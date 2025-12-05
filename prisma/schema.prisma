@@ -88,7 +88,7 @@ model User {
 
 model Grade {
     id        String   @id @default(cuid())
-    name      String // 브론즈, 실버, 골드
+    name      String // green, orange, red, black, vip
     minAmount Int // 등급 달성 최소 금액
     rate      Float // 적립률 (예: 0.05)
     createdAt DateTime @default(now())

@@ -11,7 +11,7 @@ import { env } from '@/config/constants.js';
 
 // 라우터 import
 // import authRouter from '@/domains/auth/auth.router.js';
-// import userRouter from '@/domains/user/user.router.js';
+import userRouter from '@/domains/user/user.router.js';
 // import storeRouter from '@/domains/store/store.router.js';
 import productRouter from '@/domains/product/product.router.js';
 // import cartRouter from '@/domains/cart/cart.router.js';
@@ -48,7 +48,7 @@ app.get('/health', (req, res) => {
 
 // 라우터 등록
 // app.use('/api/auth', authRouter);
-// app.use('/api/users', userRouter);
+app.use('/api/users', userRouter);
 // app.use('/api/stores', storeRouter);
 app.use('/api/products', productRouter);
 // app.use('/api/cart', cartRouter);

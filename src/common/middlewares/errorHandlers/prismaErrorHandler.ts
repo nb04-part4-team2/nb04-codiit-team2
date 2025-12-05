@@ -20,7 +20,7 @@ export function prismaErrorHandler(err: Error, _req: Request, _res: Response, ne
         if (modelName.endsWith('Like')) {
           msg = '이미 좋아요를 눌렀습니다.';
         } else if (field.includes('email')) {
-          msg = '이미 가입된 이메일 입니다.';
+          msg = '이미 존재하는 유저입니다.'; // 응답 에러 메세지에 맞게 수정
         } else {
           msg = `${field} 필드의 값이 이미 존재합니다.`;
         }
