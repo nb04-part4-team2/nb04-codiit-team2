@@ -1,6 +1,6 @@
 import bcrypt from 'bcrypt';
 import { env } from '@/config/constants.js';
-import { createUserSchema, type CreateUserDto } from './user.schema.js';
+import { CreateUserDto } from './user.schema.js';
 import { UserRepository } from './user.repository.js';
 import type { UserResponseDto, UserWithGrade } from './user.dto.js';
 
@@ -12,7 +12,7 @@ export class UserService {
   }
 
   async createUser(dto: CreateUserDto): Promise<UserResponseDto> {
-    const { name, email, password, type } = createUserSchema.parse(dto);
+    const { name, email, password, type } = dto;
 
     const hashedPassword = await bcrypt.hash(password, Number(env.BCRYPT_ROUNDS));
 
