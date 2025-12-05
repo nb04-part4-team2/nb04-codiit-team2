@@ -13,7 +13,7 @@ export default [
     ],
   },
   {
-    files: ['src/**/*.ts'],
+    files: ['src/**/*.ts', '__tests__/**/*.ts'],
     languageOptions: {
       parser: tsparser,
       parserOptions: {
