@@ -2,7 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { UserType } from '@prisma/client';
 
 // 테스트 및 개발 목적으로 req.user 객체를 주입하는 임시 미들웨어
-const MOCK_USER_ID = 'cmis6gtxu0000uyo9xtdf3vhg';
+// MOCK_USER_ID에 seed로 만든 user id를 넣으면 됩니다.
+// cuid 여서 하드 코딩이 안되서 직접 1번 입력 해주셔야 합니다.
+const MOCK_USER_ID = 'cmis6gtxu0000uyo9xtdf3vhg'; //<- 예시입니다.
 
 const MOCK_USER = {
   id: MOCK_USER_ID,
@@ -23,5 +25,4 @@ export const mockAuthMiddleware = (req: Request, _res: Response, next: NextFunct
   next();
 };
 
-// user가 개발이 되기 전에 기능 테스트를 하기 위래 만든 임시 미들웨어입니다.
 // user가 만들어 지면 지워야 합니다.

@@ -5,6 +5,7 @@ import { UnauthorizedError } from '@/common/utils/errors.js';
 export class InquiryController {
   constructor(private inquiryService: InquiryService) {}
 
+  // 특정 상품의 모든 문의
   public getInquiries = async (req: Request, res: Response) => {
     const { productId } = req.params;
 
@@ -12,6 +13,7 @@ export class InquiryController {
     return res.status(200).json(inquiries);
   };
 
+  // 특정 상품의 문의 생성
   public createInquiry = async (req: Request, res: Response) => {
     const { productId } = req.params;
 
@@ -23,6 +25,7 @@ export class InquiryController {
     return res.status(201).json(inquiry);
   };
 
+  // 모든 문의 조회 (사용자 본인의 문의)
   public getAllInquiries = async (req: Request, res: Response) => {
     const query = req.query;
 
@@ -33,6 +36,7 @@ export class InquiryController {
     return res.status(200).json(inquiries);
   };
 
+  // 특정 문의 조회
   public getInquiry = async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -40,6 +44,7 @@ export class InquiryController {
     return res.status(200).json(inquiry);
   };
 
+  // 특정 문의 수정
   public updateInquiry = async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -51,6 +56,7 @@ export class InquiryController {
     return res.status(200).json(inquiry);
   };
 
+  // 특정 문의 삭제
   public deleteInquiry = async (req: Request, res: Response) => {
     const { id } = req.params;
 

@@ -40,7 +40,7 @@ export const contentSchema = z
   .max(1000, '내용은 최대 1000글자까지 가능합니다.');
 export const isSecretSchema = z.boolean().default(false);
 
-// Inquiry
+// 문의 생성
 export const createInquiry = z
   .object({
     title: titleSchema,
@@ -51,6 +51,7 @@ export const createInquiry = z
 
 export type CreateInquiryBody = z.infer<typeof createInquiry>;
 
+// 문의 수정
 export const updateInquiry = z
   .object({
     title: titleSchema,
@@ -62,7 +63,7 @@ export const updateInquiry = z
 
 export type UpdateInquiryBody = z.infer<typeof updateInquiry>;
 
-// reply
+// 답변 생성
 export const createReply = z
   .object({
     content: contentSchema,
@@ -71,6 +72,7 @@ export const createReply = z
 
 export type CreateReplyBody = z.infer<typeof createReply>;
 
+// 답변 수정
 export const updateReply = z
   .object({
     content: contentSchema,

@@ -14,7 +14,7 @@ import {
 const nestedInquiryRouter = Router({ mergeParams: true });
 const inquiryRouter = Router();
 
-// 문의
+// 특정 상품의 모든 문의 조회, 생성
 nestedInquiryRouter
   .route('/')
   .get(
@@ -30,6 +30,7 @@ nestedInquiryRouter
     asyncHandler(inquiryController.createInquiry),
   );
 
+// 모든 문의 조회 (사용자 본인의 문의)
 inquiryRouter.get(
   '/',
   mockAuthMiddleware,
@@ -38,6 +39,7 @@ inquiryRouter.get(
   asyncHandler(inquiryController.getAllInquiries),
 );
 
+// 특정 문의 조회, 수정, 삭제
 inquiryRouter
   .route('/:id')
   .get(

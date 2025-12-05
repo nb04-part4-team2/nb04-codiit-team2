@@ -3,6 +3,7 @@ import type { Prisma, PrismaClient } from '@prisma/client';
 export class InquiryRepository {
   constructor(private prisma: PrismaClient) {}
 
+  // 특정 상품의 모든 문의 조회
   public getInquiries = async (getQuery: Prisma.InquiryFindManyArgs) => {
     const inquiries = await this.prisma.inquiry.findMany({
       ...getQuery,
@@ -42,6 +43,7 @@ export class InquiryRepository {
     return inquiries;
   };
 
+  // 문의 생성
   public createInquiry = async (createData: Prisma.InquiryCreateInput) => {
     const inquiry = await this.prisma.inquiry.create({
       data: createData,
@@ -61,6 +63,7 @@ export class InquiryRepository {
     return inquiry;
   };
 
+  // 모든 문의 조회 (사용자 본인의 문의)
   public getAllInquiries = async (getQuery: Prisma.InquiryFindManyArgs) => {
     const inquiries = await this.prisma.inquiry.findMany({
       ...getQuery,
@@ -96,6 +99,7 @@ export class InquiryRepository {
     return inquiries;
   };
 
+  // 특정 문의 조회
   public getInquiry = async (id: string) => {
     const inquiry = await this.prisma.inquiry.findUnique({
       where: { id },
@@ -129,6 +133,7 @@ export class InquiryRepository {
     return inquiry;
   };
 
+  // 문의 수정
   public updateInquiry = async (id: string, updateData: Prisma.InquiryUpdateInput) => {
     const inquiry = await this.prisma.inquiry.update({
       where: { id },
@@ -149,6 +154,7 @@ export class InquiryRepository {
     return inquiry;
   };
 
+  // 문의 삭제
   public deleteInquiry = async (id: string) => {
     const inquiry = await this.prisma.inquiry.delete({
       where: { id },
@@ -168,6 +174,7 @@ export class InquiryRepository {
     return inquiry;
   };
 
+  // 상품 찾기
   public findProduct = async (productId: string) => {
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
@@ -176,6 +183,7 @@ export class InquiryRepository {
     return product;
   };
 
+  // 문의 찾기
   public findInquiry = async (id: string) => {
     const inquiry = await this.prisma.inquiry.findUnique({
       where: { id },
@@ -184,6 +192,7 @@ export class InquiryRepository {
     return inquiry;
   };
 
+  // 문의 카운트
   public countInquiries = async (countQuery: Prisma.InquiryCountArgs) => {
     const count = await this.prisma.inquiry.count(countQuery);
 
