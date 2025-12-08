@@ -16,4 +16,11 @@ export class UserRepository {
       include: { grade: true },
     });
   }
+
+  async findByEmail(email: string) {
+    return prisma.user.findUnique({
+      where: { email },
+      include: { grade: true },
+    });
+  }
 }
