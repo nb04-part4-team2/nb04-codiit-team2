@@ -1,10 +1,10 @@
 generator client {
-    provider = "prisma-client-js"
+  provider = "prisma-client-js"
 }
 
 datasource db {
-    provider = "postgresql"
-    url      = env("DATABASE_URL")
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
 }
 
 // --------------------------------------
@@ -12,27 +12,27 @@ datasource db {
 // --------------------------------------
 
 enum UserType {
-    BUYER
-    SELLER
+  BUYER
+  SELLER
 }
 
 enum InquiryStatus {
-    WaitingAnswer
-    CompletedAnswer
+  WaitingAnswer
+  CompletedAnswer
 }
 
 enum PaymentStatus {
-    Pending
-    CompletedPayment
-    Failed
-    Cancelled
+  Pending
+  CompletedPayment
+  Failed
+  Cancelled
 }
 
 enum OrderStatus {
-    WaitingPayment
-    CompletedPayment
-    Cancelled
-    Delivered
+  WaitingPayment
+  CompletedPayment
+  Cancelled
+  Delivered
 }
 
 // --------------------------------------
@@ -40,17 +40,17 @@ enum OrderStatus {
 // --------------------------------------
 
 model Size {
-    //  xs: 1, s: 2, m: 3, l: 4, xl: 5, free: 6,
-    // project-codiit-fe-main/src/utils/formData/toProductFormData.ts 참고
-    id Int    @id
-    en String // Small, Medium
-    ko String // 소, 중
+  //  xs: 1, s: 2, m: 3, l: 4, xl: 5, free: 6,
+  // project-codiit-fe-main/src/utils/formData/toProductFormData.ts 참고
+  id Int    @id
+  en String // Small, Medium
+  ko String // 소, 중
 
-    stocks     Stock[]
-    cartItems  CartItem[]
-    orderItems OrderItem[]
+  stocks     Stock[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
 
-    @@map("size")
+  @@map("size")
 }
 
 // --------------------------------------
@@ -58,32 +58,32 @@ model Size {
 // --------------------------------------
 
 model User {
-    id        String   @id @default(cuid())
-    email     String   @unique
-    password  String
-    name      String
-    type      UserType
-    image     String?
-    point     Int      @default(0)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  type      UserType
+  image     String?
+  point     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // FK
-    gradeId String
-    grade   Grade  @relation(fields: [gradeId], references: [id])
+  // FK
+  gradeId String
+  grade   Grade  @relation(fields: [gradeId], references: [id])
 
-    // Relations
-    store         Store? // 판매자일 경우 1:1 (혹은 1:N 확장 가능)
-    cart          Cart? // 구매자일 경우 1:1
-    orders        Order[]
-    reviews       Review[]
-    inquiries     Inquiry[]
-    replies       Reply[]
-    storeLikes    StoreLike[]
-    notifications Notification[]
-    pointHistory  PointHistory[]
+  // Relations
+  store         Store? // 판매자일 경우 1:1 (혹은 1:N 확장 가능)
+  cart          Cart? // 구매자일 경우 1:1
+  orders        Order[]
+  reviews       Review[]
+  inquiries     Inquiry[]
+  replies       Reply[]
+  storeLikes    StoreLike[]
+  notifications Notification[]
+  pointHistory  PointHistory[]
 
-    @@map("users")
+  @@map("users")
 }
 
 model Grade {
@@ -94,9 +94,9 @@ model Grade {
     createdAt DateTime @default(now())
     updatedAt DateTime @updatedAt
 
-    users User[]
+  users User[]
 
-    @@map("grade")
+  @@map("grade")
 }
 
 // --------------------------------------
@@ -104,79 +104,79 @@ model Grade {
 // --------------------------------------
 
 model Store {
-    id            String   @id @default(cuid())
-    name          String
-    content       String // 가게 소개
-    address       String
-    detailAddress String?
-    phoneNumber   String
-    image         String?
-    createdAt     DateTime @default(now())
-    updatedAt     DateTime @updatedAt
+  id            String   @id @default(cuid())
+  name          String
+  content       String // 가게 소개
+  address       String
+  detailAddress String?
+  phoneNumber   String
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
 
-    // FK
-    sellerId String @unique // 유저 한 명당 가게 하나라고 가정
-    seller   User   @relation(fields: [sellerId], references: [id])
+  // FK
+  userId String @unique // 유저 한 명당 가게 하나라고 가정
+  user   User   @relation(fields: [userId], references: [id])
 
-    // Relations
-    products Product[]
-    likes    StoreLike[]
+  // Relations
+  products Product[]
+  likes    StoreLike[]
 
-    @@map("stores")
+  @@map("stores")
 }
 
 model Product {
-    id                String    @id @default(cuid())
-    name              String
-    price             Int
-    content           String?
-    image             String
-    discountRate      Int       @default(0)
-    discountStartTime DateTime?
-    discountEndTime   DateTime?
-    isSoldOut         Boolean   @default(false)
-    salesCount        Int       @default(0)
-    reviewsCount      Int       @default(0)
-    reviewsRating     Float     @default(0.0)
-    createdAt         DateTime  @default(now())
-    updatedAt         DateTime  @updatedAt
+  id                String    @id @default(cuid())
+  name              String
+  price             Int
+  content           String?
+  image             String
+  discountRate      Int       @default(0)
+  discountStartTime DateTime?
+  discountEndTime   DateTime?
+  isSoldOut         Boolean   @default(false)
+  salesCount        Int       @default(0)
+  reviewsCount      Int       @default(0)
+  reviewsRating     Float     @default(0.0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
 
-    // FK
-    storeId    String
-    store      Store    @relation(fields: [storeId], references: [id])
-    categoryId String
-    category   Category @relation(fields: [categoryId], references: [id])
+  // FK
+  storeId    String
+  store      Store    @relation(fields: [storeId], references: [id])
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
 
-    // Relations
-    stocks     Stock[]
-    cartItems  CartItem[]
-    orderItems OrderItem[]
-    reviews    Review[]
-    inquiries  Inquiry[]
+  // Relations
+  stocks     Stock[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[]
+  inquiries  Inquiry[]
 
-    @@map("products")
+  @@map("products")
 }
 
 model Category {
-    id   String @id @default(cuid()) // SQL의 'Key'를 id로 변경
-    name String
+  id   String @id @default(cuid()) // SQL의 'Key'를 id로 변경
+  name String
 
-    products Product[]
+  products Product[]
 
-    @@map("categories")
+  @@map("categories")
 }
 
 model Stock {
-    id       String @id @default(cuid())
-    quantity Int // 재고 수량
+  id       String @id @default(cuid())
+  quantity Int // 재고 수량
 
-    // FK
-    productId String
-    product   Product @relation(fields: [productId], references: [id])
-    sizeId    Int
-    size      Size    @relation(fields: [sizeId], references: [id])
+  // FK
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  sizeId    Int
+  size      Size    @relation(fields: [sizeId], references: [id])
 
-    @@map("stocks")
+  @@map("stocks")
 }
 
 // --------------------------------------
@@ -184,35 +184,35 @@ model Stock {
 // --------------------------------------
 
 model Cart {
-    id        String   @id @default(cuid()) // SQL의 string 타입 반영
-    quantity  Int      @default(0) // 장바구니에 담긴 총 아이템 개수? (필요 없으면 삭제 가능, Computed field로 대체 권장)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid()) // SQL의 string 타입 반영
+  quantity  Int      @default(0) // 장바구니에 담긴 총 아이템 개수? (필요 없으면 삭제 가능, Computed field로 대체 권장)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // FK
-    buyerId String @unique
-    buyer   User   @relation(fields: [buyerId], references: [id])
+  // FK
+  buyerId String @unique
+  buyer   User   @relation(fields: [buyerId], references: [id])
 
-    items CartItem[]
+  items CartItem[]
 
-    @@map("carts")
+  @@map("carts")
 }
 
 model CartItem {
-    id        String   @id @default(cuid())
-    quantity  Int
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // FK
-    cartId    String
-    cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
-    productId String
-    product   Product @relation(fields: [productId], references: [id])
-    sizeId    Int
-    size      Size    @relation(fields: [sizeId], references: [id])
+  // FK
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  sizeId    Int
+  size      Size    @relation(fields: [sizeId], references: [id])
 
-    @@map("cart_items")
+  @@map("cart_items")
 }
 
 // --------------------------------------
@@ -220,56 +220,56 @@ model CartItem {
 // --------------------------------------
 
 model Order {
-    id            String   @id @default(cuid())
-    name          String // 주문자 이름
-    phoneNumber   String
-    address       String
-    subtotal      Int // 상품 총액
-    totalQuantity Int // 총 주문수량
-    usePoint      Int      @default(0)
-    createdAt     DateTime @default(now())
+  id            String   @id @default(cuid())
+  name          String // 주문자 이름
+  phoneNumber   String
+  address       String
+  subtotal      Int // 상품 총액
+  totalQuantity Int // 총 주문수량
+  usePoint      Int      @default(0)
+  createdAt     DateTime @default(now())
 
-    // 비회원 주문에 대한 내용은 추후 확장
-    buyerId String
-    buyer   User   @relation(fields: [buyerId], references: [id])
+  // 비회원 주문에 대한 내용은 추후 확장
+  buyerId String
+  buyer   User   @relation(fields: [buyerId], references: [id])
 
-    orderItems   OrderItem[]
-    payment      Payment?
-    pointHistory PointHistory[]
+  orderItems   OrderItem[]
+  payment      Payment?
+  pointHistory PointHistory[]
 
-    @@map("orders")
+  @@map("orders")
 }
 
 model OrderItem {
-    id       String @id @default(cuid())
-    price    Int // 구매 당시 가격 (Snapshot)
-    quantity Int
+  id       String @id @default(cuid())
+  price    Int // 구매 당시 가격 (Snapshot)
+  quantity Int
 
-    // FK
-    orderId   String
-    order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
-    productId String
-    product   Product @relation(fields: [productId], references: [id])
-    sizeId    Int
-    size      Size    @relation(fields: [sizeId], references: [id])
+  // FK
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
+  sizeId    Int
+  size      Size    @relation(fields: [sizeId], references: [id])
 
-    review Review?
+  review Review?
 
-    @@map("order_items")
+  @@map("order_items")
 }
 
 model Payment {
-    id        String        @id @default(cuid())
-    price     Int
-    status    PaymentStatus
-    createdAt DateTime      @default(now())
-    updatedAt DateTime      @updatedAt
+  id        String        @id @default(cuid())
+  price     Int
+  status    PaymentStatus
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-    // FK
-    orderId String @unique
-    order   Order  @relation(fields: [orderId], references: [id])
+  // FK
+  orderId String @unique
+  order   Order  @relation(fields: [orderId], references: [id])
 
-    @@map("payments")
+  @@map("payments")
 }
 
 // --------------------------------------
@@ -277,97 +277,97 @@ model Payment {
 // --------------------------------------
 
 model Review {
-    id        String   @id @default(cuid())
-    rating    Int
-    content   String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  rating    Int
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // FK
-    userId      String
-    user        User      @relation(fields: [userId], references: [id])
-    productId   String
-    product     Product   @relation(fields: [productId], references: [id])
-    orderItemId String    @unique // 리뷰는 특정 구매 건에 종속
-    orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
+  // FK
+  userId      String
+  user        User      @relation(fields: [userId], references: [id])
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id])
+  orderItemId String    @unique // 리뷰는 특정 구매 건에 종속
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
 
-    @@map("reviews")
+  @@map("reviews")
 }
 
 model Inquiry {
-    id        String        @id @default(cuid())
-    title     String
-    content   String
-    status    InquiryStatus @default(WaitingAnswer)
-    isSecret  Boolean       @default(false)
-    createdAt DateTime      @default(now())
-    updatedAt DateTime      @updatedAt
+  id        String        @id @default(cuid())
+  title     String
+  content   String
+  status    InquiryStatus @default(WaitingAnswer)
+  isSecret  Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
 
-    // FK
-    userId    String
-    user      User    @relation(fields: [userId], references: [id])
-    productId String
-    product   Product @relation(fields: [productId], references: [id])
+  // FK
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  productId String
+  product   Product @relation(fields: [productId], references: [id])
 
-    reply Reply?
+  reply Reply?
 
-    @@map("inquiries")
+  @@map("inquiries")
 }
 
 model Reply {
-    id        String   @id @default(cuid())
-    content   String
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // FK
-    userId    String
-    user      User    @relation(fields: [userId], references: [id])
-    inquiryId String  @unique
-    inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+  // FK
+  userId    String
+  user      User    @relation(fields: [userId], references: [id])
+  inquiryId String  @unique
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
 
-    @@map("replies")
+  @@map("replies")
 }
 
 model StoreLike {
-    id        String   @id @default(cuid())
-    createdAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
 
-    // FK
-    userId  String
-    user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
-    storeId String
-    store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+  // FK
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
 
-    @@unique([userId, storeId]) // 중복 좋아요 방지
-    @@map("store_likes")
+  @@unique([userId, storeId]) // 중복 좋아요 방지
+  @@map("store_likes")
 }
 
 model PointHistory {
-    id        String   @id @default(cuid())
-    type      String // 적립, 사용
-    amount    Int
-    createdAt DateTime @default(now())
+  id        String   @id @default(cuid())
+  type      String // 적립, 사용
+  amount    Int
+  createdAt DateTime @default(now())
 
-    // FK
-    userId  String
-    user    User    @relation(fields: [userId], references: [id])
-    orderId String? // 주문과 관련된 포인트일 경우
-    order   Order?  @relation(fields: [orderId], references: [id])
+  // FK
+  userId  String
+  user    User    @relation(fields: [userId], references: [id])
+  orderId String? // 주문과 관련된 포인트일 경우
+  order   Order?  @relation(fields: [orderId], references: [id])
 
-    @@map("point_history")
+  @@map("point_history")
 }
 
 model Notification {
-    id        String   @id @default(cuid())
-    content   String
-    isChecked Boolean  @default(false)
-    createdAt DateTime @default(now())
-    updatedAt DateTime @updatedAt
+  id        String   @id @default(cuid())
+  content   String
+  isChecked Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
 
-    // FK
-    userId String
-    user   User   @relation(fields: [userId], references: [id])
+  // FK
+  userId String
+  user   User   @relation(fields: [userId], references: [id])
 
-    @@map("notifications")
+  @@map("notifications")
 }
