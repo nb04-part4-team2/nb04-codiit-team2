@@ -23,4 +23,11 @@ export class UserRepository {
       include: { grade: true },
     });
   }
+
+  async findById(id: string) {
+    return prisma.user.findUnique({
+      where: { id },
+      include: { grade: true },
+    });
+  }
 }
