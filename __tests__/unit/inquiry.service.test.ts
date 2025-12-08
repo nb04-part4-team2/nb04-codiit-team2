@@ -424,7 +424,7 @@ describe('InquiryService 유닛 테스트', () => {
     });
 
     it('문의를 수정할 권한이 없을때 ForbiddenError 발생', async () => {
-      // --- 준비 (Arrange) ---)
+      // --- 준비 (Arrange) ---
       const data = {
         title: '문의 제목 수정',
       };
@@ -434,7 +434,7 @@ describe('InquiryService 유닛 테스트', () => {
       };
       inquiryRepository.findInquiry.mockResolvedValue(mockFindInquiry_userId);
 
-      // --- 실행 및 검증 (Act & Assert)
+      // --- 실행 및 검증 (Act & Assert) ---
       await expect(inquiryService.updateInquiry(inquiryId, userId, data)).rejects.toThrow(
         '문의를 수정할 권한이 없습니다.',
       );
@@ -455,7 +455,7 @@ describe('InquiryService 유닛 테스트', () => {
       );
     });
 
-    it('답변 완료된 문의는 수정 할때 ForbiddenError 발생', async () => {
+    it('답변 완료된 문의는 수정할 때 ForbiddenError 발생', async () => {
       // --- 준비 (Arrange) ---
       const data = {
         title: '문의 제목 수정',
@@ -494,7 +494,7 @@ describe('InquiryService 유닛 테스트', () => {
       // --- 실행 (Act) ---
       const result = await inquiryService.deleteInquiry(inquiryId, userId);
 
-      // --- 검증 (Assert)
+      // --- 검증 (Assert) ---
       expect(inquiryRepository.findInquiry).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.findInquiry).toHaveBeenCalledWith(inquiryId);
       expect(inquiryRepository.deleteInquiry).toHaveBeenCalledTimes(1);
@@ -513,14 +513,14 @@ describe('InquiryService 유닛 테스트', () => {
     });
 
     it('문의를 삭제할 권한이 없을때 ForbiddenError 발생', async () => {
-      // --- 준비 (Arrange) ---)
+      // --- 준비 (Arrange) ---
       const mockFindInquiry_userId = {
         ...mockFindInquiry,
         userId: '다른 사용자 ID',
       };
       inquiryRepository.findInquiry.mockResolvedValue(mockFindInquiry_userId);
 
-      // --- 실행 및 검증 (Act & Assert)
+      // --- 실행 및 검증 (Act & Assert) ---
       await expect(inquiryService.deleteInquiry(inquiryId, userId)).rejects.toThrow(
         '문의를 삭제할 권한이 없습니다.',
       );
