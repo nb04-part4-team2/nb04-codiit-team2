@@ -7,6 +7,11 @@ export interface JwtPayload {
   type: UserType;
 }
 
+export interface AuthUser {
+  id: string;
+  type: UserType;
+}
+
 export const generateAccessToken = (userId: string, type: UserType): string => {
   return jwt.sign(
     { userId, type },

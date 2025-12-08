@@ -13,7 +13,10 @@ export const authenticate = (req: Request, res: Response, next: NextFunction): v
   const token = authHeader.split(' ')[1];
   const payload = verifyAccessToken(token);
 
-  req.user = payload;
+  req.user = {
+    id: payload.userId,
+    type: payload.type,
+  };
   next();
 };
 

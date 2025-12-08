@@ -18,7 +18,7 @@ export class InquiryController {
     const { productId } = req.params;
 
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const data = req.body;
     const inquiry = await this.inquiryService.createInquiry(productId, userId, data);
@@ -30,7 +30,7 @@ export class InquiryController {
     const query = req.query;
 
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const inquiries = await this.inquiryService.getAllInquiries(query, userId);
     return res.status(200).json(inquiries);
@@ -49,7 +49,7 @@ export class InquiryController {
     const { id } = req.params;
 
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const data = req.body;
     const inquiry = await this.inquiryService.updateInquiry(id, userId, data);
@@ -61,7 +61,7 @@ export class InquiryController {
     const { id } = req.params;
 
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
-    const userId = req.user.userId;
+    const userId = req.user.id;
 
     const inquiry = await this.inquiryService.deleteInquiry(id, userId);
     return res.status(200).json(inquiry);
