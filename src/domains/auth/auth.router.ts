@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { AuthController } from '@/domains/auth/auth.controller.js';
+import { AuthController } from './auth.controller.js';
 import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 import { authenticate } from '@/common/middlewares/auth.middleware.js';
 import { validate } from '@/common/middlewares/validate.middleware.js';
-import { loginSchema } from '@/domains/auth/auth.schema.js';
+import { loginSchema } from './auth.schema.js';
 const router = Router();
 const authController = new AuthController();
 

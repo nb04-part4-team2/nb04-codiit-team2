@@ -5,7 +5,7 @@ import {
   verifyRefreshToken,
 } from '@/common/utils/jwt.util.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
-import { loginSchema } from '@/domains/auth/auth.schema.js';
+import { loginSchema } from './auth.schema.js';
 import { UserRepository } from '@/domains/user/user.repository.js';
 
 export class AuthService {

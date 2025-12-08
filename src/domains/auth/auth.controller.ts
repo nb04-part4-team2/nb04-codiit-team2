@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { AuthService } from '@/domains/auth/auth.service.js';
+import { AuthService } from './auth.service.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 
 export class AuthController {
