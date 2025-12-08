@@ -15,6 +15,9 @@
     "typecheck": "tsc --noEmit",
     "prepare": "husky"
   },
+    "prisma": {
+    "seed": "tsx prisma/seed.ts"
+  },
   "keywords": [],
   "author": "",
   "license": "ISC",
