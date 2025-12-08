@@ -1,11 +1,9 @@
-import { User as PrismaUser } from '@prisma/client';
+import { JwtPayload } from '@/common/middlewares/auth.middleware.ts';
 
 declare global {
   namespace Express {
-    type User = PrismaUser;
-
     interface Request {
-      user?: User;
+      user?: JwtPayload;
     }
   }
 }
