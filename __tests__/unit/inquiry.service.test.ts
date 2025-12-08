@@ -206,6 +206,7 @@ describe('InquiryService 유닛 테스트', () => {
       const query = {
         page: '1',
         pageSize: '100',
+        status: InquiryStatus.WaitingAnswer,
       };
       const mockInquiries = [
         {
@@ -258,11 +259,11 @@ describe('InquiryService 유닛 테스트', () => {
       const result = await inquiryService.getAllInquiries(query, userId);
 
       const countQuery = {
-        where: { userId },
+        where: { userId, status: query.status },
       };
 
       const getQuery = {
-        where: { userId },
+        where: { userId, status: query.status },
         take: 100,
         skip: 0,
         orderBy: {
@@ -281,44 +282,45 @@ describe('InquiryService 유닛 테스트', () => {
       });
     });
 
-    it('status가 있을때 status를 포함한 문의 조회 성공', async () => {
+    it('query가 없을 경우, 기본값(page=1, pageSize=100)이 적용된다', async () => {
       // --- 준비 (Arrange) ---
       const query = {
-        page: '1',
-        pageSize: '100',
         status: InquiryStatus.WaitingAnswer,
       };
-      const mockInquiries = [
-        {
-          id: 'inquiry-1',
-          title: '문의 제목 1',
-          isSecret: false,
-          status: InquiryStatus.WaitingAnswer,
-          user: {
-            id: userId,
-            name: '테스트 사용자 1',
-          },
-          createdAt: new Date(),
-          content: '문의 내용 1',
-          product: {
-            id: productId,
-            name: '상품 이름',
-            image: '상품 이미지 URL',
-            store: {
-              id: storeId,
-              name: '상점 이름',
-            },
-          },
-        },
-      ];
-      inquiryRepository.getAllInquiries.mockResolvedValue(mockInquiries);
-      inquiryRepository.countInquiries.mockResolvedValue(1);
+      inquiryRepository.countInquiries.mockResolvedValue(0);
+      inquiryRepository.getAllInquiries.mockResolvedValue([]);
 
       // --- 실행 (Act) ---
       await inquiryService.getAllInquiries(query, userId);
 
       const getQuery = {
         where: { userId, status: query.status },
+        take: 100,
+        skip: 0,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      };
+
+      // --- 검증 (Assert) ---
+      expect(inquiryRepository.getAllInquiries).toHaveBeenCalledTimes(1);
+      expect(inquiryRepository.getAllInquiries).toHaveBeenCalledWith(getQuery);
+    });
+
+    it('page와 pageSize가 숫자가 아닌 문자열일 경우 기본값이 적용된다', async () => {
+      // --- 준비 (Arrange) ---
+      const query = {
+        page: 'invalid',
+        pageSize: 'invalid',
+      };
+      inquiryRepository.countInquiries.mockResolvedValue(0);
+      inquiryRepository.getAllInquiries.mockResolvedValue([]);
+
+      // --- 실행 (Act) ---
+      await inquiryService.getAllInquiries(query, userId);
+
+      const getQuery = {
+        where: { userId },
         take: 100,
         skip: 0,
         orderBy: {
@@ -377,7 +379,7 @@ describe('InquiryService 유닛 테스트', () => {
       const data = {
         title: '문의 제목 수정',
         content: '문의 내용 수정',
-        isSecret: false,
+        isSecret: true,
       };
       const mockInquiry = {
         id: inquiryId,
@@ -397,6 +399,7 @@ describe('InquiryService 유닛 테스트', () => {
       const updateData = {
         title: data.title,
         content: data.content,
+        isSecret: data.isSecret,
       };
 
       // --- 검증 (Assert) ---
@@ -437,19 +440,19 @@ describe('InquiryService 유닛 테스트', () => {
       );
     });
 
-    it('수정할 데이터가 없으면 아무것도 하지 않고 반환', async () => {
+    it('수정할 내용이 없을 때 BadRequestError 발생', async () => {
       // --- 준비 (Arrange) ---
-      const data = {};
+      const data = {
+        title: mockFindInquiry.title,
+        content: mockFindInquiry.content,
+        isSecret: mockFindInquiry.isSecret,
+      };
       inquiryRepository.findInquiry.mockResolvedValue(mockFindInquiry);
 
-      // --- 실행 (Act) ---
-      const result = await inquiryService.updateInquiry(inquiryId, userId, data);
-
-      // --- 검증 (Assert) ---
-      expect(inquiryRepository.findInquiry).toHaveBeenCalledTimes(1);
-      expect(inquiryRepository.findInquiry).toHaveBeenCalledWith(inquiryId);
-      expect(inquiryRepository.updateInquiry).not.toHaveBeenCalled();
-      expect(result).toBeUndefined();
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(inquiryService.updateInquiry(inquiryId, userId, data)).rejects.toThrow(
+        '수정할 내용이 없습니다.',
+      );
     });
 
     it('답변 완료된 문의는 수정 할때 ForbiddenError 발생', async () => {
