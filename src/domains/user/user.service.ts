@@ -1,8 +1,8 @@
 import bcrypt from 'bcrypt';
 import { env } from '@/config/constants.js';
-import { CreateUserDto } from '@/domains/user/user.schema.js';
-import { UserRepository } from '@/domains/user/user.repository.js';
-import type { UserResponseDto, UserWithGrade } from '@/domains/user/user.dto.js';
+import { CreateUserDto } from './user.schema.js';
+import { UserRepository } from './user.repository.js';
+import type { UserResponseDto, UserWithGrade } from './user.dto.js';
 import { ConflictError } from '@/common/utils/errors.js';
 
 export class UserService {

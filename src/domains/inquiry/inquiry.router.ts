@@ -2,7 +2,8 @@ import { Router } from 'express';
 import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 import { validate } from '@/common/middlewares/validate.middleware.js';
 import { inquiryController } from './inquiry.container.js';
-import { mockAuthMiddleware } from '@/common/middlewares/mock.auth.middleware.js';
+import { authenticate } from '@/common/middlewares/auth.middleware.js';
+// import { mockAuthMiddleware } from '@/common/middlewares/mock.auth.middleware.js';
 import {
   idSchema,
   productIdSchema,
@@ -23,7 +24,7 @@ nestedInquiryRouter
     asyncHandler(inquiryController.getInquiries),
   )
   .post(
-    mockAuthMiddleware,
+    authenticate,
     // authenticate,
     validate(productIdSchema, 'params'),
     validate(createInquiry, 'body'),
@@ -33,7 +34,7 @@ nestedInquiryRouter
 // 모든 문의 조회 (사용자 본인의 문의)
 inquiryRouter.get(
   '/',
-  mockAuthMiddleware,
+  authenticate,
   // authenticate,
   validate(offsetSchema, 'query'),
   asyncHandler(inquiryController.getAllInquiries),
@@ -43,20 +44,20 @@ inquiryRouter.get(
 inquiryRouter
   .route('/:id')
   .get(
-    mockAuthMiddleware,
+    authenticate,
     // authenticate,
     validate(idSchema, 'params'),
     asyncHandler(inquiryController.getInquiry),
   )
   .patch(
-    mockAuthMiddleware,
+    authenticate,
     // authenticate,
     validate(idSchema, 'params'),
     validate(updateInquiry, 'body'),
     asyncHandler(inquiryController.updateInquiry),
   )
   .delete(
-    mockAuthMiddleware,
+    authenticate,
     // authenticate,
     validate(idSchema, 'params'),
     asyncHandler(inquiryController.deleteInquiry),
