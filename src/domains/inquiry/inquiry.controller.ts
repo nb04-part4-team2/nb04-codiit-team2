@@ -5,7 +5,7 @@ import { UnauthorizedError } from '@/common/utils/errors.js';
 export class InquiryController {
   constructor(private inquiryService: InquiryService) {}
 
-  // 특정 상품의 모든 문의
+  // 특정 상품의 모든 문의 조회
   public getInquiries = async (req: Request, res: Response) => {
     const { productId } = req.params;
 
@@ -13,7 +13,7 @@ export class InquiryController {
     return res.status(200).json(inquiries);
   };
 
-  // 특정 상품의 문의 생성
+  // 문의 생성
   public createInquiry = async (req: Request, res: Response) => {
     const { productId } = req.params;
 
