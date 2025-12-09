@@ -42,8 +42,9 @@ enum OrderStatus {
 model Size {
   //  xs: 1, s: 2, m: 3, l: 4, xl: 5, free: 6,
   // project-codiit-fe-main/src/utils/formData/toProductFormData.ts 참고
-  id   Int  @id
-  size Json
+  id Int    @id
+  en String // Small, Medium
+  ko String // 소, 중
 
   stocks     Stock[]
   cartItems  CartItem[]
