@@ -54,7 +54,8 @@ export class CartRepository {
                     size: {
                       select: {
                         id: true,
-                        size: true,
+                        en: true,
+                        ko: true,
                       },
                     },
                   },

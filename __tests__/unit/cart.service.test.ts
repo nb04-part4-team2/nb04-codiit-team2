@@ -71,10 +71,8 @@ describe('CartService', () => {
                   quantity: 1,
                   size: {
                     id: 2,
-                    size: {
-                      en: 's',
-                      ko: '소',
-                    },
+                    en: 's',
+                    ko: '소',
                   },
                 },
               ],
