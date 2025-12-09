@@ -1,5 +1,10 @@
 import type { Prisma } from '@prisma/client';
-import type { OffsetQuery, CreateInquiryBody, UpdateInquiryBody } from './inquiry.dto.js';
+import type {
+  OffsetQuery,
+  CreateInquiryBody,
+  UpdateInquiryBody,
+  CreateReplyBody,
+} from './inquiry.dto.js';
 import type { InquiryRepository } from './inquiry.repository.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/common/utils/errors.js';
 
@@ -155,7 +160,34 @@ export class InquiryService {
   // TODO : 답변 로직 추가
   // public getReply = async (id: string) => {};
 
-  // public createReply = async (id: string, userId: string, data: CreateReplyBody) => {};
+  // 답변 생성
+  public createReply = async (id: string, userId: string, data: CreateReplyBody) => {
+    // 문의 존재 및 인가 확인
+    const findInquiry = await this.inquiryRepository.findInquiryById(id);
+    if (!findInquiry) throw new NotFoundError('문의가 존재하지 않습니다.');
+    if (findInquiry.product.store.userId !== userId)
+      throw new ForbiddenError('답변을 생성할 권한이 없습니다.');
+
+    const { content } = data;
+
+    const createData: Prisma.ReplyCreateInput = {
+      content,
+      user: {
+        connect: {
+          id: userId,
+        },
+      },
+      inquiry: {
+        connect: {
+          id,
+        },
+      },
+    };
+
+    const reply = await this.inquiryRepository.createReply(createData);
+
+    return reply;
+  };
 
   // public updateReply = async (id: string, userId: string, data: UpdateReplyBody) => {};
 }

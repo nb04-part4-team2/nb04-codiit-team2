@@ -174,6 +174,23 @@ export class InquiryRepository {
     return inquiry;
   };
 
+  // 답변 생성
+  public createReply = async (createData: Prisma.ReplyCreateInput) => {
+    const reply = await this.prisma.reply.create({
+      data: createData,
+      select: {
+        id: true,
+        inquiryId: true,
+        userId: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return reply;
+  };
+
   // 상품 찾기
   public findProductByProductId = async (productId: string) => {
     const product = await this.prisma.product.findUnique({
@@ -187,6 +204,17 @@ export class InquiryRepository {
   public findInquiryById = async (id: string) => {
     const inquiry = await this.prisma.inquiry.findUnique({
       where: { id },
+      include: {
+        product: {
+          select: {
+            store: {
+              select: {
+                userId: true,
+              },
+            },
+          },
+        },
+      },
     });
 
     return inquiry;

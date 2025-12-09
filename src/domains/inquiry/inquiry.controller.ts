@@ -75,16 +75,17 @@ export class InquiryController {
   //   return res.status(200).json(replies);
   // };
 
-  // public createReply = async (req: Request, res: Response) => {
-  //   const { id } = req.params;
+  // 답변 생성
+  public createReply = async (req: Request, res: Response) => {
+    const { id } = req.params;
 
-  //   if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
-  //   const userId = req.user.id;
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const userId = req.user.id;
 
-  //   const data = req.body;
-  //   const reply = await this.inquiryService.createReply(id, userId, data);
-  //   return res.status(201).json(reply);
-  // };
+    const data = req.body;
+    const reply = await this.inquiryService.createReply(id, userId, data);
+    return res.status(201).json(reply);
+  };
 
   // public updateReply = async (req: Request, res: Response) => {
   //   const { id } = req.params;

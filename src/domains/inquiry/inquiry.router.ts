@@ -9,6 +9,7 @@ import {
   offsetSchema,
   createInquiry,
   updateInquiry,
+  createReply,
 } from './inquiry.dto.js';
 
 const nestedInquiryRouter = Router({ mergeParams: true });
@@ -53,23 +54,14 @@ inquiryRouter
     asyncHandler(inquiryController.deleteInquiry),
   );
 
-// TODO : 답변 로직 추가
-// 답변
-// inquiryRouter
-//   .route('/:id/replies')
-//   .get(
-//     validate(idSchema, 'params'),
-//     asyncHandler(inquiryController.getReply),
-//   )
-//   .post(
-//     validate(idSchema, 'params'),
-//     validate(createReply, 'body'),
-//     asyncHandler(inquiryController.createReply),
-//   )
-//   .patch(
-//     validate(idSchema, 'params'),
-//     validate(updateReply, 'body'),
-//     asyncHandler(inquiryController.updateReply),
-//   );
+// 답변 생성
+inquiryRouter
+  .route('/:id/replies')
+  .post(
+    authenticate,
+    validate(idSchema, 'params'),
+    validate(createReply, 'body'),
+    asyncHandler(inquiryController.createReply),
+  );
 
 export { inquiryRouter, nestedInquiryRouter };
