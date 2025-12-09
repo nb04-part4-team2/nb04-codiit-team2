@@ -40,7 +40,7 @@ inquiryRouter.get(
 // 특정 문의 조회, 수정, 삭제
 inquiryRouter
   .route('/:id')
-  .get(authenticate, validate(idSchema, 'params'), asyncHandler(inquiryController.getInquiry))
+  .get(authenticate, validate(idSchema, 'params'), asyncHandler(inquiryController.getInquiryById))
   .patch(
     authenticate,
     validate(idSchema, 'params'),

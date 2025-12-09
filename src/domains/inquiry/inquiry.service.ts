@@ -9,8 +9,8 @@ export class InquiryService {
   // 특정 상품의 모든 문의 조회
   public getInquiries = async (productId: string) => {
     // 상품 존재 확인
-    const product = await this.inquiryRepository.findProduct(productId);
-    if (!product) throw new NotFoundError('상품이 존재하지 않습니다.');
+    const findProduct = await this.inquiryRepository.findProductByProductId(productId);
+    if (!findProduct) throw new NotFoundError('상품이 존재하지 않습니다.');
 
     const countQuery: Prisma.InquiryCountArgs = {
       where: { productId },
@@ -37,7 +37,7 @@ export class InquiryService {
   // 문의 생성
   public createInquiry = async (productId: string, userId: string, data: CreateInquiryBody) => {
     // 상품 존재 확인
-    const findProduct = await this.inquiryRepository.findProduct(productId);
+    const findProduct = await this.inquiryRepository.findProductByProductId(productId);
     if (!findProduct) throw new NotFoundError('상품이 존재하지 않습니다.');
 
     const { title, content, isSecret } = data;
@@ -107,8 +107,8 @@ export class InquiryService {
   };
 
   // 특정 문의 조회
-  public getInquiry = async (id: string) => {
-    const inquiry = await this.inquiryRepository.getInquiry(id);
+  public getInquiryById = async (id: string) => {
+    const inquiry = await this.inquiryRepository.getInquiryById(id);
     if (!inquiry) throw new NotFoundError('문의가 존재하지 않습니다.');
 
     return inquiry;
@@ -117,7 +117,7 @@ export class InquiryService {
   // 문의 수정
   public updateInquiry = async (id: string, userId: string, data: UpdateInquiryBody) => {
     // 문의 존재 및 인가 확인
-    const findInquiry = await this.inquiryRepository.findInquiry(id);
+    const findInquiry = await this.inquiryRepository.findInquiryById(id);
     if (!findInquiry) throw new NotFoundError('문의가 존재하지 않습니다.');
     if (findInquiry.userId !== userId) throw new ForbiddenError('문의를 수정할 권한이 없습니다.');
     if (findInquiry.status == 'CompletedAnswer')
@@ -143,7 +143,7 @@ export class InquiryService {
   // 문의 삭제
   public deleteInquiry = async (id: string, userId: string) => {
     // 문의 존재 및 인가 확인
-    const findInquiry = await this.inquiryRepository.findInquiry(id);
+    const findInquiry = await this.inquiryRepository.findInquiryById(id);
     if (!findInquiry) throw new NotFoundError('문의가 존재하지 않습니다.');
     if (findInquiry.userId !== userId) throw new ForbiddenError('문의를 삭제할 권한이 없습니다.');
 

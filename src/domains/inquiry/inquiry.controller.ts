@@ -37,14 +37,14 @@ export class InquiryController {
   };
 
   // 특정 문의 조회
-  public getInquiry = async (req: Request, res: Response) => {
+  public getInquiryById = async (req: Request, res: Response) => {
     const { id } = req.params;
 
-    const inquiry = await this.inquiryService.getInquiry(id);
+    const inquiry = await this.inquiryService.getInquiryById(id);
     return res.status(200).json(inquiry);
   };
 
-  // 특정 문의 수정
+  // 문의 수정
   public updateInquiry = async (req: Request, res: Response) => {
     const { id } = req.params;
 
@@ -56,7 +56,7 @@ export class InquiryController {
     return res.status(200).json(inquiry);
   };
 
-  // 특정 문의 삭제
+  // 문의 삭제
   public deleteInquiry = async (req: Request, res: Response) => {
     const { id } = req.params;
 
