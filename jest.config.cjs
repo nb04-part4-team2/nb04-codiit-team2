@@ -5,7 +5,7 @@ module.exports = {
   extensionsToTreatAsEsm: ['.ts'],
   testEnvironment: 'node',
   verbose: true,
-  testMatch: ['**/*.test.ts'],
+  testMatch: ['**/*.test.ts', '**/*.spec.ts'],
   transform: {
     '^.+\\.ts$': [
       'ts-jest',

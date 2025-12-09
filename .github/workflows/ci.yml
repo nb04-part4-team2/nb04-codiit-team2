@@ -51,6 +51,9 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Generate Prisma Client    # 이 줄 추가
+        run: npx prisma generate
+
       - name: Run tests
         run: npm test
 
