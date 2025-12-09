@@ -1,8 +1,7 @@
 import { Request, Response } from 'express';
 import { ProductService } from './product.service.js';
 import { CreateProductDto } from './product.dto.js';
-import { UnauthorizedError, ForbiddenError } from '@/common/utils/errors.js';
-import { UserType } from '@prisma/client';
+import { UnauthorizedError } from '@/common/utils/errors.js';
 
 export class ProductController {
   constructor(private productService: ProductService) {}
@@ -13,10 +12,7 @@ export class ProductController {
       throw new UnauthorizedError('로그인이 필요합니다.');
     }
 
-    // 권한(Role) 명시적 검사 추가
-    if (req.user.type !== UserType.SELLER) {
-      throw new ForbiddenError('상품 등록 권한이 없습니다. (판매자만 가능)');
-    }
+    // 권한 검사는 라우터의 onlySeller 미들웨어에서 처리하므로 제거함
 
     const userId = req.user.id;
     const requestBody = req.body as CreateProductDto;
