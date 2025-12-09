@@ -1,9 +1,9 @@
 import { Router } from 'express';
 import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 import { validate } from '@/common/middlewares/validate.middleware.js';
-import { authenticate } from '@/common/middlewares/auth.middleware.js';
+import { authenticate, onlySeller } from '@/common/middlewares/auth.middleware.js'; // onlySeller 추가
 import { productController } from './product.container.js';
-import { createProductSchema } from './product.dto.js';
+import { createProductSchema } from './product.schema.js';
 import { nestedInquiryRouter } from '../inquiry/inquiry.router.js';
 
 const productRouter = Router();
@@ -12,6 +12,7 @@ const productRouter = Router();
 productRouter.post(
   '/',
   authenticate,
+  onlySeller, // 판매자 권한 확인 미들웨어 추가
   validate(createProductSchema, 'body'),
   asyncHandler(productController.create),
 );
