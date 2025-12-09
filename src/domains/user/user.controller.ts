@@ -1,5 +1,6 @@
 import { Request, Response } from 'express';
 import { UserService } from './user.service.js';
+import { UnauthorizedError } from '@/common/utils/errors.js';
 
 export class UserController {
   private userService: UserService;
@@ -14,7 +15,11 @@ export class UserController {
   };
 
   getMe = async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
+    if (!req.user) {
+      throw new UnauthorizedError('인증이 필요합니다.');
+    }
+
+    const userId = req.user.id;
     const result = await this.userService.getMe(userId);
     res.status(200).json(result);
   };

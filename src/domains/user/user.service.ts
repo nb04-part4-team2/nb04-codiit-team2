@@ -3,7 +3,12 @@ import { env } from '@/config/constants.js';
 import { CreateUserDto, UpdateUserDto } from './user.schema.js';
 import { UserRepository } from './user.repository.js';
 import type { UserResponseDto, UserWithGrade } from './user.dto.js';
-import { ConflictError, NotFoundError, UnauthorizedError } from '@/common/utils/errors.js';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError,
+} from '@/common/utils/errors.js';
 
 export class UserService {
   private userRepository: UserRepository;
@@ -45,6 +50,10 @@ export class UserService {
 
   async updateMe(userId: string, dto: UpdateUserDto, imageUrl?: string): Promise<UserResponseDto> {
     const { name, password, currentPassword } = dto;
+
+    if (!name && !password && !imageUrl) {
+      throw new BadRequestError('수정할 내용이 없습니다.');
+    }
 
     const user = await this.userRepository.findById(userId);
 
