@@ -1,7 +1,7 @@
 import type { Prisma } from '@prisma/client';
 import type { OffsetQuery, CreateInquiryBody, UpdateInquiryBody } from './inquiry.dto.js';
 import type { InquiryRepository } from './inquiry.repository.js';
-import { NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
+import { NotFoundError, ForbiddenError, BadRequestError } from '@/common/utils/errors.js';
 
 export class InquiryService {
   constructor(private inquiryRepository: InquiryRepository) {}
@@ -77,7 +77,10 @@ export class InquiryService {
     const skip = (pageInt - 1) * take;
 
     const countQuery: Prisma.InquiryCountArgs = {
-      where: { userId },
+      where: {
+        ...(status && { status }),
+        userId,
+      },
     };
 
     const getQuery: Prisma.InquiryFindManyArgs = {
@@ -127,6 +130,10 @@ export class InquiryService {
       ...(content !== findInquiry.content && { content }),
       ...(isSecret !== findInquiry.isSecret && { isSecret }),
     };
+
+    if (Object.keys(updateData).length === 0) {
+      throw new BadRequestError('수정할 내용이 없습니다.');
+    }
 
     const inquiry = await this.inquiryRepository.updateInquiry(id, updateData);
 
