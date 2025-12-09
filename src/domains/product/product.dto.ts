@@ -1,26 +1,10 @@
 import { z } from 'zod';
+import { createProductSchema } from './product.schema.js';
 
-// 상품 등록 요청-
-export const createProductSchema = z.object({
-  name: z.string(),
-  price: z.number(),
-  content: z.string(),
-  image: z.string(),
-  discountRate: z.number(),
-  discountStartTime: z.string().datetime().optional().nullable(),
-  discountEndTime: z.string().datetime().optional().nullable(),
-  categoryName: z.string(),
-  stocks: z.array(
-    z.object({
-      sizeId: z.number(),
-      quantity: z.number(),
-    }),
-  ),
-});
-
+// Zod 스키마로부터 타입 추론
 export type CreateProductDto = z.infer<typeof createProductSchema>;
 
-// 응답 데이터 구조
+// --- 응답 DTO ---
 
 export interface ReviewStatsDto {
   rate1Length: number;
@@ -65,7 +49,7 @@ export interface StocksDto {
   };
 }
 
-// 최종 응답 DTO
+// 최종 상세 응답 DTO
 export interface DetailProductResponse {
   id: string;
   name: string;
@@ -74,22 +58,16 @@ export interface DetailProductResponse {
   createdAt: string;
   updatedAt: string;
   reviewsRating: number;
-
   storeId: string;
   storeName: string;
-
   price: number;
   discountPrice: number;
   discountRate: number;
   discountStartTime: string | null;
   discountEndTime: string | null;
-
   reviewsCount: number;
   reviews: ReviewStatsDto[];
-
   inquiries: DetailInquiryDto[];
-
   category: CategoryResponseDto[];
-
   stocks: StocksDto[];
 }
