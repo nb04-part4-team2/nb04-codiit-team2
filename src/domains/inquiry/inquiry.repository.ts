@@ -175,20 +175,34 @@ export class InquiryRepository {
   };
 
   // 답변 생성
-  public createReply = async (createData: Prisma.ReplyCreateInput) => {
-    const reply = await this.prisma.reply.create({
-      data: createData,
-      select: {
-        id: true,
-        inquiryId: true,
-        userId: true,
-        content: true,
-        createdAt: true,
-        updatedAt: true,
-      },
-    });
+  public createReply = async (
+    createData: Prisma.ReplyCreateInput,
+    id: string,
+    updateData: Prisma.InquiryUpdateInput,
+  ) => {
+    // 트랜잭션 사용
+    return this.prisma.$transaction(async (tx) => {
+      // 답변 생성
+      const reply = await tx.reply.create({
+        data: createData,
+        select: {
+          id: true,
+          inquiryId: true,
+          userId: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
 
-    return reply;
+      // 문의 상태 변경
+      await tx.inquiry.update({
+        where: { id },
+        data: updateData,
+      });
+
+      return reply;
+    });
   };
 
   // 상품 찾기

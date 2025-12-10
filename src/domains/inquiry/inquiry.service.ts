@@ -184,7 +184,12 @@ export class InquiryService {
       },
     };
 
-    const reply = await this.inquiryRepository.createReply(createData);
+    const updateData: Prisma.InquiryUpdateInput = {
+      status: 'CompletedAnswer',
+    };
+
+    // 트랜잭션 사용
+    const reply = await this.inquiryRepository.createReply(createData, id, updateData);
 
     return reply;
   };

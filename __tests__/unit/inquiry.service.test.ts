@@ -567,12 +567,15 @@ describe('InquiryService 유닛 테스트', () => {
           },
         },
       };
+      const updateData = {
+        status: InquiryStatus.CompletedAnswer,
+      };
 
       // --- 검증 (Assert) ---
       expect(inquiryRepository.findInquiryById).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.findInquiryById).toHaveBeenCalledWith(inquiryId);
       expect(inquiryRepository.createReply).toHaveBeenCalledTimes(1);
-      expect(inquiryRepository.createReply).toHaveBeenCalledWith(createData);
+      expect(inquiryRepository.createReply).toHaveBeenCalledWith(createData, inquiryId, updateData);
       expect(result).toEqual(mockReply);
     });
 

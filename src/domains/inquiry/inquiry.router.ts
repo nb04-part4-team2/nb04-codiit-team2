@@ -2,7 +2,7 @@ import { Router } from 'express';
 import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 import { validate } from '@/common/middlewares/validate.middleware.js';
 import { inquiryController } from './inquiry.container.js';
-import { authenticate } from '@/common/middlewares/auth.middleware.js';
+import { authenticate, onlySeller } from '@/common/middlewares/auth.middleware.js';
 import {
   idSchema,
   productIdSchema,
@@ -59,6 +59,7 @@ inquiryRouter
   .route('/:id/replies')
   .post(
     authenticate,
+    onlySeller,
     validate(idSchema, 'params'),
     validate(createReply, 'body'),
     asyncHandler(inquiryController.createReply),
