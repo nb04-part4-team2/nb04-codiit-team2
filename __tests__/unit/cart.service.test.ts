@@ -99,10 +99,29 @@ describe('CartService', () => {
     //   // then
     //   await expect(mockCartService.getCart(userId)).rejects.toThrow(ForbiddenError);
     // });
-    it('해당 유저의 장바구니가 없는 경우 404 에러 반환', async () => {
+    it('해당 유저의 장바구니가 없는 경우 빈 배열 반환', async () => {
       // given
       const userId = 'testBuyer1';
       mockCartRepo.findByUserId.mockResolvedValue(null);
+      // when
+      const result = await mockCartService.getCart(userId);
+      // then
+      expect(result).toEqual([]);
+    });
+    it('해당 유저의 장바구니에 아이템이 하나도 없는 경우 404 에러 반환', async () => {
+      // given
+      const userId = 'testBuyer1';
+      const date1 = new Date('2025-12-04T05:05:00.861Z');
+      const date2 = new Date('2025-12-04T05:05:00.861Z');
+      const cartResult = {
+        id: 'testCart1',
+        buyerId: 'testBuyer1',
+        quantity: 1,
+        createdAt: date1,
+        updatedAt: date2,
+        items: [],
+      };
+      mockCartRepo.findByUserId.mockResolvedValue(cartResult);
       // when
       // then
       await expect(mockCartService.getCart(userId)).rejects.toThrow(NotFoundError);
