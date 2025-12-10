@@ -1,5 +1,10 @@
 import { Product, Category, Stock, Size, Review, Inquiry, Reply, User } from '@prisma/client';
-import { DetailProductResponse, ReviewStatsDto } from './product.dto.js';
+import {
+  DetailProductResponse,
+  ProductListDto,
+  ProductListResponse,
+  ReviewStatsDto,
+} from './product.dto.js';
 
 type InquiryWithRelations = Inquiry & {
   reply: (Reply & { user: User }) | null;
@@ -15,6 +20,56 @@ type ProductWithRelations = Product & {
 };
 
 export class ProductMapper {
+  /**
+   * 상품 목록 조회 응답 변환
+   * @param products DB에서 조회된 상품 배열 (store 정보 포함)
+   * @param totalCount 전체 상품 수
+   */
+  static toProductListResponse(
+    products: (Product & { store: { id: string; name: string } })[],
+    totalCount: number,
+  ): ProductListResponse {
+    return {
+      list: products.map((product) => this.toProductListDto(product)),
+      totalCount,
+    };
+  }
+
+  /**
+   * 단일 상품을 리스트 아이템 DTO로 변환 (내부 헬퍼 함수)
+   */
+  private static toProductListDto(
+    product: Product & { store: { id: string; name: string } },
+  ): ProductListDto {
+    // 할인가 계산 (할인율이 없으면 정가 그대로, 소수점 버림)
+    const discountPrice =
+      product.discountRate > 0
+        ? Math.floor(product.price * (1 - product.discountRate / 100))
+        : product.price;
+
+    return {
+      id: product.id,
+      storeId: product.storeId,
+      storeName: product.store.name, // Join된 스토어 이름
+      name: product.name,
+      image: product.image,
+      price: product.price,
+      discountPrice: discountPrice, // 계산된 할인가
+      discountRate: product.discountRate,
+      discountStartTime: product.discountStartTime?.toISOString() ?? null,
+      discountEndTime: product.discountEndTime?.toISOString() ?? null,
+      reviewsCount: product.reviewsCount,
+      reviewsRating: product.reviewsRating,
+      createdAt: product.createdAt.toISOString(),
+      updatedAt: product.updatedAt.toISOString(),
+      sales: product.salesCount, // DB 필드명(salesCount) -> DTO 필드명(sales) 매핑
+      isSoldOut: product.isSoldOut,
+    };
+  }
+
+  /**
+   * 상품 상세 조회 응답 변환
+   */
   static toDetailResponse(product: ProductWithRelations): DetailProductResponse {
     // 리뷰 통계 계산 로직 구현
     // 기본값 초기화
@@ -51,7 +106,6 @@ export class ProductMapper {
             stats.rate5Length++;
             break;
           default:
-            // 1~5점 범위를 벗어난 경우 처리 (필요시 로깅 등)
             break;
         }
       });
@@ -66,7 +120,7 @@ export class ProductMapper {
       createdAt: product.createdAt.toISOString(),
       updatedAt: product.updatedAt.toISOString(),
 
-      // DB에 저장된 평점 사용 (필요시 위에서 계산한 stats.sumScore / reviews.length로 대체 가능)
+      // DB에 저장된 평점 사용
       reviewsRating: product.reviewsRating ?? 0,
 
       storeId: product.storeId,
