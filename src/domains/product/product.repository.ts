@@ -25,7 +25,13 @@ export interface CreateProductData {
   }[];
 }
 
+<<<<<<< HEAD
 // 레포지토리 조회용 파라미터 인터페이스
+=======
+// 레포지토리 조회용 파라미터 인터페이스 정의
+// DTO에 의존하지 않고, 순수하게 DB 조회에 필요한 데이터 구조를 정의합니다.
+// 이를 통해 Controller/DTO 계층의 변경이 DB 계층에 영향을 주지 않도록 분리합니다.
+>>>>>>> 7da17f9 (feat: 상품 목록 조회를 위한 레포지토리 코드 작성)
 export interface FindProductsParams {
   page: number;
   pageSize: number;
@@ -86,6 +92,7 @@ export class ProductRepository {
     const { page, pageSize, search, sort, priceMin, priceMax, categoryName, size, favoriteStore } =
       params;
 
+<<<<<<< HEAD
     // Where 조건 구성
     const where: Prisma.ProductWhereInput = {
       ...(search && {
@@ -94,29 +101,63 @@ export class ProductRepository {
           { store: { name: { contains: search, mode: 'insensitive' } } },
         ],
       }),
+=======
+    // Where 조건 절 구성 (동적 쿼리)
+    const where: Prisma.ProductWhereInput = {
+      // 검색 (상품명 OR 스토어명)
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } }, // 대소문자 무시
+          { store: { name: { contains: search, mode: 'insensitive' } } },
+        ],
+      }),
+      // 가격 범위
+>>>>>>> 7da17f9 (feat: 상품 목록 조회를 위한 레포지토리 코드 작성)
       price: {
         ...(priceMin !== undefined && { gte: priceMin }),
         ...(priceMax !== undefined && { lte: priceMax }),
       },
+<<<<<<< HEAD
       ...(categoryName && {
         category: { name: categoryName },
       }),
+=======
+      // 카테고리 필터
+      ...(categoryName && {
+        category: { name: categoryName },
+      }),
+      // 사이즈 필터 (재고 테이블과 조인하여 확인)
+>>>>>>> 7da17f9 (feat: 상품 목록 조회를 위한 레포지토리 코드 작성)
       ...(size && {
         stocks: {
           some: {
             size: {
+<<<<<<< HEAD
               OR: [{ en: size }, { ko: size }], // 영문/한글 사이즈 모두 검색
+=======
+              // ko(한글) 또는 en(영문) 중 매칭되는 것이 있는지 확인
+              OR: [{ en: size }, { ko: size }],
+>>>>>>> 7da17f9 (feat: 상품 목록 조회를 위한 레포지토리 코드 작성)
             },
           },
         },
       }),
+<<<<<<< HEAD
+=======
+      // 관심 스토어 (특정 스토어 ID 필터링)
+>>>>>>> 7da17f9 (feat: 상품 목록 조회를 위한 레포지토리 코드 작성)
       ...(favoriteStore && {
         storeId: favoriteStore,
       }),
     };
 
+<<<<<<< HEAD
     // OrderBy 정렬 구성
     let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' };
+=======
+    // 2. OrderBy 정렬 조건 구성
+    let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' }; // 기본값
+>>>>>>> 7da17f9 (feat: 상품 목록 조회를 위한 레포지토리 코드 작성)
 
     switch (sort) {
       case 'lowPrice':
@@ -132,7 +173,11 @@ export class ProductRepository {
         orderBy = { reviewsRating: 'desc' };
         break;
       case 'salesRanking':
+<<<<<<< HEAD
         orderBy = { salesCount: 'desc' };
+=======
+        orderBy = { salesCount: 'desc' }; // Prisma 스키마에 salesCount 필드가 있어야 함
+>>>>>>> 7da17f9 (feat: 상품 목록 조회를 위한 레포지토리 코드 작성)
         break;
       case 'recent':
       default:
@@ -140,9 +185,17 @@ export class ProductRepository {
         break;
     }
 
+<<<<<<< HEAD
     const skip = (page - 1) * pageSize;
 
     // 트랜잭션으로 데이터 + 카운트 조회
+=======
+    // 페이지네이션 계산
+    const skip = (page - 1) * pageSize;
+
+    // 트랜잭션으로 데이터 조회 및 전체 카운트 동시에 수행
+    // (리스트 조회의 경우 DB 부하를 줄이기 위해 include를 최소화했습니다. 필요 시 추가하시면 됩니다.)
+>>>>>>> 7da17f9 (feat: 상품 목록 조회를 위한 레포지토리 코드 작성)
     const [products, totalCount] = await this.prisma.$transaction([
       this.prisma.product.findMany({
         where,
@@ -151,9 +204,14 @@ export class ProductRepository {
         take: pageSize,
         include: {
           store: {
+<<<<<<< HEAD
             select: { id: true, name: true },
           },
           // 리스트에서는 stocks, category 전체 정보가 필요 없으므로 include 최소화
+=======
+            select: { id: true, name: true }, // 목록에 필요한 스토어 이름만 조회
+          },
+>>>>>>> 7da17f9 (feat: 상품 목록 조회를 위한 레포지토리 코드 작성)
         },
       }),
       this.prisma.product.count({ where }),
