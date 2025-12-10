@@ -3,7 +3,12 @@ import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 import { validate } from '@/common/middlewares/validate.middleware.js';
 import { authenticate, onlySeller } from '@/common/middlewares/auth.middleware.js';
 import { storeController } from './store.container.js';
-import { createStoreSchema, storeIdParamSchema, storeProductQuerySchema } from './store.schema.js';
+import {
+  createStoreSchema,
+  updateStoreSchema,
+  storeIdParamSchema,
+  storeProductQuerySchema,
+} from './store.schema.js';
 
 const storeRouter = Router();
 
@@ -38,6 +43,16 @@ storeRouter.get(
   '/:storeId',
   validate(storeIdParamSchema, 'params'),
   asyncHandler(storeController.getStoreDetail),
+);
+
+// PATCH /api/stores/:storeId - 스토어 수정 (판매자 전용, 본인 스토어만)
+storeRouter.patch(
+  '/:storeId',
+  authenticate,
+  onlySeller,
+  validate(storeIdParamSchema, 'params'),
+  validate(updateStoreSchema, 'body'),
+  asyncHandler(storeController.updateStore),
 );
 
 export { storeRouter };
