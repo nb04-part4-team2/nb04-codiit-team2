@@ -9,6 +9,12 @@ interface CreateUserData {
   gradeId: string;
 }
 
+interface UpdateUserData {
+  name?: string;
+  password?: string;
+  image?: string;
+}
+
 export class UserRepository {
   async create(data: CreateUserData) {
     return prisma.user.create({
@@ -27,6 +33,14 @@ export class UserRepository {
   async findById(id: string) {
     return prisma.user.findUnique({
       where: { id },
+      include: { grade: true },
+    });
+  }
+
+  async update(id: string, data: UpdateUserData) {
+    return prisma.user.update({
+      where: { id },
+      data,
       include: { grade: true },
     });
   }

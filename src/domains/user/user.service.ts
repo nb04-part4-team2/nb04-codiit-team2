@@ -1,9 +1,14 @@
 import bcrypt from 'bcrypt';
 import { env } from '@/config/constants.js';
-import { CreateUserDto } from './user.schema.js';
+import { CreateUserDto, UpdateUserDto } from './user.schema.js';
 import { UserRepository } from './user.repository.js';
 import type { UserResponseDto, UserWithGrade } from './user.dto.js';
-import { ConflictError } from '@/common/utils/errors.js';
+import {
+  BadRequestError,
+  ConflictError,
+  NotFoundError,
+  UnauthorizedError,
+} from '@/common/utils/errors.js';
 
 export class UserService {
   private userRepository: UserRepository;
@@ -31,6 +36,54 @@ export class UserService {
     });
 
     return this.toUserResponse(user);
+  }
+
+  async getMe(userId: string): Promise<UserResponseDto> {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      throw new NotFoundError('유저를 찾을 수 없습니다.');
+    }
+
+    return this.toUserResponse(user);
+  }
+
+  async updateMe(userId: string, dto: UpdateUserDto, imageUrl?: string): Promise<UserResponseDto> {
+    const { name, password, currentPassword } = dto;
+
+    if (!name && !password && !imageUrl) {
+      throw new BadRequestError('수정할 내용이 없습니다.');
+    }
+
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      throw new NotFoundError('유저를 찾을 수 없습니다.');
+    }
+
+    const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
+
+    if (!isPasswordValid) {
+      throw new UnauthorizedError('현재 비밀번호가 일치하지 않습니다.');
+    }
+
+    const updateData: { name?: string; password?: string; image?: string } = {};
+
+    if (name) {
+      updateData.name = name;
+    }
+
+    if (password) {
+      updateData.password = await bcrypt.hash(password, Number(env.BCRYPT_ROUNDS));
+    }
+
+    if (imageUrl) {
+      updateData.image = imageUrl;
+    }
+
+    const updatedUser = await this.userRepository.update(userId, updateData);
+
+    return this.toUserResponse(updatedUser);
   }
 
   private toUserResponse(user: UserWithGrade): UserResponseDto {
