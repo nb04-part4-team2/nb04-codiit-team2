@@ -1,5 +1,11 @@
-import { GetCartResponse, GetCartRawData } from '@/domains/cart/cart.dto.js';
 import {
+  GetCartResponse,
+  GetCartRawData,
+  CreateCartRawData,
+  CreateCartResponse,
+} from '@/domains/cart/cart.dto.js';
+import {
+  CartBase,
   CartItemRawData,
   CartItemResponse,
   ProductRawData,
@@ -9,7 +15,7 @@ import {
   StoreRawData,
   StoreResponse,
 } from '@/domains/cart/cart.type.js';
-import { toStoreResponse } from '../store/store.mapper.js';
+import { toStoreResponse as getStoreResponse } from '@/domains/store/store.mapper.js';
 
 // ============================================
 // 응답 객체 조립용 부품들
@@ -29,10 +35,10 @@ const toStockResponse = (stock: StockRawData): StockResponse => ({
 });
 
 // 반환 형태가 유사한 store.mapper.ts의 toStoreResponse 재사용
-const getStoreResponse = (storeRawData: StoreRawData): StoreResponse => {
+const toStoreResponse = (storeRawData: StoreRawData): StoreResponse => {
   // 매개변수 타입 일치용 더미 데이터 추가
   const storeWithDummy = { ...storeRawData, detailAddress: null };
-  const { detailAddress: _detailAddress, ...store } = toStoreResponse(storeWithDummy);
+  const { detailAddress: _detailAddress, ...store } = getStoreResponse(storeWithDummy);
   return store;
 };
 
@@ -45,7 +51,7 @@ const toProductResponse = (productRawData: ProductRawData): ProductResponse => (
   discountRate: productRawData.discountRate,
   discountStartTime: productRawData.discountStartTime?.toISOString() ?? null,
   discountEndTime: productRawData.discountEndTime?.toISOString() ?? null,
-  store: getStoreResponse(productRawData.store),
+  store: toStoreResponse(productRawData.store),
   stocks: productRawData.stocks.map(toStockResponse),
 });
 
@@ -60,14 +66,24 @@ const toItemResponse = (itemRawData: CartItemRawData): CartItemResponse => ({
   product: toProductResponse(itemRawData.product),
 });
 
+const toCartBaseResponse = (cart: CartBase<Date>): CartBase<string> => ({
+  id: cart.id,
+  buyerId: cart.buyerId,
+  quantity: cart.quantity,
+  createdAt: cart.createdAt.toISOString(),
+  updatedAt: cart.updatedAt.toISOString(),
+});
+
 // ============================================
 // 장바구니 조회 응답 객체 변환
 // ============================================
-export const toCartResponse = (rawCart: GetCartRawData): GetCartResponse => ({
-  id: rawCart.id,
-  buyerId: rawCart.buyerId,
-  quantity: rawCart.quantity,
-  createdAt: rawCart.createdAt.toISOString(),
-  updatedAt: rawCart.updatedAt.toISOString(),
+export const toGetCartResponse = (rawCart: GetCartRawData): GetCartResponse => ({
+  ...toCartBaseResponse(rawCart),
   items: rawCart.items.map(toItemResponse),
 });
+// ============================================
+// 장바구니 생성 응답 객체 변환
+// ============================================
+export const toCreateCartResponse = (rawCart: CreateCartRawData): CreateCartResponse => {
+  return toCartBaseResponse(rawCart);
+};

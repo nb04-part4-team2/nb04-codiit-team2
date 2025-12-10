@@ -1,6 +1,6 @@
 import { CartRepository } from '@/domains/cart/cart.repository.js';
 import { NotFoundError } from '@/common/utils/errors.js';
-import { GetCartRawData } from '@/domains/cart/cart.dto.js';
+import { CreateCartRawData, GetCartRawData } from '@/domains/cart/cart.dto.js';
 
 export class CartService {
   constructor(private cartRepository: CartRepository) {}
@@ -11,7 +11,7 @@ export class CartService {
     }
     return cart;
   }
-  async createCart(userId: string) {
+  async createCart(userId: string): Promise<CreateCartRawData> {
     const cart = await this.cartRepository.createCart(userId);
     return cart;
   }
