@@ -20,11 +20,6 @@ type ProductWithRelations = Product & {
 };
 
 export class ProductMapper {
-  /**
-   * 상품 목록 조회 응답 변환
-   * @param products DB에서 조회된 상품 배열 (store 정보 포함)
-   * @param totalCount 전체 상품 수
-   */
   static toProductListResponse(
     products: (Product & { store: { id: string; name: string } })[],
     totalCount: number,
@@ -35,26 +30,31 @@ export class ProductMapper {
     };
   }
 
-  /**
-   * 단일 상품을 리스트 아이템 DTO로 변환 (내부 헬퍼 함수)
-   */
   private static toProductListDto(
     product: Product & { store: { id: string; name: string } },
   ): ProductListDto {
-    // 할인가 계산 (할인율이 없으면 정가 그대로, 소수점 버림)
-    const discountPrice =
-      product.discountRate > 0
-        ? Math.floor(product.price * (1 - product.discountRate / 100))
-        : product.price;
+    // 할인 기간 체크 로직 추가
+    const now = new Date();
+    const isDiscountActive =
+      product.discountRate > 0 &&
+      product.discountStartTime &&
+      product.discountEndTime &&
+      now >= product.discountStartTime &&
+      now <= product.discountEndTime;
+
+    // 할인 기간일 때만 할인가 계산, 아니면 정가 사용
+    const discountPrice = isDiscountActive
+      ? Math.floor(product.price * (1 - product.discountRate / 100))
+      : product.price;
 
     return {
       id: product.id,
       storeId: product.storeId,
-      storeName: product.store.name, // Join된 스토어 이름
+      storeName: product.store.name,
       name: product.name,
       image: product.image,
       price: product.price,
-      discountPrice: discountPrice, // 계산된 할인가
+      discountPrice, // 수정된 할인가 적용
       discountRate: product.discountRate,
       discountStartTime: product.discountStartTime?.toISOString() ?? null,
       discountEndTime: product.discountEndTime?.toISOString() ?? null,
@@ -62,17 +62,26 @@ export class ProductMapper {
       reviewsRating: product.reviewsRating,
       createdAt: product.createdAt.toISOString(),
       updatedAt: product.updatedAt.toISOString(),
-      sales: product.salesCount, // DB 필드명(salesCount) -> DTO 필드명(sales) 매핑
+      sales: product.salesCount,
       isSoldOut: product.isSoldOut,
     };
   }
 
-  /**
-   * 상품 상세 조회 응답 변환
-   */
   static toDetailResponse(product: ProductWithRelations): DetailProductResponse {
-    // 리뷰 통계 계산 로직 구현
-    // 기본값 초기화
+    // 상세 조회에도 동일한 할인 로직 적용
+    const now = new Date();
+    const isDiscountActive =
+      product.discountRate > 0 &&
+      product.discountStartTime &&
+      product.discountEndTime &&
+      now >= product.discountStartTime &&
+      now <= product.discountEndTime;
+
+    const discountPrice = isDiscountActive
+      ? Math.floor(product.price * (1 - product.discountRate / 100))
+      : product.price;
+
+    // 리뷰 통계 계산
     const stats: ReviewStatsDto = {
       rate1Length: 0,
       rate2Length: 0,
@@ -82,13 +91,9 @@ export class ProductMapper {
       sumScore: 0,
     };
 
-    // 리뷰 데이터가 존재하면 순회하며 통계 집계
     if (product.reviews && product.reviews.length > 0) {
       product.reviews.forEach((review) => {
-        // 총점 누적
         stats.sumScore += review.rating;
-
-        // 별점별 개수 카운팅
         switch (review.rating) {
           case 1:
             stats.rate1Length++;
@@ -105,13 +110,10 @@ export class ProductMapper {
           case 5:
             stats.rate5Length++;
             break;
-          default:
-            break;
         }
       });
     }
 
-    // 응답 객체 조립
     return {
       id: product.id,
       name: product.name,
@@ -119,26 +121,16 @@ export class ProductMapper {
       content: product.content || '',
       createdAt: product.createdAt.toISOString(),
       updatedAt: product.updatedAt.toISOString(),
-
-      // DB에 저장된 평점 사용
       reviewsRating: product.reviewsRating ?? 0,
-
       storeId: product.storeId,
       storeName: product.store.name,
-
       price: product.price,
-      // 할인 가격 계산 (소수점 버림)
-      discountPrice: Math.floor(product.price * (1 - product.discountRate / 100)),
+      discountPrice, // 수정된 할인가 적용
       discountRate: product.discountRate,
       discountStartTime: product.discountStartTime?.toISOString() ?? null,
       discountEndTime: product.discountEndTime?.toISOString() ?? null,
-
       reviewsCount: product._count?.reviews ?? 0,
-
-      // 계산된 통계 객체를 배열에 담아 반환
       reviews: [stats],
-
-      // 문의 매핑
       inquiries: (product.inquiries ?? []).map((inquiry) => ({
         id: inquiry.id,
         title: inquiry.title,
@@ -157,24 +149,12 @@ export class ProductMapper {
             }
           : undefined,
       })),
-
-      // 카테고리 매핑
-      category: [
-        {
-          name: product.category.name,
-          id: product.category.id,
-        },
-      ],
-
-      // 재고 매핑
+      category: [{ name: product.category.name, id: product.category.id }],
       stocks: product.stocks.map((stock) => ({
         id: stock.id,
         productId: stock.productId,
         quantity: stock.quantity,
-        size: {
-          id: stock.sizeId,
-          name: stock.size.en,
-        },
+        size: { id: stock.sizeId, name: stock.size.en },
       })),
     };
   }
