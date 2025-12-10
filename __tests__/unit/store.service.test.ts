@@ -2,8 +2,12 @@ import { jest } from '@jest/globals';
 import { StoreRepository } from '../../src/domains/store/store.repository.js';
 import { StoreService } from '../../src/domains/store/store.service.js';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import { createStoreMock, createStoreInputMock } from '../mocks/store.mock.js';
-import { NotFoundError } from '../../src/common/utils/errors.js';
+import {
+  createStoreMock,
+  createStoreInputMock,
+  updateStoreInputMock,
+} from '../mocks/store.mock.js';
+import { NotFoundError, ForbiddenError } from '../../src/common/utils/errors.js';
 
 describe('StoreService 유닛 테스트', () => {
   let storeService: StoreService;
@@ -210,6 +214,61 @@ describe('StoreService 유닛 테스트', () => {
 
       // --- 검증 (Assert) ---
       expect(result.products[0].isDiscount).toBe(true);
+    });
+  });
+
+  // 스토어 수정
+  describe('updateStore', () => {
+    it('스토어 수정 성공', async () => {
+      // --- 준비 (Arrange) ---
+      const store = createStoreMock({ id: storeId, userId });
+      const updateData = updateStoreInputMock({ name: '수정된 스토어명' });
+      const updatedStore = createStoreMock({
+        id: storeId,
+        userId,
+        name: '수정된 스토어명',
+      });
+
+      storeRepository.findById.mockResolvedValue(store);
+      storeRepository.update.mockResolvedValue(updatedStore);
+
+      // --- 실행 (Act) ---
+      const result = await storeService.updateStore(storeId, userId, updateData);
+
+      // --- 검증 (Assert) ---
+      expect(storeRepository.findById).toHaveBeenCalledWith(storeId);
+      expect(storeRepository.update).toHaveBeenCalledWith(storeId, updateData);
+      expect(result.name).toBe('수정된 스토어명');
+    });
+
+    it('스토어가 존재하지 않으면 NotFoundError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      const updateData = updateStoreInputMock();
+      storeRepository.findById.mockResolvedValue(null);
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(storeService.updateStore(storeId, userId, updateData)).rejects.toThrow(
+        NotFoundError,
+      );
+      expect(storeRepository.update).not.toHaveBeenCalled();
+    });
+
+    it('본인 스토어가 아니면 ForbiddenError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      const otherUserId = 'other-user-id';
+      const store = createStoreMock({ id: storeId, userId: otherUserId }); // 다른 사용자의 스토어
+      const updateData = updateStoreInputMock();
+
+      storeRepository.findById.mockResolvedValue(store);
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(storeService.updateStore(storeId, userId, updateData)).rejects.toThrow(
+        ForbiddenError,
+      );
+      await expect(storeService.updateStore(storeId, userId, updateData)).rejects.toThrow(
+        '본인 스토어만 수정할 수 있습니다.',
+      );
+      expect(storeRepository.update).not.toHaveBeenCalled();
     });
   });
 });

@@ -1,7 +1,7 @@
 import type { StoreRepository } from './store.repository.js';
-import type { CreateStoreBody, StoreProductQuery } from './store.schema.js';
+import type { CreateStoreBody, UpdateStoreBody, StoreProductQuery } from './store.schema.js';
 import type { ProductWithStock } from './store.mapper.js';
-import { ConflictError, NotFoundError } from '@/common/utils/errors.js';
+import { ConflictError, NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
 
 export class StoreService {
   constructor(private storeRepository: StoreRepository) {}
@@ -94,5 +94,24 @@ export class StoreService {
     });
 
     return { products: productsWithStock, totalCount };
+  }
+
+  // 스토어 수정 (본인 스토어만)
+  async updateStore(storeId: string, userId: string, data: UpdateStoreBody) {
+    // 스토어 존재 확인
+    const store = await this.storeRepository.findById(storeId);
+    if (!store) {
+      throw new NotFoundError('스토어를 찾을 수 없습니다.');
+    }
+
+    // 본인 스토어인지 확인
+    if (store.userId !== userId) {
+      throw new ForbiddenError('본인 스토어만 수정할 수 있습니다.');
+    }
+
+    // 스토어 수정
+    const updatedStore = await this.storeRepository.update(storeId, data);
+
+    return updatedStore;
   }
 }

@@ -116,7 +116,7 @@ model Store {
 
   // FK
   userId String @unique // 유저 한 명당 가게 하나라고 가정
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   // Relations
   products Product[]
