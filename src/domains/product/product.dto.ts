@@ -1,8 +1,9 @@
 import { z } from 'zod';
-import { createProductSchema } from './product.schema.js';
+import { createProductSchema, productListSchema } from './product.schema.js';
 
 // Zod 스키마로부터 타입 추론
 export type CreateProductDto = z.infer<typeof createProductSchema>;
+export type ProductListQueryDto = z.infer<typeof productListSchema>;
 
 // --- 응답 DTO ---
 
@@ -47,6 +48,31 @@ export interface StocksDto {
     id: number;
     name: string;
   };
+}
+
+export interface ProductListDto {
+  id: string;
+  storeId: string;
+  storeName: string; // JOIN을 통해 가져올 스토어 이름
+  name: string;
+  image: string;
+  price: number;
+  discountPrice: number; // 할인이 적용된 최종 가격 (계산 필요)
+  discountRate: number;
+  discountStartTime: string | null;
+  discountEndTime: string | null;
+  reviewsCount: number;
+  reviewsRating: number;
+  createdAt: string;
+  updatedAt: string;
+  sales: number; // 판매량
+  isSoldOut: boolean;
+}
+
+// 최종적으로 클라이언트에게 내려줄 목록 응답 형태 (페이지네이션 정보 포함)
+export interface ProductListResponse {
+  list: ProductListDto[]; // 위에서 정의한 상품 객체 배열
+  totalCount: number; // 검색 조건에 맞는 전체 상품 수 (페이지네이션 계산용)
 }
 
 // 최종 상세 응답 DTO
