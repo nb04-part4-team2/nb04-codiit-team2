@@ -174,10 +174,76 @@ export class InquiryRepository {
     return inquiry;
   };
 
+  // 답변 조회
+  // public getReplyById = async (id: string) => {
+  //   const reply = await this.prisma.reply.findUnique({
+  //     where: { id },
+  //     select: {
+  //       id: true,
+  //       userId: true,
+  //       productId: true,
+  //       title: true,
+  //       content: true,
+  //       status: true,
+  //       isSecret: true,
+  //       createdAt: true,
+  //       updatedAt: true,
+  //       reply: {
+  //         select: {
+  //           id: true,
+  //           content: true,
+  //           createdAt: true,
+  //           updatedAt: true,
+  //           user: {
+  //             select: {
+  //               name: true,
+  //               id: true,
+  //             },
+  //           },
+  //         },
+  //       },
+  //     },
+  //   });
+
+  //   return reply;
+  // };
+
   // 답변 생성
-  public createReply = async (createData: Prisma.ReplyCreateInput) => {
-    const reply = await this.prisma.reply.create({
-      data: createData,
+  public createReply = async (
+    createData: Prisma.ReplyCreateInput,
+    id: string,
+    updateData: Prisma.InquiryUpdateInput,
+  ) => {
+    // 트랜잭션 사용
+    return this.prisma.$transaction(async (tx) => {
+      // 답변 생성
+      const reply = await tx.reply.create({
+        data: createData,
+        select: {
+          id: true,
+          inquiryId: true,
+          userId: true,
+          content: true,
+          createdAt: true,
+          updatedAt: true,
+        },
+      });
+
+      // 문의 상태 변경
+      await tx.inquiry.update({
+        where: { id },
+        data: updateData,
+      });
+
+      return reply;
+    });
+  };
+
+  // 답변 수정
+  public updateReply = async (id: string, updateData: Prisma.ReplyUpdateInput) => {
+    const reply = await this.prisma.reply.update({
+      where: { id },
+      data: updateData,
       select: {
         id: true,
         inquiryId: true,
@@ -218,6 +284,15 @@ export class InquiryRepository {
     });
 
     return inquiry;
+  };
+
+  // 답변 찾기
+  public findReplyById = async (id: string) => {
+    const reply = await this.prisma.reply.findUnique({
+      where: { id },
+    });
+
+    return reply;
   };
 
   // 문의 카운트

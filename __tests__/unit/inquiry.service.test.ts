@@ -3,6 +3,7 @@ import { InquiryRepository } from '../../src/domains/inquiry/inquiry.repository.
 import { InquiryService } from '../../src/domains/inquiry/inquiry.service.js';
 import { InquiryStatus } from '@prisma/client';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
+import { mockFindReply } from '../mocks/inquiry.mock.js';
 
 describe('InquiryService 유닛 테스트', () => {
   let inquiryService: InquiryService;
@@ -567,12 +568,15 @@ describe('InquiryService 유닛 테스트', () => {
           },
         },
       };
+      const updateData = {
+        status: InquiryStatus.CompletedAnswer,
+      };
 
       // --- 검증 (Assert) ---
       expect(inquiryRepository.findInquiryById).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.findInquiryById).toHaveBeenCalledWith(inquiryId);
       expect(inquiryRepository.createReply).toHaveBeenCalledTimes(1);
-      expect(inquiryRepository.createReply).toHaveBeenCalledWith(createData);
+      expect(inquiryRepository.createReply).toHaveBeenCalledWith(createData, inquiryId, updateData);
       expect(result).toEqual(mockReply);
     });
 
@@ -607,6 +611,83 @@ describe('InquiryService 유닛 테스트', () => {
       // --- 실행 및 검증 (Act & Assert) ---
       await expect(inquiryService.createReply(inquiryId, userId, data)).rejects.toThrow(
         '답변을 생성할 권한이 없습니다.',
+      );
+    });
+  });
+
+  // 답변 수정
+  describe('updateReply', () => {
+    it('답변 수정 성공', async () => {
+      // --- 준비 (Arrange) ---
+      const data = {
+        content: '답변 내용 수정',
+      };
+      const mockReply = {
+        id: replyId,
+        ...data,
+        inquiryId: inquiryId,
+        userId: userId,
+        createdAt: new Date(),
+        updatedAt: new Date(),
+      };
+      inquiryRepository.findReplyById.mockResolvedValue(mockFindReply);
+      inquiryRepository.updateReply.mockResolvedValue(mockReply);
+
+      // --- 실행 (Act) ---
+      const result = await inquiryService.updateReply(replyId, userId, data);
+
+      const updateData = {
+        content: data.content,
+      };
+
+      // --- 검증 (Assert) ---
+      expect(inquiryRepository.findReplyById).toHaveBeenCalledTimes(1);
+      expect(inquiryRepository.findReplyById).toHaveBeenCalledWith(replyId);
+      expect(inquiryRepository.updateReply).toHaveBeenCalledTimes(1);
+      expect(inquiryRepository.updateReply).toHaveBeenCalledWith(replyId, updateData);
+      expect(result).toEqual(mockReply);
+    });
+
+    it('답변이 존재하지 않을때 NotFoundError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      const data = {
+        content: '답변 내용 수정',
+      };
+      inquiryRepository.findReplyById.mockResolvedValue(null);
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(inquiryService.updateReply(replyId, userId, data)).rejects.toThrow(
+        '답변이 존재하지 않습니다.',
+      );
+    });
+
+    it('답변을 수정할 권한이 없을때 ForbiddenError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      const data = {
+        content: '답변 내용 수정',
+      };
+      const mockFindReply_userId = {
+        ...mockFindReply,
+        userId: '다른 사용자 ID',
+      };
+      inquiryRepository.findReplyById.mockResolvedValue(mockFindReply_userId);
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(inquiryService.updateReply(replyId, userId, data)).rejects.toThrow(
+        '답변을 수정할 권한이 없습니다.',
+      );
+    });
+
+    it('수정할 내용이 없을 때 BadRequestError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      const data = {
+        content: mockFindReply.content,
+      };
+      inquiryRepository.findReplyById.mockResolvedValue(mockFindReply);
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(inquiryService.updateReply(replyId, userId, data)).rejects.toThrow(
+        '수정할 내용이 없습니다.',
       );
     });
   });

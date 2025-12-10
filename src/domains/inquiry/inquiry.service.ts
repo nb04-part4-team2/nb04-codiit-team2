@@ -4,6 +4,7 @@ import type {
   CreateInquiryBody,
   UpdateInquiryBody,
   CreateReplyBody,
+  UpdateReplyBody,
 } from './inquiry.dto.js';
 import type { InquiryRepository } from './inquiry.repository.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/common/utils/errors.js';
@@ -157,8 +158,13 @@ export class InquiryService {
     return inquiry;
   };
 
-  // TODO : 답변 로직 추가
-  // public getReply = async (id: string) => {};
+  // 답변 조회
+  // public getReplyById = async (id: string) => {
+  //   const reply = await this.inquiryRepository.getReplyById(id);
+  //   if (!reply) throw new NotFoundError('답변이 존재하지 않습니다.');
+
+  //   return reply;
+  // };
 
   // 답변 생성
   public createReply = async (id: string, userId: string, data: CreateReplyBody) => {
@@ -184,10 +190,34 @@ export class InquiryService {
       },
     };
 
-    const reply = await this.inquiryRepository.createReply(createData);
+    const updateData: Prisma.InquiryUpdateInput = {
+      status: 'CompletedAnswer',
+    };
+
+    // 트랜잭션 사용
+    const reply = await this.inquiryRepository.createReply(createData, id, updateData);
 
     return reply;
   };
 
-  // public updateReply = async (id: string, userId: string, data: UpdateReplyBody) => {};
+  public updateReply = async (id: string, userId: string, data: UpdateReplyBody) => {
+    // 답변 존재 및 인가 확인
+    const findReply = await this.inquiryRepository.findReplyById(id);
+    if (!findReply) throw new NotFoundError('답변이 존재하지 않습니다.');
+    if (findReply.userId !== userId) throw new ForbiddenError('답변을 수정할 권한이 없습니다.');
+
+    const { content } = data;
+
+    const updateData: Prisma.ReplyUpdateInput = {
+      ...(content !== findReply.content && { content }),
+    };
+
+    if (Object.keys(updateData).length === 0) {
+      throw new BadRequestError('수정할 내용이 없습니다.');
+    }
+
+    const reply = await this.inquiryRepository.updateReply(id, updateData);
+
+    return reply;
+  };
 }
