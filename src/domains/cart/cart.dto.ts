@@ -1,12 +1,15 @@
 import { CartBase, CartItemRawData, CartItemResponse } from '@/domains/cart/cart.type.js';
 
-// 장바구니 조회
 // db 조회 결과
-export interface RawCartData extends CartBase<Date> {
+export interface GetCartRawData extends CartBase<Date> {
   items: CartItemRawData[];
 }
 
+export type CreateCartRawData = CartBase<Date>;
+
 // response
-export interface CartResponse extends CartBase<string> {
+export interface GetCartResponse extends CartBase<string> {
   items: CartItemResponse[];
 }
+
+export type CreateCartResponse = CartBase<string>;

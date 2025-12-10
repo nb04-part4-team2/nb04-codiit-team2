@@ -1,4 +1,4 @@
-import { CartResponse, RawCartData } from '@/domains/cart/cart.dto.js';
+import { GetCartResponse, GetCartRawData } from '@/domains/cart/cart.dto.js';
 import {
   CartItemRawData,
   CartItemResponse,
@@ -63,7 +63,7 @@ const toItemResponse = (itemRawData: CartItemRawData): CartItemResponse => ({
 // ============================================
 // 장바구니 조회 응답 객체 변환
 // ============================================
-export const toCartResponse = (rawCart: RawCartData): CartResponse => ({
+export const toCartResponse = (rawCart: GetCartRawData): GetCartResponse => ({
   id: rawCart.id,
   buyerId: rawCart.buyerId,
   quantity: rawCart.quantity,
