@@ -6,7 +6,7 @@ import {
   CartItemRawData,
   CartBase,
 } from '../../src/domains/cart/cart.type';
-import { createStoreMock } from './store.mock.ts';
+import { createStoreMock } from './store.mock';
 import { toGetCartResponse } from '../../src/domains/cart/cart.mapper';
 
 // ============================================
@@ -39,46 +39,55 @@ export const createSizeMock = (overrides: Partial<SizeRawData> = {}): SizeRawDat
 /**
  * [부품] Stock 팩토리
  */
-export const createStockMock = (overrides: Partial<StockRawData> = {}): StockRawData => ({
-  id: 'stock-id-1',
-  productId: 'product-id-1',
-  sizeId: 1,
-  quantity: 10,
-  size: createSizeMock(overrides.size),
-  ...overrides,
-});
+export const createStockMock = (overrides: Partial<StockRawData> = {}): StockRawData => {
+  const { size, ...rest } = overrides;
+  return {
+    id: 'stock-id-1',
+    productId: 'product-id-1',
+    sizeId: 1,
+    quantity: 10,
+    size: createSizeMock(size),
+    ...rest,
+  };
+};
 
 /**
  * [부품] Product 팩토리
  */
-export const createProductMock = (overrides: Partial<ProductRawData> = {}): ProductRawData => ({
-  id: 'product-id-1',
-  storeId: 'store-id-1',
-  name: '테스트 상품',
-  price: 10000,
-  image: 'https://test.s3.ap-northeast-2.amazonaws.com/test/testImg1.jpg',
-  discountRate: 0,
-  discountStartTime: null,
-  discountEndTime: null,
-  store: createStoreMock(overrides.store),
-  stocks: overrides.stocks ?? [],
-  ...overrides,
-});
+export const createProductMock = (overrides: Partial<ProductRawData> = {}): ProductRawData => {
+  const { store, stocks, ...rest } = overrides;
+  return {
+    id: 'product-id-1',
+    storeId: 'store-id-1',
+    name: '테스트 상품',
+    price: 10000,
+    image: 'https://test.s3.ap-northeast-2.amazonaws.com/test/testImg1.jpg',
+    discountRate: 0,
+    discountStartTime: null,
+    discountEndTime: null,
+    store: createStoreMock(store),
+    stocks: stocks ?? [],
+    ...rest,
+  };
+};
 
 /**
  * [부품] CartItem 팩토리
  */
-export const createCartItemMock = (overrides: Partial<CartItemRawData> = {}): CartItemRawData => ({
-  id: 'item-id-1',
-  cartId: 'cart-id-1',
-  productId: 'product-id-1',
-  sizeId: 1,
-  quantity: 1,
-  createdAt: date1,
-  updatedAt: date2,
-  product: createProductMock(overrides.product),
-  ...overrides,
-});
+export const createCartItemMock = (overrides: Partial<CartItemRawData> = {}): CartItemRawData => {
+  const { product, ...rest } = overrides;
+  return {
+    id: 'item-id-1',
+    cartId: 'cart-id-1',
+    productId: 'product-id-1',
+    sizeId: 1,
+    quantity: 1,
+    createdAt: date1,
+    updatedAt: date2,
+    product: createProductMock(product),
+    ...rest,
+  };
+};
 
 // ============================================
 // RawData 객체 조립
