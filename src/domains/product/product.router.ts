@@ -18,9 +18,9 @@ productRouter.post(
 );
 
 // 상품 목록 조회 API
+// 누구나 접근 가능하도록 authenticate를 뺐습니다.
 productRouter.get(
   '/',
-  authenticate,
   validate(productListSchema, 'query'),
   asyncHandler(productController.getProducts),
 );
