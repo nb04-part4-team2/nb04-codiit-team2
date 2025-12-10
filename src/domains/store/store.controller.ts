@@ -49,4 +49,15 @@ export class StoreController {
 
     res.status(200).json(toMyStoreProductListResponse(products, totalCount));
   };
+
+  // 스토어 수정
+  updateStore = async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const userId = req.user.id;
+    const { storeId } = req.params;
+
+    const store = await this.storeService.updateStore(storeId, userId, req.body);
+
+    res.status(200).json(toStoreResponse(store));
+  };
 }

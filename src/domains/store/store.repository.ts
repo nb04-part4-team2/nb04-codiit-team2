@@ -18,6 +18,11 @@ export class StoreRepository {
     return this.prisma.store.findUnique({ where: { id } });
   }
 
+  // 스토어 수정
+  async update(id: string, data: Prisma.StoreUpdateInput) {
+    return this.prisma.store.update({ where: { id }, data });
+  }
+
   // 스토어 좋아요 수 조회
   async countFavorites(storeId: string): Promise<number> {
     return this.prisma.storeLike.count({ where: { storeId } });

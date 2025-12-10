@@ -1,5 +1,5 @@
 import type { Store } from '@prisma/client';
-import type { CreateStoreBody } from '../../src/domains/store/store.schema.js';
+import type { CreateStoreBody, UpdateStoreBody } from '../../src/domains/store/store.schema.js';
 
 /**
  * Store Mock 데이터 생성 팩토리
@@ -30,5 +30,16 @@ export const createStoreInputMock = (
   address: '서울시 강남구',
   phoneNumber: '010-1234-5678',
   content: '테스트 스토어 설명입니다.',
+  ...overrides,
+});
+
+/**
+ * 스토어 수정 입력 데이터 (API 요청 body)
+ * src/domains/store/store.schema.ts의 UpdateStoreBody 타입 사용
+ */
+export const updateStoreInputMock = (
+  overrides: Partial<UpdateStoreBody> = {},
+): UpdateStoreBody => ({
+  name: '수정된 스토어',
   ...overrides,
 });
