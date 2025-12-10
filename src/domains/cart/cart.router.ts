@@ -5,6 +5,9 @@ import { authenticate, onlyBuyer } from '@/common/middlewares/auth.middleware.js
 
 const cartRouter = Router();
 
-cartRouter.get('/', authenticate, onlyBuyer, asyncHandler(cartController.getCart));
+cartRouter
+  .route('/')
+  .get(authenticate, onlyBuyer, asyncHandler(cartController.getCart))
+  .post(authenticate, onlyBuyer, asyncHandler(cartController.createCart));
 
 export default cartRouter;
