@@ -78,4 +78,25 @@ export class StoreRepository {
       take,
     });
   }
+
+  // 관심 스토어 등록 여부 확인
+  async findFavorite(userId: string, storeId: string) {
+    return this.prisma.storeLike.findUnique({
+      where: { userId_storeId: { userId, storeId } },
+    });
+  }
+
+  // 관심 스토어 등록
+  async createFavorite(userId: string, storeId: string) {
+    return this.prisma.storeLike.create({
+      data: { userId, storeId },
+    });
+  }
+
+  // 관심 스토어 해제
+  async deleteFavorite(userId: string, storeId: string) {
+    return this.prisma.storeLike.delete({
+      where: { userId_storeId: { userId, storeId } },
+    });
+  }
 }

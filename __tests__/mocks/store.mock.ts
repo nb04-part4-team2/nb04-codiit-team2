@@ -1,4 +1,4 @@
-import type { Store } from '@prisma/client';
+import type { Store, StoreLike } from '@prisma/client';
 import type { CreateStoreBody, UpdateStoreBody } from '../../src/domains/store/store.schema.js';
 
 /**
@@ -41,5 +41,17 @@ export const updateStoreInputMock = (
   overrides: Partial<UpdateStoreBody> = {},
 ): UpdateStoreBody => ({
   name: '수정된 스토어',
+  ...overrides,
+});
+
+/**
+ * StoreLike Mock 데이터 생성 팩토리
+ * Unit Test에서 관심 스토어 관련 Repository mock 반환값으로 사용
+ */
+export const createStoreLikeMock = (overrides: Partial<StoreLike> = {}): StoreLike => ({
+  id: 'store-like-id-1',
+  userId: 'user-id-1',
+  storeId: 'store-id-1',
+  createdAt: new Date(),
   ...overrides,
 });

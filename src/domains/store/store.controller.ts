@@ -5,6 +5,7 @@ import {
   toStoreDetailResponse,
   toMyStoreDetailResponse,
   toMyStoreProductListResponse,
+  toFavoriteStoreResponse,
 } from './store.mapper.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 
@@ -59,5 +60,27 @@ export class StoreController {
     const store = await this.storeService.updateStore(storeId, userId, req.body);
 
     res.status(200).json(toStoreResponse(store));
+  };
+
+  // 관심 스토어 등록
+  registerFavorite = async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const userId = req.user.id;
+    const { storeId } = req.params;
+
+    const store = await this.storeService.registerFavorite(userId, storeId);
+
+    res.status(201).json(toFavoriteStoreResponse('register', store));
+  };
+
+  // 관심 스토어 해제
+  unregisterFavorite = async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const userId = req.user.id;
+    const { storeId } = req.params;
+
+    const store = await this.storeService.unregisterFavorite(userId, storeId);
+
+    res.status(200).json(toFavoriteStoreResponse('delete', store));
   };
 }

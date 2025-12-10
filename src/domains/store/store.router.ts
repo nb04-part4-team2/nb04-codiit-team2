@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 import { validate } from '@/common/middlewares/validate.middleware.js';
-import { authenticate, onlySeller } from '@/common/middlewares/auth.middleware.js';
+import { authenticate, onlySeller, onlyBuyer } from '@/common/middlewares/auth.middleware.js';
 import { storeController } from './store.container.js';
 import {
   createStoreSchema,
@@ -53,6 +53,24 @@ storeRouter.patch(
   validate(storeIdParamSchema, 'params'),
   validate(updateStoreSchema, 'body'),
   asyncHandler(storeController.updateStore),
+);
+
+// POST /api/stores/:storeId/favorite - 관심 스토어 등록 (구매자 전용)
+storeRouter.post(
+  '/:storeId/favorite',
+  authenticate,
+  onlyBuyer,
+  validate(storeIdParamSchema, 'params'),
+  asyncHandler(storeController.registerFavorite),
+);
+
+// DELETE /api/stores/:storeId/favorite - 관심 스토어 해제 (구매자 전용)
+storeRouter.delete(
+  '/:storeId/favorite',
+  authenticate,
+  onlyBuyer,
+  validate(storeIdParamSchema, 'params'),
+  asyncHandler(storeController.unregisterFavorite),
 );
 
 export { storeRouter };
