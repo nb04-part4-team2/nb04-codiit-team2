@@ -1,8 +1,9 @@
 import { PrismaClient } from '@prisma/client';
+import { RawCartData } from '@/domains/cart/cart.dto.js';
 
 export class CartRepository {
   constructor(private prisma: PrismaClient) {}
-  async findByUserId(userId: string) {
+  async findByUserId(userId: string): Promise<RawCartData | null> {
     return await this.prisma.cart.findUnique({
       where: {
         buyerId: userId,
