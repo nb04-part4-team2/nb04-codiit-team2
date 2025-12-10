@@ -25,7 +25,10 @@ export class UserController {
   };
 
   updateMe = async (req: Request, res: Response): Promise<void> => {
-    const userId = req.user!.id;
+    if (!req.user) {
+      throw new UnauthorizedError('인증이 필요합니다.');
+    }
+    const userId = req.user.id;
     const result = await this.userService.updateMe(userId, req.body);
     res.status(200).json(result);
   };

@@ -9,7 +9,9 @@ const router = Router();
 const userController = new UserController();
 
 router.post('/', validate(createUserSchema, 'body'), asyncHandler(userController.createUser));
+
 router.get('/me', authenticate, asyncHandler(userController.getMe));
+
 router.patch(
   '/me',
   authenticate,
