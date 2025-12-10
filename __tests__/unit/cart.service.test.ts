@@ -5,88 +5,32 @@ import { CartService } from '../../src/domains/cart/cart.service';
 import { CartRepository } from '../../src/domains/cart/cart.repository';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
 import { NotFoundError } from '../../src/common/utils/errors';
-
-const mockCartRepo = {
-  findByUserId: jest.fn(),
-  findOwnerByUserId: jest.fn(),
-} as unknown as jest.Mocked<CartRepository>;
+import { createCartBaseMock, createCartMock } from '../mocks/cart.mock.ts';
+import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 
 describe('CartService', () => {
+  let mockCartRepo: DeepMockProxy<CartRepository>;
   let mockCartService: CartService;
 
   beforeEach(() => {
     jest.resetAllMocks();
 
+    mockCartRepo = mockDeep<CartRepository>();
     mockCartService = new CartService(mockCartRepo);
   });
 
   describe('장바구니 조회', () => {
     it('장바구니를 조회한다.', async () => {
       // given
-      const userId = 'testBuyer1';
-      const date1 = new Date('2025-12-04T05:05:00.861Z');
-      const date2 = new Date('2025-12-04T05:05:00.861Z');
-      const cartResult = {
-        id: 'testCart1',
-        buyerId: 'testBuyer1',
-        quantity: 1,
-        createdAt: date1,
-        updatedAt: date2,
-        items: [
-          {
-            id: 'testItem1',
-            cartId: 'testCart1',
-            productId: 'testProduct1',
-            sizeId: 1,
-            quantity: 1,
-            createdAt: date1,
-            updatedAt: date2,
-            product: {
-              id: 'testProduct1',
-              storeId: 'testStore1',
-              name: '테스트 상품1',
-              price: 10000,
-              image: 'https://test.s3.ap-northeast-2.amazonaws.com/test/testImg1.jpg',
-              discountRate: 0,
-              discountStartTime: date1,
-              discountEndTime: date1,
-              createdAt: date1,
-              updatedAt: date2,
-              store: {
-                id: 'testStore1',
-                userId: 'testSeller1',
-                name: '테스트 스토어',
-                address: '서울특별시',
-                phoneNumber: '010-1234-1234',
-                content: 'testContent',
-                image: 'https://test.s3.ap-northeast-2.amazonaws.com/test/testImg2.jpg',
-                createdAt: date1,
-                updatedAt: date2,
-              },
-              stocks: [
-                {
-                  id: 'testStocks1',
-                  productId: 'testProduct1',
-                  sizeId: 2,
-                  quantity: 1,
-                  size: {
-                    id: 2,
-                    en: 's',
-                    ko: '소',
-                  },
-                },
-              ],
-            },
-          },
-        ],
-      };
-      mockCartRepo.findByUserId.mockResolvedValue(cartResult);
+      const userId = 'buyer-id-1';
+      const cartRawData = createCartMock();
+      mockCartRepo.findByUserId.mockResolvedValue(cartRawData);
 
       // when
       const result = await mockCartService.getCart(userId);
 
       // then
-      expect(result).toEqual(cartResult);
+      expect(result).toEqual(cartRawData);
       expect(mockCartRepo.findByUserId).toHaveBeenCalledWith(userId);
       expect(mockCartRepo.findByUserId).toHaveBeenCalledTimes(1);
     });
@@ -101,7 +45,7 @@ describe('CartService', () => {
     // });
     it('해당 유저의 장바구니가 없는 경우 빈 배열 반환', async () => {
       // given
-      const userId = 'testBuyer1';
+      const userId = 'buyer-id-1';
       mockCartRepo.findByUserId.mockResolvedValue(null);
       // when
       const result = await mockCartService.getCart(userId);
@@ -110,21 +54,28 @@ describe('CartService', () => {
     });
     it('해당 유저의 장바구니에 아이템이 하나도 없는 경우 404 에러 반환', async () => {
       // given
-      const userId = 'testBuyer1';
-      const date1 = new Date('2025-12-04T05:05:00.861Z');
-      const date2 = new Date('2025-12-04T05:05:00.861Z');
-      const cartResult = {
-        id: 'testCart1',
-        buyerId: 'testBuyer1',
-        quantity: 1,
-        createdAt: date1,
-        updatedAt: date2,
-        items: [],
-      };
+      const userId = 'buyer-id-1';
+      const cartResult = createCartMock({ items: [] });
       mockCartRepo.findByUserId.mockResolvedValue(cartResult);
       // when
       // then
       await expect(mockCartService.getCart(userId)).rejects.toThrow(NotFoundError);
+    });
+  });
+  describe('장바구니 생성', () => {
+    it('장바구니 생성', async () => {
+      // given
+      const userId = 'buyer-id-1';
+      const cartRawData = createCartBaseMock();
+      mockCartRepo.createCart.mockResolvedValue(cartRawData);
+
+      // when
+      const result = await mockCartService.createCart(userId);
+
+      // then
+      expect(result).toEqual(cartRawData);
+      expect(mockCartRepo.createCart).toHaveBeenCalledWith(userId);
+      expect(mockCartRepo.createCart).toHaveBeenCalledTimes(1);
     });
   });
 });
