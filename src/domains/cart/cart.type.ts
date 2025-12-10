@@ -51,7 +51,7 @@ interface CartItemBase<TProduct, TDate> {
   updatedAt: TDate;
 }
 
-interface SizeRawData {
+export interface SizeRawData {
   id: number;
   en: string;
   ko: string;
