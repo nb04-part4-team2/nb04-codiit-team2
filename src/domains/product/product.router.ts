@@ -22,7 +22,7 @@ productRouter.get(
   '/',
   authenticate,
   validate(productListSchema, 'query'),
-  asyncHandler(productController.getProducts), // 이제 타입 에러 없이 연결됩니다.
+  asyncHandler(productController.getProducts),
 );
 
 // 문의 중첩 라우터

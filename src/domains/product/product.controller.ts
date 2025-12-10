@@ -23,10 +23,10 @@ export class ProductController {
   };
 
   getProducts = async (
-    req: Request<Record<string, string>, unknown, unknown, ProductListQueryDto>,
+    req: Request<Record<string, string>, unknown, unknown, unknown>,
     res: Response,
   ) => {
-    const query = req.query;
+    const query = req.query as ProductListQueryDto;
 
     const result = await this.productService.getProducts(query);
 
