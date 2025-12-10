@@ -10,6 +10,7 @@ import {
   createInquiry,
   updateInquiry,
   createReply,
+  updateReply,
 } from './inquiry.dto.js';
 
 const nestedInquiryRouter = Router({ mergeParams: true });
@@ -54,15 +55,23 @@ inquiryRouter
     asyncHandler(inquiryController.deleteInquiry),
   );
 
-// 답변 생성
+// 답변 생성, 수정
 inquiryRouter
   .route('/:id/replies')
+  // .get(authenticate, validate(idSchema, 'params'), asyncHandler(inquiryController.getReplyById))
   .post(
     authenticate,
     onlySeller,
     validate(idSchema, 'params'),
     validate(createReply, 'body'),
     asyncHandler(inquiryController.createReply),
+  )
+  .patch(
+    authenticate,
+    onlySeller,
+    validate(idSchema, 'params'),
+    validate(updateReply, 'body'),
+    asyncHandler(inquiryController.updateReply),
   );
 
 export { inquiryRouter, nestedInquiryRouter };

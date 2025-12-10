@@ -174,6 +174,40 @@ export class InquiryRepository {
     return inquiry;
   };
 
+  // 답변 조회
+  // public getReplyById = async (id: string) => {
+  //   const reply = await this.prisma.reply.findUnique({
+  //     where: { id },
+  //     select: {
+  //       id: true,
+  //       userId: true,
+  //       productId: true,
+  //       title: true,
+  //       content: true,
+  //       status: true,
+  //       isSecret: true,
+  //       createdAt: true,
+  //       updatedAt: true,
+  //       reply: {
+  //         select: {
+  //           id: true,
+  //           content: true,
+  //           createdAt: true,
+  //           updatedAt: true,
+  //           user: {
+  //             select: {
+  //               name: true,
+  //               id: true,
+  //             },
+  //           },
+  //         },
+  //       },
+  //     },
+  //   });
+
+  //   return reply;
+  // };
+
   // 답변 생성
   public createReply = async (
     createData: Prisma.ReplyCreateInput,
@@ -205,6 +239,24 @@ export class InquiryRepository {
     });
   };
 
+  // 답변 수정
+  public updateReply = async (id: string, updateData: Prisma.ReplyUpdateInput) => {
+    const reply = await this.prisma.reply.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        inquiryId: true,
+        userId: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return reply;
+  };
+
   // 상품 찾기
   public findProductByProductId = async (productId: string) => {
     const product = await this.prisma.product.findUnique({
@@ -232,6 +284,15 @@ export class InquiryRepository {
     });
 
     return inquiry;
+  };
+
+  // 답변 찾기
+  public findReplyById = async (id: string) => {
+    const reply = await this.prisma.reply.findUnique({
+      where: { id },
+    });
+
+    return reply;
   };
 
   // 문의 카운트
