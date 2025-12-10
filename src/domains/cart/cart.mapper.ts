@@ -36,9 +36,7 @@ const toStockResponse = (stock: StockRawData): StockResponse => ({
 
 // 반환 형태가 유사한 store.mapper.ts의 toStoreResponse 재사용
 const toStoreResponse = (storeRawData: StoreRawData): StoreResponse => {
-  // 매개변수 타입 일치용 더미 데이터 추가
-  const storeWithDummy = { ...storeRawData, detailAddress: null };
-  const { detailAddress: _detailAddress, ...store } = getStoreResponse(storeWithDummy);
+  const { detailAddress: _detailAddress, ...store } = getStoreResponse(storeRawData);
   return store;
 };
 

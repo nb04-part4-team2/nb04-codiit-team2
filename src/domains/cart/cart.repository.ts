@@ -39,6 +39,7 @@ export class CartRepository {
                     userId: true,
                     name: true,
                     address: true,
+                    detailAddress: true,
                     phoneNumber: true,
                     content: true,
                     image: true,

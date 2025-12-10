@@ -67,7 +67,9 @@ interface SizeResponse {
 
 // DB 조회 결과 RawData
 export type StockRawData = StockBase<SizeRawData>;
-export type StoreRawData = StoreBase<Date>;
+export interface StoreRawData extends StoreBase<Date> {
+  detailAddress: string | null;
+}
 export type ProductRawData = ProductBase<StockRawData, StoreRawData, Date>;
 export type CartItemRawData = CartItemBase<ProductRawData, Date>;
 
