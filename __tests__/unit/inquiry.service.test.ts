@@ -3,53 +3,21 @@ import { InquiryRepository } from '../../src/domains/inquiry/inquiry.repository.
 import { InquiryService } from '../../src/domains/inquiry/inquiry.service.js';
 import { InquiryStatus } from '@prisma/client';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import { mockFindReply } from '../mocks/inquiry.mock.js';
+import { inquiryId, replyId, productId, userId } from '../mocks/inquiry.mock.js';
+import {
+  createInquiryMock,
+  createReplyMock,
+  mockInquiries,
+  mockAllInquiries,
+  mockInquiry,
+  mockFindProduct,
+  mockFindInquiry,
+  mockFindReply,
+} from '../mocks/inquiry.mock.js';
 
 describe('InquiryService 유닛 테스트', () => {
   let inquiryService: InquiryService;
   let inquiryRepository: DeepMockProxy<InquiryRepository>;
-
-  const inquiryId = 'inquiry-id-1';
-  const replyId = 'reply-id-1';
-  const productId = 'product-id-1';
-  const userId = 'user-id-1';
-  const storeId = 'store-id-1';
-  const categoryId = 'category-id-1';
-
-  const mockFindProduct = {
-    id: productId,
-    name: '상품 이름',
-    price: 10000,
-    content: '상품 설명',
-    image: '상품 이미지 URL',
-    discountRate: 0,
-    discountStartTime: null,
-    discountEndTime: null,
-    isSoldOut: false,
-    salesCount: 0,
-    reviewsCount: 0,
-    reviewsRating: 0.0,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    storeId: storeId,
-    categoryId: categoryId,
-  };
-  const mockFindInquiry = {
-    id: inquiryId,
-    title: '문의 제목',
-    content: '문의 내용',
-    status: InquiryStatus.WaitingAnswer,
-    isSecret: false,
-    createdAt: new Date(),
-    updatedAt: new Date(),
-    userId: userId,
-    productId: productId,
-    product: {
-      store: {
-        userId: userId,
-      },
-    },
-  };
 
   // 테스트 케이스가 실행되기 전에 매번 실행
   beforeEach(() => {
@@ -68,38 +36,6 @@ describe('InquiryService 유닛 테스트', () => {
   describe('getInquiries', () => {
     it('특정 상품의 모든 문의 조회 성공', async () => {
       // --- 준비 (Arrange) ---
-      const mockInquiries = [
-        {
-          id: 'inquiry-1',
-          userId: 'user-1',
-          productId: 'product-1',
-          title: '문의 제목 1',
-          content: '문의 내용 1',
-          status: InquiryStatus.WaitingAnswer,
-          isSecret: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          user: {
-            name: '테스트 사용자 1',
-          },
-          reply: null,
-        },
-        {
-          id: 'inquiry-2',
-          userId: 'user-2',
-          productId: 'product-1',
-          title: '문의 제목 2',
-          content: '문의 내용 2',
-          status: InquiryStatus.WaitingAnswer,
-          isSecret: false,
-          createdAt: new Date(),
-          updatedAt: new Date(),
-          user: {
-            name: '테스트 사용자 1',
-          },
-          reply: null,
-        },
-      ];
       inquiryRepository.findProductByProductId.mockResolvedValue(mockFindProduct);
       inquiryRepository.countInquiries.mockResolvedValue(2);
       inquiryRepository.getInquiries.mockResolvedValue(mockInquiries);
@@ -151,15 +87,7 @@ describe('InquiryService 유닛 테스트', () => {
         content: '문의 내용',
         isSecret: false,
       };
-      const mockInquiry = {
-        id: inquiryId,
-        userId: userId,
-        productId: productId,
-        ...data,
-        status: InquiryStatus.WaitingAnswer,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockInquiry = createInquiryMock(data);
       inquiryRepository.findProductByProductId.mockResolvedValue(mockFindProduct);
       inquiryRepository.createInquiry.mockResolvedValue(mockInquiry);
 
@@ -215,51 +143,7 @@ describe('InquiryService 유닛 테스트', () => {
         pageSize: '100',
         status: InquiryStatus.WaitingAnswer,
       };
-      const mockInquiries = [
-        {
-          id: 'inquiry-1',
-          title: '문의 제목 1',
-          isSecret: false,
-          status: InquiryStatus.WaitingAnswer,
-          user: {
-            id: userId,
-            name: '테스트 사용자 1',
-          },
-          createdAt: new Date(),
-          content: '문의 내용 1',
-          product: {
-            id: productId,
-            name: '상품 이름',
-            image: '상품 이미지 URL',
-            store: {
-              id: storeId,
-              name: '상점 이름',
-            },
-          },
-        },
-        {
-          id: 'inquiry-2',
-          title: '문의 제목 2',
-          isSecret: false,
-          status: InquiryStatus.WaitingAnswer,
-          user: {
-            id: userId,
-            name: '테스트 사용자 1',
-          },
-          createdAt: new Date(),
-          content: '문의 내용 2',
-          product: {
-            id: productId,
-            name: '상품 이름',
-            image: '상품 이미지 URL',
-            store: {
-              id: storeId,
-              name: '상점 이름',
-            },
-          },
-        },
-      ];
-      inquiryRepository.getAllInquiries.mockResolvedValue(mockInquiries);
+      inquiryRepository.getAllInquiries.mockResolvedValue(mockAllInquiries);
       inquiryRepository.countInquiries.mockResolvedValue(2);
 
       // --- 실행 (Act) ---
@@ -284,7 +168,7 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.getAllInquiries).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.getAllInquiries).toHaveBeenCalledWith(getQuery);
       expect(result).toEqual({
-        list: mockInquiries,
+        list: mockAllInquiries,
         totalCount: 2,
       });
     });
@@ -345,18 +229,6 @@ describe('InquiryService 유닛 테스트', () => {
   describe('getInquiry', () => {
     it('특정 문의 조회 성공', async () => {
       // --- 준비 (Arrange) ---
-      const mockInquiry = {
-        id: inquiryId,
-        userId: userId,
-        productId: productId,
-        title: '문의 제목',
-        content: '문의 내용',
-        status: InquiryStatus.WaitingAnswer,
-        isSecret: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-        reply: null,
-      };
       inquiryRepository.getInquiryById.mockResolvedValue(mockInquiry);
 
       // --- 실행 (Act) ---
@@ -388,15 +260,7 @@ describe('InquiryService 유닛 테스트', () => {
         content: '문의 내용 수정',
         isSecret: true,
       };
-      const mockInquiry = {
-        id: inquiryId,
-        userId: userId,
-        productId: productId,
-        ...data,
-        status: InquiryStatus.WaitingAnswer,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockInquiry = createInquiryMock(data);
       inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry);
       inquiryRepository.updateInquiry.mockResolvedValue(mockInquiry);
 
@@ -484,17 +348,7 @@ describe('InquiryService 유닛 테스트', () => {
   describe('deleteInquiry', () => {
     it('문의 삭제 성공', async () => {
       // --- 준비 (Arrange) ---
-      const mockInquiry = {
-        id: inquiryId,
-        userId: userId,
-        productId: productId,
-        title: '문의 제목',
-        content: '문의 내용',
-        status: InquiryStatus.WaitingAnswer,
-        isSecret: false,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockInquiry = createInquiryMock();
       inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry);
       inquiryRepository.deleteInquiry.mockResolvedValue(mockInquiry);
 
@@ -541,14 +395,7 @@ describe('InquiryService 유닛 테스트', () => {
       const data = {
         content: '답변 내용',
       };
-      const mockReply = {
-        id: replyId,
-        inquiryId: inquiryId,
-        userId: userId,
-        content: data.content,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockReply = createReplyMock(data);
       inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry);
       inquiryRepository.createReply.mockResolvedValue(mockReply);
 
@@ -622,14 +469,7 @@ describe('InquiryService 유닛 테스트', () => {
       const data = {
         content: '답변 내용 수정',
       };
-      const mockReply = {
-        id: replyId,
-        ...data,
-        inquiryId: inquiryId,
-        userId: userId,
-        createdAt: new Date(),
-        updatedAt: new Date(),
-      };
+      const mockReply = createReplyMock(data);
       inquiryRepository.findReplyById.mockResolvedValue(mockFindReply);
       inquiryRepository.updateReply.mockResolvedValue(mockReply);
 
