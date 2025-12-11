@@ -9,6 +9,25 @@ export type ProductWithRelations = Prisma.ProductGetPayload<{
   };
 }>;
 
+// 상세 조회 시 사용되는 확장된 관계형 타입 (문의, 리뷰 포함)
+export type ProductDetailWithRelations = Prisma.ProductGetPayload<{
+  include: {
+    stocks: { include: { size: true } };
+    store: { select: { id: true; name: true } };
+    category: true;
+    inquiries: {
+      include: {
+        reply: {
+          include: {
+            user: { select: { id: true; name: true } };
+          };
+        };
+      };
+    };
+    reviews: true;
+  };
+}>;
+
 // DB 저장용 데이터 타입
 export interface CreateProductData {
   name: string;
@@ -160,5 +179,40 @@ export class ProductRepository {
     ]);
 
     return { products, totalCount };
+  }
+
+  async findById(id: string): Promise<ProductDetailWithRelations | null> {
+    return this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        // 재고 및 사이즈 정보
+        stocks: {
+          include: { size: true },
+        },
+        // 스토어 기본 정보
+        store: {
+          select: { id: true, name: true },
+        },
+        // 카테고리 정보
+        category: true,
+        // 상품 문의 및 답변 (답변자 정보 포함)
+        inquiries: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            reply: {
+              include: {
+                user: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
+          },
+        },
+        // 리뷰
+        reviews: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
   }
 }
