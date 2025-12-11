@@ -3,11 +3,14 @@ import {
   GetCartRawData,
   CreateCartRawData,
   CreateCartResponse,
+  UpdateCartRawData,
+  UpdateCartResponse,
 } from '@/domains/cart/cart.dto.js';
 import {
   CartBase,
-  CartItemRawData,
-  CartItemResponse,
+  CartItemBase,
+  GetCartItemRawData,
+  GetCartItemResponse,
   ProductRawData,
   ProductResponse,
   StockRawData,
@@ -16,6 +19,27 @@ import {
   StoreResponse,
 } from '@/domains/cart/cart.type.js';
 import { toStoreResponse as getStoreResponse } from '@/domains/store/store.mapper.js';
+
+// ============================================
+// 응답 객체 베이스들
+// ============================================
+const toCartBaseResponse = (cart: CartBase<Date>): CartBase<string> => ({
+  id: cart.id,
+  buyerId: cart.buyerId,
+  quantity: cart.quantity,
+  createdAt: cart.createdAt.toISOString(),
+  updatedAt: cart.updatedAt.toISOString(),
+});
+
+const toCartItemBaseResponse = (item: CartItemBase<Date>): CartItemBase<string> => ({
+  id: item.id,
+  cartId: item.cartId,
+  productId: item.productId,
+  sizeId: item.sizeId,
+  quantity: item.quantity,
+  createdAt: item.createdAt.toISOString(),
+  updatedAt: item.updatedAt.toISOString(),
+});
 
 // ============================================
 // 응답 객체 조립용 부품들
@@ -53,23 +77,9 @@ const toProductResponse = (productRawData: ProductRawData): ProductResponse => (
   stocks: productRawData.stocks.map(toStockResponse),
 });
 
-const toItemResponse = (itemRawData: CartItemRawData): CartItemResponse => ({
-  id: itemRawData.id,
-  cartId: itemRawData.cartId,
-  productId: itemRawData.productId,
-  sizeId: itemRawData.sizeId,
-  quantity: itemRawData.quantity,
-  createdAt: itemRawData.createdAt.toISOString(),
-  updatedAt: itemRawData.updatedAt.toISOString(),
+const toItemResponse = (itemRawData: GetCartItemRawData): GetCartItemResponse => ({
+  ...toCartItemBaseResponse(itemRawData),
   product: toProductResponse(itemRawData.product),
-});
-
-const toCartBaseResponse = (cart: CartBase<Date>): CartBase<string> => ({
-  id: cart.id,
-  buyerId: cart.buyerId,
-  quantity: cart.quantity,
-  createdAt: cart.createdAt.toISOString(),
-  updatedAt: cart.updatedAt.toISOString(),
 });
 
 // ============================================
@@ -84,4 +94,10 @@ export const toGetCartResponse = (rawCart: GetCartRawData): GetCartResponse => (
 // ============================================
 export const toCreateCartResponse = (rawCart: CreateCartRawData): CreateCartResponse => {
   return toCartBaseResponse(rawCart);
+};
+// ============================================
+// 장바구니 수정 응답 객체 변환
+// ============================================
+export const toUpdateCartResponse = (rawItems: UpdateCartRawData[]): UpdateCartResponse[] => {
+  return rawItems.map(toCartItemBaseResponse);
 };

@@ -1,8 +1,18 @@
 import { PrismaClient } from '@prisma/client';
-import { CreateCartRawData, GetCartRawData } from '@/domains/cart/cart.dto.js';
+import { CreateCartRawData, GetCartRawData, UpdateRepoInput } from '@/domains/cart/cart.dto.js';
 
 export class CartRepository {
   constructor(private prisma: PrismaClient) {}
+  async findCartIdByUserId(userId: string) {
+    return await this.prisma.cart.findUnique({
+      where: {
+        buyerId: userId,
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
   async findByUserId(userId: string): Promise<GetCartRawData | null> {
     return await this.prisma.cart.findUnique({
       where: {
@@ -85,6 +95,27 @@ export class CartRepository {
         quantity: true,
         createdAt: true,
         updatedAt: true,
+      },
+    });
+  }
+  async updateCart({ tx, cartId, productId, sizeId, quantity }: UpdateRepoInput) {
+    const db = tx ?? this.prisma;
+    return await db.cartItem.upsert({
+      where: {
+        cartId_productId_sizeId: {
+          cartId,
+          productId,
+          sizeId,
+        },
+      },
+      update: {
+        quantity: quantity,
+      },
+      create: {
+        cartId,
+        productId,
+        sizeId,
+        quantity,
       },
     });
   }

@@ -212,6 +212,7 @@ model CartItem {
   sizeId    Int
   size      Size    @relation(fields: [sizeId], references: [id])
 
+  @@unique([cartId, productId, sizeId])
   @@map("cart_items")
 }
 
