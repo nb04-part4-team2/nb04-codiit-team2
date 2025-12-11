@@ -1,5 +1,12 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 
+// 목록 조회용 가벼운 타입 추가
+export type ProductListWithRelations = Prisma.ProductGetPayload<{
+  include: {
+    store: { select: { id: true; name: true } };
+  };
+}>;
+
 // Prisma 유틸리티를 사용해 DB에서 반환될 데이터의 타입을 정확히 정의
 export type ProductWithRelations = Prisma.ProductGetPayload<{
   include: {

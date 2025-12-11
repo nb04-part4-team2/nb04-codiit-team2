@@ -4,12 +4,12 @@ import {
   ProductListResponse,
   ReviewStatsDto,
 } from './product.dto.js';
-import { ProductDetailWithRelations, ProductWithRelations } from './product.repository.js';
+import { ProductDetailWithRelations, ProductListWithRelations } from './product.repository.js';
 
 export class ProductMapper {
-  // 목록 조회용 매퍼
+  // 입력 타입을 ProductListWithRelations[] 로 변경
   static toProductListResponse(
-    products: ProductWithRelations[],
+    products: ProductListWithRelations[],
     totalCount: number,
   ): ProductListResponse {
     return {
@@ -18,9 +18,9 @@ export class ProductMapper {
     };
   }
 
-  private static toProductListDto(product: ProductWithRelations): ProductListDto {
+  // 입력 타입을 ProductListWithRelations 로 변경
+  private static toProductListDto(product: ProductListWithRelations): ProductListDto {
     const now = new Date();
-    // 할인 기간 체크
     const isDiscountActive =
       product.discountRate > 0 &&
       product.discountStartTime &&
