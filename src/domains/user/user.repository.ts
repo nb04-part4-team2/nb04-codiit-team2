@@ -44,4 +44,19 @@ export class UserRepository {
       include: { grade: true },
     });
   }
+
+  async findLikedStores(userId: string) {
+    return prisma.storeLike.findMany({
+      where: { userId },
+      include: {
+        store: true,
+      },
+    });
+  }
+
+  async delete(id: string) {
+    return prisma.user.delete({
+      where: { id },
+    });
+  }
 }
