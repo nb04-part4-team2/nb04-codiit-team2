@@ -3,8 +3,9 @@ import {
   SizeRawData,
   StockRawData,
   ProductRawData,
-  CartItemRawData,
+  GetCartItemRawData,
   CartBase,
+  CartItemBase,
 } from '../../src/domains/cart/cart.type';
 import { createStoreMock } from './store.mock';
 import { toGetCartResponse } from '../../src/domains/cart/cart.mapper';
@@ -21,6 +22,19 @@ const date2 = new Date('2025-12-04T05:05:00.861Z');
 export const baseCartMock = {
   id: 'cart-id-1',
   buyerId: 'buyer-id-1',
+  quantity: 1,
+  createdAt: date1,
+  updatedAt: date2,
+};
+
+/**
+ * [부품] 베이스 cart item mock
+ */
+export const baseCartItemMock = {
+  id: 'item-id-1',
+  cartId: 'cart-id-1',
+  productId: 'product-id-1',
+  sizeId: 1,
   quantity: 1,
   createdAt: date1,
   updatedAt: date2,
@@ -74,16 +88,12 @@ export const createProductMock = (overrides: Partial<ProductRawData> = {}): Prod
 /**
  * [부품] CartItem 팩토리
  */
-export const createCartItemMock = (overrides: Partial<CartItemRawData> = {}): CartItemRawData => {
+export const createGetCartItemMock = (
+  overrides: Partial<GetCartItemRawData> = {},
+): GetCartItemRawData => {
   const { product, ...rest } = overrides;
   return {
-    id: 'item-id-1',
-    cartId: 'cart-id-1',
-    productId: 'product-id-1',
-    sizeId: 1,
-    quantity: 1,
-    createdAt: date1,
-    updatedAt: date2,
+    ...baseCartItemMock,
     product: createProductMock(product),
     ...rest,
   };
@@ -106,9 +116,18 @@ export const createCartMock = (overrides: Partial<GetCartRawData> = {}): GetCart
   const { items, ...baseOverrides } = overrides;
   return {
     ...createCartBaseMock(baseOverrides),
-    items: items ?? [createCartItemMock()],
+    items: items ?? [createGetCartItemMock()],
   };
 };
+/**
+ * [완성본] UpdateCartRawData 팩토리
+ */
+export const createCartItemMock = (
+  overrides: Partial<CartItemBase<Date>> = {},
+): CartItemBase<Date> => ({
+  ...baseCartItemMock,
+  ...overrides,
+});
 
 // ============================================
 // Response 객체 조립

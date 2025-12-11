@@ -4,25 +4,39 @@
 import { CartService } from '../../src/domains/cart/cart.service';
 import { CartRepository } from '../../src/domains/cart/cart.repository';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { NotFoundError } from '../../src/common/utils/errors';
-import { createCartBaseMock, createCartMock } from '../mocks/cart.mock.ts';
+import { BadRequestError, NotFoundError } from '../../src/common/utils/errors';
+import { createCartBaseMock, createCartItemMock, createCartMock } from '../mocks/cart.mock.ts';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
+import { PrismaClient } from '@prisma/client';
 
 describe('CartService', () => {
   let mockCartRepo: DeepMockProxy<CartRepository>;
+  let mockPrisma: DeepMockProxy<PrismaClient>;
   let mockCartService: CartService;
+
+  const userId = 'buyer-id-1';
+  const productId = 'product-id-1';
+  const cartId = 'cart-id-1';
+  const sizeId = 1;
+  const quantity = 1;
+  const sizes = [
+    {
+      sizeId,
+      quantity,
+    },
+  ];
 
   beforeEach(() => {
     jest.resetAllMocks();
 
     mockCartRepo = mockDeep<CartRepository>();
-    mockCartService = new CartService(mockCartRepo);
+    mockPrisma = mockDeep<PrismaClient>();
+    mockCartService = new CartService(mockCartRepo, mockPrisma);
   });
 
   describe('장바구니 조회', () => {
     it('장바구니를 조회한다.', async () => {
       // given
-      const userId = 'buyer-id-1';
       const cartRawData = createCartMock();
       mockCartRepo.findByUserId.mockResolvedValue(cartRawData);
 
@@ -45,7 +59,6 @@ describe('CartService', () => {
     // });
     it('해당 유저의 장바구니가 없는 경우 빈 배열 반환', async () => {
       // given
-      const userId = 'buyer-id-1';
       mockCartRepo.findByUserId.mockResolvedValue(null);
       // when
       const result = await mockCartService.getCart(userId);
@@ -54,7 +67,6 @@ describe('CartService', () => {
     });
     it('해당 유저의 장바구니에 아이템이 하나도 없는 경우 404 에러 반환', async () => {
       // given
-      const userId = 'buyer-id-1';
       const cartResult = createCartMock({ items: [] });
       mockCartRepo.findByUserId.mockResolvedValue(cartResult);
       // when
@@ -65,7 +77,6 @@ describe('CartService', () => {
   describe('장바구니 생성', () => {
     it('장바구니 생성', async () => {
       // given
-      const userId = 'buyer-id-1';
       const cartRawData = createCartBaseMock();
       mockCartRepo.createCart.mockResolvedValue(cartRawData);
 
@@ -76,6 +87,43 @@ describe('CartService', () => {
       expect(result).toEqual(cartRawData);
       expect(mockCartRepo.createCart).toHaveBeenCalledWith(userId);
       expect(mockCartRepo.createCart).toHaveBeenCalledTimes(1);
+    });
+  });
+  describe('장바구니 수정', () => {
+    it('장바구니에 수정 (상품 추가 / 수량 변경)', async () => {
+      // repo에서 upsert로 추가 혹은 수량 변경을 수행하기 때문에 서비스에서 로직은 동일함
+      // 그래서 테스트 분기없이 한번만 수행
+      // given
+      const cartItemsRawData = [createCartItemMock()];
+      mockCartRepo.findCartIdByUserId.mockResolvedValue({ id: 'cart-id-1' });
+      mockPrisma.$transaction.mockImplementation(async (callback) => {
+        return callback(mockPrisma);
+      });
+      mockCartRepo.updateCart.mockResolvedValue(cartItemsRawData[0]);
+
+      // when
+      const result = await mockCartService.updateCart({ userId, productId, sizes });
+
+      // then
+      expect(result).toEqual(cartItemsRawData);
+      expect(mockCartRepo.findCartIdByUserId).toHaveBeenCalledWith(userId);
+      expect(mockCartRepo.updateCart).toHaveBeenCalledWith({
+        tx: mockPrisma,
+        cartId,
+        productId,
+        sizeId,
+        quantity,
+      });
+      expect(mockCartRepo.updateCart).toHaveBeenCalledTimes(1);
+    });
+    it('장바구니가 없는 경우 400 에러 반환', async () => {
+      // given
+      mockCartRepo.findCartIdByUserId.mockResolvedValue(null);
+      // when
+      // then
+      await expect(mockCartService.updateCart({ userId, productId, sizes })).rejects.toThrow(
+        BadRequestError,
+      );
     });
   });
 });

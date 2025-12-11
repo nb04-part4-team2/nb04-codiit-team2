@@ -1,9 +1,13 @@
 import { CartRepository } from '@/domains/cart/cart.repository.js';
-import { CreateCartRawData, GetCartRawData } from '@/domains/cart/cart.dto.js';
-import { NotFoundError } from '@/common/utils/errors.js';
+import { CreateCartRawData, GetCartRawData, UpdateServiceInput } from '@/domains/cart/cart.dto.js';
+import { BadRequestError, NotFoundError } from '@/common/utils/errors.js';
+import { PrismaClient } from '@prisma/client';
 
 export class CartService {
-  constructor(private cartRepository: CartRepository) {}
+  constructor(
+    private cartRepository: CartRepository,
+    private prisma: PrismaClient,
+  ) {}
   async getCart(userId: string): Promise<GetCartRawData | []> {
     const cart = await this.cartRepository.findByUserId(userId);
     if (!cart) {
@@ -18,5 +22,22 @@ export class CartService {
   async createCart(userId: string): Promise<CreateCartRawData> {
     const cart = await this.cartRepository.createCart(userId);
     return cart;
+  }
+  async updateCart({ userId, productId, sizes }: UpdateServiceInput) {
+    const cart = await this.cartRepository.findCartIdByUserId(userId);
+    if (!cart) {
+      // 사용자가 구매하기 or 장바구니 담기를 누른 경우 프론트에서 createCart를 먼저 호출함
+      // 그리고 swagger에 장바구니 수정부분 404가 없음
+      throw new BadRequestError('잘못된 요청입니다.');
+    }
+    const { id: cartId } = cart;
+    const updatedItems = await this.prisma.$transaction(async (tx) => {
+      const updatePromises = sizes.map((item) => {
+        const { sizeId, quantity } = item;
+        return this.cartRepository.updateCart({ tx, cartId, productId, sizeId, quantity });
+      });
+      return await Promise.all(updatePromises);
+    });
+    return updatedItems;
   }
 }
