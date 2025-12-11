@@ -1,5 +1,11 @@
 import * as z from 'zod';
 
+export const cartItemIdParamSchema = z
+  .object({
+    cartItemId: z.cuid('유효한 아이템 ID를 입력하세요.'),
+  })
+  .strict();
+
 export const updateCartSchema = z.object({
   productId: z.cuid({ message: '올바르지 않은 productId 형식입니다.' }),
   sizes: z
