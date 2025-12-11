@@ -12,7 +12,7 @@ export interface UserResponseDto {
   name: string;
   email: string;
   type: UserType;
-  point: number;
+  points: number;
   createdAt: Date;
   updatedAt: Date;
   grade: GradeDto;
@@ -33,5 +33,20 @@ export interface UserWithGrade {
     name: string;
     rate: number;
     minAmount: number;
+  };
+}
+
+export interface StoreLikeResponseDto {
+  store: {
+    id: string;
+    userId: string;
+    name: string;
+    address: string;
+    phoneNumber: string;
+    content: string;
+    image: string | null;
+    createdAt: Date;
+    updatedAt: Date;
+    detailAddress: string | null;
   };
 }

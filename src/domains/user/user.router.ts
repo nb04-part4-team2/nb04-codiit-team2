@@ -19,4 +19,8 @@ router.patch(
   asyncHandler(userController.updateMe),
 );
 
+router.get('/me/likes', authenticate, asyncHandler(userController.getLikedStores));
+
+router.delete('/delete', authenticate, asyncHandler(userController.deleteMe));
+
 export default router;

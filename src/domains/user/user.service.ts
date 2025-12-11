@@ -2,7 +2,7 @@ import bcrypt from 'bcrypt';
 import { env } from '@/config/constants.js';
 import { CreateUserDto, UpdateUserDto } from './user.schema.js';
 import { UserRepository } from './user.repository.js';
-import type { UserResponseDto, UserWithGrade } from './user.dto.js';
+import type { UserResponseDto, UserWithGrade, StoreLikeResponseDto } from './user.dto.js';
 import {
   BadRequestError,
   ConflictError,
@@ -92,16 +92,51 @@ export class UserService {
       name: user.name,
       email: user.email,
       type: user.type,
-      point: user.point,
+      points: user.point,
       createdAt: user.createdAt,
       updatedAt: user.updatedAt,
+      image: user.image,
       grade: {
         id: user.grade.id,
         name: user.grade.name,
         rate: user.grade.rate,
         minAmount: user.grade.minAmount,
       },
-      image: user.image,
     };
+  }
+
+  async getLikedStores(userId: string): Promise<StoreLikeResponseDto[]> {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      throw new NotFoundError('유저를 찾을 수 없습니다.');
+    }
+
+    const storeLikes = await this.userRepository.findLikedStores(userId);
+
+    return storeLikes.map((like) => ({
+      store: {
+        id: like.store.id,
+        userId: like.store.userId,
+        name: like.store.name,
+        address: like.store.address,
+        phoneNumber: like.store.phoneNumber,
+        content: like.store.content,
+        image: like.store.image,
+        createdAt: like.store.createdAt,
+        updatedAt: like.store.updatedAt,
+        detailAddress: like.store.detailAddress,
+      },
+    }));
+  }
+
+  async deleteMe(userId: string): Promise<void> {
+    const user = await this.userRepository.findById(userId);
+
+    if (!user) {
+      throw new NotFoundError('유저를 찾을 수 없습니다.');
+    }
+
+    await this.userRepository.delete(userId);
   }
 }
