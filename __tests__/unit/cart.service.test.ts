@@ -166,4 +166,38 @@ describe('CartService', () => {
       await expect(mockCartService.getCartItem(userId, cartItemId)).rejects.toThrow(NotFoundError);
     });
   });
+  describe('장바구니 아이템 삭제', () => {
+    it('장바구니 아이템 삭제 성공', async () => {
+      // given
+      const deleteCartItemRawdata = { cart: { buyerId: userId } };
+      mockCartRepo.findCartItem.mockResolvedValue({ id: cartItemId });
+      mockCartRepo.deleteCartItem.mockResolvedValue(deleteCartItemRawdata);
+      // when
+      await mockCartService.deleteCartItem(userId, cartItemId);
+
+      // then
+      expect(mockCartRepo.deleteCartItem).toHaveBeenCalledWith(cartItemId);
+      expect(mockCartRepo.deleteCartItem).toHaveBeenCalledTimes(1);
+    });
+    it('해당 유저 장바구니의 아이템이 아닌경우 403 에러 반환', async () => {
+      // given
+      const cartItemRawData = { cart: { buyerId: 'buyer-id-2' } };
+      mockCartRepo.findCartItem.mockResolvedValue({ id: cartItemId });
+      mockCartRepo.deleteCartItem.mockResolvedValue(cartItemRawData);
+      // when
+      // then
+      await expect(mockCartService.deleteCartItem(userId, cartItemId)).rejects.toThrow(
+        ForbiddenError,
+      );
+    });
+    it('해당 아이템이 없는 경우 404 에러 반환', async () => {
+      // given
+      mockCartRepo.findCartItem.mockResolvedValue(null);
+      // when
+      // then
+      await expect(mockCartService.deleteCartItem(userId, cartItemId)).rejects.toThrow(
+        NotFoundError,
+      );
+    });
+  });
 });
