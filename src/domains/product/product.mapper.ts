@@ -1,27 +1,15 @@
-import { Product, Category, Stock, Size, Review, Inquiry, Reply, User } from '@prisma/client';
 import {
   DetailProductResponse,
   ProductListDto,
   ProductListResponse,
   ReviewStatsDto,
 } from './product.dto.js';
-
-type InquiryWithRelations = Inquiry & {
-  reply: (Reply & { user: User }) | null;
-};
-
-type ProductWithRelations = Product & {
-  store: { id: string; name: string };
-  category: Category;
-  stocks: (Stock & { size: Size })[];
-  _count?: { reviews: number };
-  reviews?: Review[];
-  inquiries?: InquiryWithRelations[];
-};
+import { ProductDetailWithRelations, ProductListWithRelations } from './product.repository.js';
 
 export class ProductMapper {
+  // 입력 타입을 ProductListWithRelations[] 로 변경
   static toProductListResponse(
-    products: (Product & { store: { id: string; name: string } })[],
+    products: ProductListWithRelations[],
     totalCount: number,
   ): ProductListResponse {
     return {
@@ -30,10 +18,8 @@ export class ProductMapper {
     };
   }
 
-  private static toProductListDto(
-    product: Product & { store: { id: string; name: string } },
-  ): ProductListDto {
-    // 할인 기간 체크 로직 추가
+  // 입력 타입을 ProductListWithRelations 로 변경
+  private static toProductListDto(product: ProductListWithRelations): ProductListDto {
     const now = new Date();
     const isDiscountActive =
       product.discountRate > 0 &&
@@ -42,7 +28,6 @@ export class ProductMapper {
       now >= product.discountStartTime &&
       now <= product.discountEndTime;
 
-    // 할인 기간일 때만 할인가 계산, 아니면 정가 사용
     const discountPrice = isDiscountActive
       ? Math.floor(product.price * (1 - product.discountRate / 100))
       : product.price;
@@ -54,7 +39,7 @@ export class ProductMapper {
       name: product.name,
       image: product.image,
       price: product.price,
-      discountPrice, // 수정된 할인가 적용
+      discountPrice,
       discountRate: product.discountRate,
       discountStartTime: product.discountStartTime?.toISOString() ?? null,
       discountEndTime: product.discountEndTime?.toISOString() ?? null,
@@ -67,8 +52,8 @@ export class ProductMapper {
     };
   }
 
-  static toDetailResponse(product: ProductWithRelations): DetailProductResponse {
-    // 상세 조회에도 동일한 할인 로직 적용
+  // 입력 타입을 ProductDetailWithRelations로 명시
+  static toDetailResponse(product: ProductDetailWithRelations): DetailProductResponse {
     const now = new Date();
     const isDiscountActive =
       product.discountRate > 0 &&
@@ -92,6 +77,7 @@ export class ProductMapper {
     };
 
     if (product.reviews && product.reviews.length > 0) {
+      // product가 정확히 타이핑되면 review의 타입도 자동으로 추론됩니다.
       product.reviews.forEach((review) => {
         stats.sumScore += review.rating;
         switch (review.rating) {
@@ -125,12 +111,13 @@ export class ProductMapper {
       storeId: product.storeId,
       storeName: product.store.name,
       price: product.price,
-      discountPrice, // 수정된 할인가 적용
+      discountPrice,
       discountRate: product.discountRate,
       discountStartTime: product.discountStartTime?.toISOString() ?? null,
       discountEndTime: product.discountEndTime?.toISOString() ?? null,
-      reviewsCount: product._count?.reviews ?? 0,
+      reviewsCount: product.reviewsCount ?? 0,
       reviews: [stats],
+      // inquiries 매핑
       inquiries: (product.inquiries ?? []).map((inquiry) => ({
         id: inquiry.id,
         title: inquiry.title,
@@ -147,9 +134,10 @@ export class ProductMapper {
               updatedAt: inquiry.reply.updatedAt.toISOString(),
               user: { id: inquiry.reply.user.id, name: inquiry.reply.user.name },
             }
-          : undefined,
+          : null,
       })),
       category: [{ name: product.category.name, id: product.category.id }],
+      // stocks 매핑
       stocks: product.stocks.map((stock) => ({
         id: stock.id,
         productId: stock.productId,

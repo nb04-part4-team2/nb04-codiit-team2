@@ -5,7 +5,7 @@ import {
   ProductListQueryDto,
   ProductListResponse,
 } from './product.dto.js';
-import { ProductMapper } from './product.mapper.js'; // 매퍼 임포트
+import { ProductMapper } from './product.mapper.js';
 import { NotFoundError } from '@/common/utils/errors.js';
 
 export class ProductService {
@@ -39,19 +39,33 @@ export class ProductService {
     };
 
     // DB 저장
-    const product = await this.productRepository.create(store.id, productDataForDb);
+    const createdProduct = await this.productRepository.create(store.id, productDataForDb);
+
+    // 매퍼의 타입 요구사항(ProductDetailWithRelations)을 충족하기 위해 생성된 ID로 상세 정보를 다시 조회하여 반환합니다.
+    const productDetail = await this.productRepository.findById(createdProduct.id);
+
+    if (!productDetail) {
+      throw new Error('상품 생성 후 조회에 실패했습니다.');
+    }
 
     // 응답 반환 (Mapper 사용)
-    return ProductMapper.toDetailResponse(product);
+    return ProductMapper.toDetailResponse(productDetail);
   }
 
   // 상품 목록 조회
   async getProducts(query: ProductListQueryDto): Promise<ProductListResponse> {
-    // 레포지토리 호출
-    // DTO(query)가 Repository Interface(FindProductsParams)와 구조적으로 호환되므로 바로 전달 가능
     const { products, totalCount } = await this.productRepository.findAll(query);
-
-    // 매퍼를 통해 응답 DTO로 변환
     return ProductMapper.toProductListResponse(products, totalCount);
+  }
+
+  // 상품 상세 조회
+  async getProduct(productId: string): Promise<DetailProductResponse> {
+    const product = await this.productRepository.findById(productId);
+
+    if (!product) {
+      throw new NotFoundError('상품을 찾을 수 없습니다.');
+    }
+
+    return ProductMapper.toDetailResponse(product);
   }
 }
