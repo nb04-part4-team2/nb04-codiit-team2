@@ -50,4 +50,14 @@ export class CartService {
     }
     return item;
   }
+  async deleteCartItem(userId: string, cartItemId: string) {
+    const item = await this.cartRepository.findCartItem(cartItemId);
+    if (!item) {
+      throw new NotFoundError('장바구니에 아이템이 없습니다.');
+    }
+    const deletedItem = await this.cartRepository.deleteCartItem(cartItemId);
+    if (deletedItem.cart.buyerId !== userId) {
+      throw new ForbiddenError('권한이 없습니다.');
+    }
+  }
 }

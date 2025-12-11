@@ -133,6 +133,17 @@ export class CartRepository {
       },
     });
   }
+  // 아이템 존재 여부 확인
+  async findCartItem(cartItemId: string) {
+    return await this.prisma.cartItem.findUnique({
+      where: {
+        id: cartItemId,
+      },
+      select: {
+        id: true,
+      },
+    });
+  }
   async findCartItemDetail(cartItemId: string): Promise<GetCartItemDetailRawData | null> {
     return await this.prisma.cartItem.findUnique({
       where: {
@@ -196,6 +207,20 @@ export class CartRepository {
             quantity: true,
             createdAt: true,
             updatedAt: true,
+          },
+        },
+      },
+    });
+  }
+  async deleteCartItem(cartItemId: string) {
+    return await this.prisma.cartItem.delete({
+      where: {
+        id: cartItemId,
+      },
+      select: {
+        cart: {
+          select: {
+            buyerId: true,
           },
         },
       },

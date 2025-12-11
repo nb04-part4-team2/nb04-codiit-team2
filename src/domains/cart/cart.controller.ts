@@ -39,4 +39,11 @@ export class CartController {
     const item = await this.cartService.getCartItem(userId, cartItemId);
     return res.status(200).json(toGetCartItemResponse(item));
   };
+  deleteCartItem = async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const { id: userId } = req.user;
+    const { cartItemId } = req.params;
+    await this.cartService.deleteCartItem(userId, cartItemId);
+    return res.status(204).send(); // 반환 데이터 없음
+  };
 }
