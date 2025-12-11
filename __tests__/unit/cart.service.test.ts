@@ -4,7 +4,7 @@
 import { CartService } from '../../src/domains/cart/cart.service';
 import { CartRepository } from '../../src/domains/cart/cart.repository';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { BadRequestError, NotFoundError } from '../../src/common/utils/errors';
+import { BadRequestError, NotFoundError, ForbiddenError } from '../../src/common/utils/errors';
 import {
   createCartBaseMock,
   createCartItemDetailMock,
@@ -139,19 +139,31 @@ describe('CartService', () => {
       mockCartRepo.findCartItemDetail.mockResolvedValue(cartItemRawData);
 
       // when
-      const result = await mockCartService.getCartItem(cartItemId);
+      const result = await mockCartService.getCartItem(userId, cartItemId);
 
       // then
       expect(result).toEqual(cartItemRawData);
       expect(mockCartRepo.findCartItemDetail).toHaveBeenCalledWith(cartItemId);
       expect(mockCartRepo.findCartItemDetail).toHaveBeenCalledTimes(1);
     });
+    it('해당 유저 장바구니의 아이템이 아닌경우 403 에러 반환', async () => {
+      // given
+      const cartItemRawData = createCartItemDetailMock({
+        cart: {
+          buyerId: 'buyer-id-2',
+        },
+      });
+      mockCartRepo.findCartItemDetail.mockResolvedValue(cartItemRawData);
+      // when
+      // then
+      await expect(mockCartService.getCartItem(userId, cartItemId)).rejects.toThrow(ForbiddenError);
+    });
     it('해당 아이템이 없는 경우 404 에러 반환', async () => {
       // given
       mockCartRepo.findCartItemDetail.mockResolvedValue(null);
       // when
       // then
-      await expect(mockCartService.getCartItem(cartItemId)).rejects.toThrow(NotFoundError);
+      await expect(mockCartService.getCartItem(userId, cartItemId)).rejects.toThrow(NotFoundError);
     });
   });
 });

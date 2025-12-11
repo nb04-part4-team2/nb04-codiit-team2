@@ -34,8 +34,9 @@ export class CartController {
   };
   getCartItem = async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const { id: userId } = req.user;
     const { cartItemId } = req.params;
-    const item = await this.cartService.getCartItem(cartItemId);
+    const item = await this.cartService.getCartItem(userId, cartItemId);
     return res.status(200).json(toGetCartItemResponse(item));
   };
 }
