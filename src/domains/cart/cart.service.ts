@@ -1,6 +1,6 @@
 import { CartRepository } from '@/domains/cart/cart.repository.js';
 import { CreateCartRawData, GetCartRawData, UpdateServiceInput } from '@/domains/cart/cart.dto.js';
-import { BadRequestError, NotFoundError } from '@/common/utils/errors.js';
+import { BadRequestError, ForbiddenError, NotFoundError } from '@/common/utils/errors.js';
 import { PrismaClient } from '@prisma/client';
 
 export class CartService {
@@ -39,5 +39,15 @@ export class CartService {
       return await Promise.all(updatePromises);
     });
     return updatedItems;
+  }
+  async getCartItem(userId: string, cartItemId: string) {
+    const item = await this.cartRepository.findCartItemDetail(cartItemId);
+    if (!item) {
+      throw new NotFoundError('장바구니에 아이템이 없습니다.');
+    }
+    if (item.cart.buyerId !== userId) {
+      throw new ForbiddenError('권한이 없습니다.');
+    }
+    return item;
   }
 }

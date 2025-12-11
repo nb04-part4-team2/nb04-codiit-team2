@@ -1,5 +1,11 @@
 import { PrismaClient } from '@prisma/client';
-import { CreateCartRawData, GetCartRawData, UpdateRepoInput } from '@/domains/cart/cart.dto.js';
+import {
+  CreateCartRawData,
+  GetCartItemDetailRawData,
+  GetCartRawData,
+  UpdateCartRawData,
+  UpdateRepoInput,
+} from '@/domains/cart/cart.dto.js';
 
 export class CartRepository {
   constructor(private prisma: PrismaClient) {}
@@ -43,6 +49,8 @@ export class CartRepository {
                 discountRate: true,
                 discountStartTime: true,
                 discountEndTime: true,
+                createdAt: true,
+                updatedAt: true,
                 store: {
                   select: {
                     id: true,
@@ -98,7 +106,13 @@ export class CartRepository {
       },
     });
   }
-  async updateCart({ tx, cartId, productId, sizeId, quantity }: UpdateRepoInput) {
+  async updateCart({
+    tx,
+    cartId,
+    productId,
+    sizeId,
+    quantity,
+  }: UpdateRepoInput): Promise<UpdateCartRawData> {
     const db = tx ?? this.prisma;
     return await db.cartItem.upsert({
       where: {
@@ -116,6 +130,74 @@ export class CartRepository {
         productId,
         sizeId,
         quantity,
+      },
+    });
+  }
+  async findCartItemDetail(cartItemId: string): Promise<GetCartItemDetailRawData | null> {
+    return await this.prisma.cartItem.findUnique({
+      where: {
+        id: cartItemId,
+      },
+      select: {
+        id: true,
+        cartId: true,
+        productId: true,
+        sizeId: true,
+        quantity: true,
+        createdAt: true,
+        updatedAt: true,
+        product: {
+          select: {
+            id: true,
+            storeId: true,
+            name: true,
+            price: true,
+            image: true,
+            discountRate: true,
+            discountStartTime: true,
+            discountEndTime: true,
+            createdAt: true,
+            updatedAt: true,
+            store: {
+              select: {
+                id: true,
+                userId: true,
+                name: true,
+                address: true,
+                detailAddress: true,
+                phoneNumber: true,
+                content: true,
+                image: true,
+                createdAt: true,
+                updatedAt: true,
+              },
+            },
+            stocks: {
+              select: {
+                id: true,
+                productId: true,
+                sizeId: true,
+                quantity: true,
+                size: {
+                  select: {
+                    id: true,
+                    en: true,
+                    ko: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+        cart: {
+          select: {
+            id: true,
+            buyerId: true,
+            quantity: true,
+            createdAt: true,
+            updatedAt: true,
+          },
+        },
       },
     });
   }
