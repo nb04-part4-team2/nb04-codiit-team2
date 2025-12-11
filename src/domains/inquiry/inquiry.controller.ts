@@ -67,14 +67,6 @@ export class InquiryController {
     return res.status(200).json(inquiry);
   };
 
-  // 답변 조회
-  // public getReplyById = async (req: Request, res: Response) => {
-  //   const { id } = req.params;
-
-  //   const reply = await this.inquiryService.getReplyById(id);
-  //   return res.status(200).json(reply);
-  // };
-
   // 답변 생성
   public createReply = async (req: Request, res: Response) => {
     const { id } = req.params;

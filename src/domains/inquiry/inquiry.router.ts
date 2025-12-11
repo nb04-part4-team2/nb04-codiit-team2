@@ -58,7 +58,6 @@ inquiryRouter
 // 답변 생성, 수정
 inquiryRouter
   .route('/:id/replies')
-  // .get(authenticate, validate(idSchema, 'params'), asyncHandler(inquiryController.getReplyById))
   .post(
     authenticate,
     onlySeller,
