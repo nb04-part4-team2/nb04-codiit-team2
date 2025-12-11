@@ -3,6 +3,7 @@ import { CartService } from '@/domains/cart/cart.service.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 import {
   toCreateCartResponse,
+  toGetCartItemResponse,
   toGetCartResponse,
   toUpdateCartResponse,
 } from '@/domains/cart/cart.mapper.js';
@@ -30,5 +31,11 @@ export class CartController {
     const { productId, sizes } = req.body;
     const updatedItems = await this.cartService.updateCart({ userId, productId, sizes });
     return res.status(200).json(toUpdateCartResponse(updatedItems));
+  };
+  getCartItem = async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const { cartItemId } = req.params;
+    const item = await this.cartService.getCartItem(cartItemId);
+    return res.status(200).json(toGetCartItemResponse(item));
   };
 }

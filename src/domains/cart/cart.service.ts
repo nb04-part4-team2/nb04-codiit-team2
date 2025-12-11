@@ -40,4 +40,11 @@ export class CartService {
     });
     return updatedItems;
   }
+  async getCartItem(cartItemId: string) {
+    const item = await this.cartRepository.findCartItemDetail(cartItemId);
+    if (!item) {
+      throw new NotFoundError('장바구니에 아이템이 없습니다.');
+    }
+    return item;
+  }
 }
