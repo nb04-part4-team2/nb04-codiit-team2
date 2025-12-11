@@ -158,14 +158,6 @@ export class InquiryService {
     return inquiry;
   };
 
-  // 답변 조회
-  // public getReplyById = async (id: string) => {
-  //   const reply = await this.inquiryRepository.getReplyById(id);
-  //   if (!reply) throw new NotFoundError('답변이 존재하지 않습니다.');
-
-  //   return reply;
-  // };
-
   // 답변 생성
   public createReply = async (id: string, userId: string, data: CreateReplyBody) => {
     // 문의 존재 및 인가 확인

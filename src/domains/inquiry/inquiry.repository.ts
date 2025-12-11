@@ -174,40 +174,6 @@ export class InquiryRepository {
     return inquiry;
   };
 
-  // 답변 조회
-  // public getReplyById = async (id: string) => {
-  //   const reply = await this.prisma.reply.findUnique({
-  //     where: { id },
-  //     select: {
-  //       id: true,
-  //       userId: true,
-  //       productId: true,
-  //       title: true,
-  //       content: true,
-  //       status: true,
-  //       isSecret: true,
-  //       createdAt: true,
-  //       updatedAt: true,
-  //       reply: {
-  //         select: {
-  //           id: true,
-  //           content: true,
-  //           createdAt: true,
-  //           updatedAt: true,
-  //           user: {
-  //             select: {
-  //               name: true,
-  //               id: true,
-  //             },
-  //           },
-  //         },
-  //       },
-  //     },
-  //   });
-
-  //   return reply;
-  // };
-
   // 답변 생성
   public createReply = async (
     createData: Prisma.ReplyCreateInput,

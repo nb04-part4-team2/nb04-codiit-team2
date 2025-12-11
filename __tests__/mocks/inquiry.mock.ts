@@ -1,14 +1,6 @@
 import type { Product, Inquiry, Reply } from '@prisma/client';
 import { InquiryStatus } from '@prisma/client';
 
-// type InquiryWithRelations = Inquiry & {
-//   product?: Partial<Product> & {
-//     store?: {
-//       userId: string;
-//     };
-//   };
-// };
-
 // ID
 export const inquiryId = 'inquiry-id-1';
 export const replyId = 'reply-id-1';
@@ -16,15 +8,6 @@ export const productId = 'product-id-1';
 export const userId = 'user-id-1';
 export const storeId = 'store-id-1';
 export const categoryId = 'category-id-1';
-
-// export const mockFindReply = {
-//   id: replyId,
-//   content: '답변 내용',
-//   createdAt: new Date(),
-//   updatedAt: new Date(),
-//   inquiryId: inquiryId,
-//   userId: userId,
-// };
 
 // ============================================
 // 목 데이터 팩토리 함수
@@ -64,22 +47,6 @@ export const createInquiryMock = (overrides: Partial<Inquiry> = {}): Inquiry => 
   productId: productId,
   ...overrides,
 });
-
-// 문의 생성 확장
-// export const createInquirWithProductMock = (
-//   overrides: Partial<InquiryWithRelations> = {},
-// ): InquiryWithRelations => {
-//   const baseInquiry = createInquiryMock();
-
-//   const baseInquiryWithRelation: InquiryWithRelations = {
-//     ...baseInquiry,
-//   };
-
-//   return {
-//     ...baseInquiryWithRelation,
-//     ...overrides,
-//   };
-// };
 
 // 답변 생성
 export const createReplyMock = (overrides: Partial<Reply> = {}): Reply => ({
