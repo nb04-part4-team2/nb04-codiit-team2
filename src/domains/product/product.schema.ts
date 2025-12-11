@@ -41,3 +41,24 @@ export const createProductSchema = z
       path: ['discountEndTime'],
     },
   );
+
+export const productListSchema = z.object({
+  page: z.coerce.number().int().min(1).default(1),
+  pageSize: z.coerce.number().int().min(1).default(10),
+  search: z.string().optional(),
+  sort: z
+    .enum([
+      'mostReviewed', // 리뷰 많은순
+      'recent', // 등록일순 (최신순)
+      'lowPrice', // 낮은 가격순
+      'highPrice', // 높은 가격순
+      'highRating', // 별점 높은순
+      'salesRanking', // 판매순
+    ])
+    .default('recent'), // 기본 정렬은 최신순으로 설정 (필요에 따라 변경 가능)
+  priceMin: z.coerce.number().min(0).optional(),
+  priceMax: z.coerce.number().min(0).optional(),
+  size: z.string().optional(), // 사이즈 이름
+  favoriteStore: z.string().optional(),
+  categoryName: z.string().optional(),
+});

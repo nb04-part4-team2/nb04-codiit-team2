@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { ProductService } from './product.service.js';
-import { CreateProductDto } from './product.dto.js';
+import { CreateProductDto, ProductListQueryDto } from './product.dto.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 
 export class ProductController {
@@ -20,5 +20,16 @@ export class ProductController {
     const product = await this.productService.createProduct(userId, requestBody);
 
     res.status(201).json(product);
+  };
+
+  getProducts = async (
+    req: Request<Record<string, string>, unknown, unknown, unknown>,
+    res: Response,
+  ) => {
+    const query = req.query as ProductListQueryDto;
+
+    const result = await this.productService.getProducts(query);
+
+    res.status(200).json(result);
   };
 }

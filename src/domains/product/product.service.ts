@@ -1,13 +1,17 @@
 import { ProductRepository } from './product.repository.js';
-import { CreateProductDto, DetailProductResponse } from './product.dto.js';
+import {
+  CreateProductDto,
+  DetailProductResponse,
+  ProductListQueryDto,
+  ProductListResponse,
+} from './product.dto.js';
 import { ProductMapper } from './product.mapper.js'; // 매퍼 임포트
 import { NotFoundError } from '@/common/utils/errors.js';
 
 export class ProductService {
   constructor(private productRepository: ProductRepository) {}
 
-  // 기존 private toProductResponse 메서드는 삭제됨 (Mapper로 이동)
-
+  // 상품 등록
   async createProduct(userId: string, data: CreateProductDto): Promise<DetailProductResponse> {
     // 스토어 검증
     const store = await this.productRepository.findStoreByUserId(userId);
@@ -39,5 +43,15 @@ export class ProductService {
 
     // 응답 반환 (Mapper 사용)
     return ProductMapper.toDetailResponse(product);
+  }
+
+  // 상품 목록 조회
+  async getProducts(query: ProductListQueryDto): Promise<ProductListResponse> {
+    // 레포지토리 호출
+    // DTO(query)가 Repository Interface(FindProductsParams)와 구조적으로 호환되므로 바로 전달 가능
+    const { products, totalCount } = await this.productRepository.findAll(query);
+
+    // 매퍼를 통해 응답 DTO로 변환
+    return ProductMapper.toProductListResponse(products, totalCount);
   }
 }
