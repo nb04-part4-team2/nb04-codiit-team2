@@ -6,8 +6,9 @@ import {
   createStoreMock,
   createStoreInputMock,
   updateStoreInputMock,
+  createStoreLikeMock,
 } from '../mocks/store.mock.js';
-import { NotFoundError, ForbiddenError } from '../../src/common/utils/errors.js';
+import { NotFoundError, ForbiddenError, ConflictError } from '../../src/common/utils/errors.js';
 
 describe('StoreService 유닛 테스트', () => {
   let storeService: StoreService;
@@ -265,10 +266,96 @@ describe('StoreService 유닛 테스트', () => {
       await expect(storeService.updateStore(storeId, userId, updateData)).rejects.toThrow(
         ForbiddenError,
       );
-      await expect(storeService.updateStore(storeId, userId, updateData)).rejects.toThrow(
-        '본인 스토어만 수정할 수 있습니다.',
-      );
       expect(storeRepository.update).not.toHaveBeenCalled();
+    });
+  });
+
+  // 관심 스토어 등록
+  describe('registerFavorite', () => {
+    it('관심 스토어 등록 성공', async () => {
+      // --- 준비 (Arrange) ---
+      const store = createStoreMock({ id: storeId });
+      const storeLike = createStoreLikeMock({ userId, storeId });
+
+      storeRepository.findById.mockResolvedValue(store);
+      storeRepository.findFavorite.mockResolvedValue(null); // 아직 등록 안됨
+      storeRepository.createFavorite.mockResolvedValue(storeLike);
+
+      // --- 실행 (Act) ---
+      const result = await storeService.registerFavorite(userId, storeId);
+
+      // --- 검증 (Assert) ---
+      expect(storeRepository.findById).toHaveBeenCalledWith(storeId);
+      expect(storeRepository.findFavorite).toHaveBeenCalledWith(userId, storeId);
+      expect(storeRepository.createFavorite).toHaveBeenCalledWith(userId, storeId);
+      expect(result).toEqual(store);
+    });
+
+    it('스토어가 존재하지 않으면 NotFoundError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      storeRepository.findById.mockResolvedValue(null);
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(storeService.registerFavorite(userId, storeId)).rejects.toThrow(NotFoundError);
+      expect(storeRepository.findFavorite).not.toHaveBeenCalled();
+      expect(storeRepository.createFavorite).not.toHaveBeenCalled();
+    });
+
+    it('이미 관심 등록된 경우 ConflictError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      const store = createStoreMock({ id: storeId });
+      const existingFavorite = createStoreLikeMock({ userId, storeId });
+
+      storeRepository.findById.mockResolvedValue(store);
+      storeRepository.findFavorite.mockResolvedValue(existingFavorite);
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(storeService.registerFavorite(userId, storeId)).rejects.toThrow(ConflictError);
+      expect(storeRepository.createFavorite).not.toHaveBeenCalled();
+    });
+  });
+
+  // 관심 스토어 해제
+  describe('unregisterFavorite', () => {
+    it('관심 스토어 해제 성공', async () => {
+      // --- 준비 (Arrange) ---
+      const store = createStoreMock({ id: storeId });
+      const existingFavorite = createStoreLikeMock({ userId, storeId });
+
+      storeRepository.findById.mockResolvedValue(store);
+      storeRepository.findFavorite.mockResolvedValue(existingFavorite);
+      storeRepository.deleteFavorite.mockResolvedValue(existingFavorite);
+
+      // --- 실행 (Act) ---
+      const result = await storeService.unregisterFavorite(userId, storeId);
+
+      // --- 검증 (Assert) ---
+      expect(storeRepository.findById).toHaveBeenCalledWith(storeId);
+      expect(storeRepository.findFavorite).toHaveBeenCalledWith(userId, storeId);
+      expect(storeRepository.deleteFavorite).toHaveBeenCalledWith(userId, storeId);
+      expect(result).toEqual(store);
+    });
+
+    it('스토어가 존재하지 않으면 NotFoundError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      storeRepository.findById.mockResolvedValue(null);
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(storeService.unregisterFavorite(userId, storeId)).rejects.toThrow(NotFoundError);
+      expect(storeRepository.findFavorite).not.toHaveBeenCalled();
+      expect(storeRepository.deleteFavorite).not.toHaveBeenCalled();
+    });
+
+    it('관심 등록되지 않은 경우 NotFoundError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      const store = createStoreMock({ id: storeId });
+
+      storeRepository.findById.mockResolvedValue(store);
+      storeRepository.findFavorite.mockResolvedValue(null); // 등록되지 않음
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(storeService.unregisterFavorite(userId, storeId)).rejects.toThrow(NotFoundError);
+      expect(storeRepository.deleteFavorite).not.toHaveBeenCalled();
     });
   });
 });

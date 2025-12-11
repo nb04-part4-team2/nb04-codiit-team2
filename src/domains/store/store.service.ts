@@ -114,4 +114,44 @@ export class StoreService {
 
     return updatedStore;
   }
+
+  // 관심 스토어 등록
+  async registerFavorite(userId: string, storeId: string) {
+    // 스토어 존재 확인
+    const store = await this.storeRepository.findById(storeId);
+    if (!store) {
+      throw new NotFoundError('스토어를 찾을 수 없습니다.');
+    }
+
+    // 이미 등록 여부 확인
+    const existingFavorite = await this.storeRepository.findFavorite(userId, storeId);
+    if (existingFavorite) {
+      throw new ConflictError('이미 관심 스토어로 등록되어 있습니다.');
+    }
+
+    // 관심 등록
+    await this.storeRepository.createFavorite(userId, storeId);
+
+    return store;
+  }
+
+  // 관심 스토어 해제
+  async unregisterFavorite(userId: string, storeId: string) {
+    // 스토어 존재 확인
+    const store = await this.storeRepository.findById(storeId);
+    if (!store) {
+      throw new NotFoundError('스토어를 찾을 수 없습니다.');
+    }
+
+    // 등록 여부 확인
+    const existingFavorite = await this.storeRepository.findFavorite(userId, storeId);
+    if (!existingFavorite) {
+      throw new NotFoundError('관심 스토어로 등록되어 있지 않습니다.');
+    }
+
+    // 관심 해제
+    await this.storeRepository.deleteFavorite(userId, storeId);
+
+    return store;
+  }
 }
