@@ -6,6 +6,16 @@ export interface CartBase<TDate> {
   createdAt: TDate;
   updatedAt: TDate;
 }
+// 장바구니 아이템 베이스
+export interface CartItemBase<TDate> {
+  id: string;
+  cartId: string;
+  productId: string;
+  sizeId: number;
+  quantity: number;
+  createdAt: TDate;
+  updatedAt: TDate;
+}
 
 interface StoreBase<TDate> {
   id: string;
@@ -39,16 +49,9 @@ interface ProductBase<TStocks, TStore, TTime> {
   store: TStore;
   stocks: TStocks[];
 }
-
-interface CartItemBase<TProduct, TDate> {
-  id: string;
-  cartId: string;
-  productId: string;
-  sizeId: number;
-  quantity: number;
+// 자식이 제네릭을 받아 부모에게 넘겨줄 수 있음
+interface GetCartItemBase<TProduct, TDate> extends CartItemBase<TDate> {
   product: TProduct;
-  createdAt: TDate;
-  updatedAt: TDate;
 }
 
 export interface SizeRawData {
@@ -65,16 +68,16 @@ interface SizeResponse {
   };
 }
 
-// DB 조회 결과 RawData
+// DB 조회 결과 RawData type
 export type StockRawData = StockBase<SizeRawData>;
 export interface StoreRawData extends StoreBase<Date> {
   detailAddress: string | null;
 }
 export type ProductRawData = ProductBase<StockRawData, StoreRawData, Date>;
-export type CartItemRawData = CartItemBase<ProductRawData, Date>;
+export type GetCartItemRawData = GetCartItemBase<ProductRawData, Date>;
 
-// response 응답용 data
+// response 응답용 data type
 export type StockResponse = StockBase<SizeResponse>;
 export type StoreResponse = StoreBase<string>;
 export type ProductResponse = ProductBase<StockResponse, StoreResponse, string>;
-export type CartItemResponse = CartItemBase<ProductResponse, string>;
+export type GetCartItemResponse = GetCartItemBase<ProductResponse, string>;
