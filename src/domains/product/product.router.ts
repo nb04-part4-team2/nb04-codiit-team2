@@ -25,6 +25,8 @@ productRouter.get(
   asyncHandler(productController.getProducts),
 );
 
+productRouter.get('/:productId', asyncHandler(productController.getOne));
+
 // 문의 중첩 라우터
 productRouter.use('/:productId/inquiries', nestedInquiryRouter);
 
