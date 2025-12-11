@@ -103,19 +103,19 @@ export class CartRepository {
     return await db.cartItem.upsert({
       where: {
         cartId_productId_sizeId: {
-          cartId: cartId,
-          productId: productId,
-          sizeId: sizeId,
+          cartId,
+          productId,
+          sizeId,
         },
       },
       update: {
         quantity: quantity,
       },
       create: {
-        cartId: cartId,
-        productId: productId,
-        sizeId: sizeId,
-        quantity: quantity,
+        cartId,
+        productId,
+        sizeId,
+        quantity,
       },
     });
   }

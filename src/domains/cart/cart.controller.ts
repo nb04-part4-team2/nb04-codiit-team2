@@ -28,7 +28,7 @@ export class CartController {
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
     const { id: userId } = req.user;
     const { productId, sizes } = req.body;
-    const cart = await this.cartService.updateCart({ userId, productId, sizes });
-    return res.status(201).json(toUpdateCartResponse(cart));
+    const updatedItems = await this.cartService.updateCart({ userId, productId, sizes });
+    return res.status(200).json(toUpdateCartResponse(updatedItems));
   };
 }

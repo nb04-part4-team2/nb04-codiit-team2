@@ -21,8 +21,8 @@ describe('CartService', () => {
   const quantity = 1;
   const sizes = [
     {
-      sizeId: sizeId,
-      quantity: quantity,
+      sizeId,
+      quantity,
     },
   ];
 
