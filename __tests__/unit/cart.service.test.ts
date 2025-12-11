@@ -169,21 +169,22 @@ describe('CartService', () => {
   describe('장바구니 아이템 삭제', () => {
     it('장바구니 아이템 삭제 성공', async () => {
       // given
-      const deleteCartItemRawdata = { cart: { buyerId: userId } };
-      mockCartRepo.findCartItem.mockResolvedValue({ id: cartItemId });
-      mockCartRepo.deleteCartItem.mockResolvedValue(deleteCartItemRawdata);
+      mockCartRepo.findCartItem.mockResolvedValue({ id: cartItemId, cart: { buyerId: userId } });
       // when
       await mockCartService.deleteCartItem(userId, cartItemId);
 
       // then
       expect(mockCartRepo.deleteCartItem).toHaveBeenCalledWith(cartItemId);
       expect(mockCartRepo.deleteCartItem).toHaveBeenCalledTimes(1);
+      expect(mockCartRepo.findCartItem).toHaveBeenCalledWith(cartItemId);
+      expect(mockCartRepo.findCartItem).toHaveBeenCalledTimes(1);
     });
     it('해당 유저 장바구니의 아이템이 아닌경우 403 에러 반환', async () => {
       // given
-      const cartItemRawData = { cart: { buyerId: 'buyer-id-2' } };
-      mockCartRepo.findCartItem.mockResolvedValue({ id: cartItemId });
-      mockCartRepo.deleteCartItem.mockResolvedValue(cartItemRawData);
+      mockCartRepo.findCartItem.mockResolvedValue({
+        id: cartItemId,
+        cart: { buyerId: 'buyer-id-2' },
+      });
       // when
       // then
       await expect(mockCartService.deleteCartItem(userId, cartItemId)).rejects.toThrow(

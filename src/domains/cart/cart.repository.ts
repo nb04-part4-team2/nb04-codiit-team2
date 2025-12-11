@@ -141,6 +141,11 @@ export class CartRepository {
       },
       select: {
         id: true,
+        cart: {
+          select: {
+            buyerId: true,
+          },
+        },
       },
     });
   }
@@ -216,13 +221,6 @@ export class CartRepository {
     return await this.prisma.cartItem.delete({
       where: {
         id: cartItemId,
-      },
-      select: {
-        cart: {
-          select: {
-            buyerId: true,
-          },
-        },
       },
     });
   }
