@@ -5,6 +5,8 @@ import {
   CreateCartResponse,
   UpdateCartRawData,
   UpdateCartResponse,
+  GetCartItemDetailRawData,
+  GetCartItemDetailResponse,
 } from '@/domains/cart/cart.dto.js';
 import {
   CartBase,
@@ -73,6 +75,8 @@ const toProductResponse = (productRawData: ProductRawData): ProductResponse => (
   discountRate: productRawData.discountRate,
   discountStartTime: productRawData.discountStartTime?.toISOString() ?? null,
   discountEndTime: productRawData.discountEndTime?.toISOString() ?? null,
+  createdAt: productRawData.createdAt.toISOString(),
+  updatedAt: productRawData.updatedAt.toISOString(),
   store: toStoreResponse(productRawData.store),
   stocks: productRawData.stocks.map(toStockResponse),
 });
@@ -101,3 +105,12 @@ export const toCreateCartResponse = (rawCart: CreateCartRawData): CreateCartResp
 export const toUpdateCartResponse = (rawItems: UpdateCartRawData[]): UpdateCartResponse[] => {
   return rawItems.map(toCartItemBaseResponse);
 };
+// ============================================
+// 아이템 상세 조회 응답 객체 변환
+// ============================================
+export const toGetCartItemResponse = (
+  rawItem: GetCartItemDetailRawData,
+): GetCartItemDetailResponse => ({
+  ...toItemResponse(rawItem), // 명시적으로 필드를 1대1 매치하기때문에 cart가 같이 들어가도 안전
+  cart: toCartBaseResponse(rawItem.cart),
+});

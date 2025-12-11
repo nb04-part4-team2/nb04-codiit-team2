@@ -46,6 +46,8 @@ interface ProductBase<TStocks, TStore, TTime> {
   discountRate: number;
   discountStartTime: TTime | null;
   discountEndTime: TTime | null;
+  createdAt: TTime;
+  updatedAt: TTime;
   store: TStore;
   stocks: TStocks[];
 }

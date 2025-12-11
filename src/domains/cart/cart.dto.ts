@@ -29,6 +29,10 @@ export type CreateCartRawData = CartBase<Date>;
 
 export type UpdateCartRawData = CartItemBase<Date>;
 
+export interface GetCartItemDetailRawData extends GetCartItemRawData {
+  cart: CartBase<Date>;
+}
+
 // response
 export interface GetCartResponse extends CartBase<string> {
   items: GetCartItemResponse[];
@@ -37,3 +41,7 @@ export interface GetCartResponse extends CartBase<string> {
 export type CreateCartResponse = CartBase<string>;
 
 export type UpdateCartResponse = CartItemBase<string>;
+
+export interface GetCartItemDetailResponse extends GetCartItemResponse {
+  cart: CartBase<string>;
+}

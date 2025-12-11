@@ -1,4 +1,8 @@
-import { GetCartRawData, GetCartResponse } from '../../src/domains/cart/cart.dto';
+import {
+  GetCartItemDetailRawData,
+  GetCartRawData,
+  GetCartResponse,
+} from '../../src/domains/cart/cart.dto';
 import {
   SizeRawData,
   StockRawData,
@@ -79,6 +83,8 @@ export const createProductMock = (overrides: Partial<ProductRawData> = {}): Prod
     discountRate: 0,
     discountStartTime: null,
     discountEndTime: null,
+    createdAt: date1,
+    updatedAt: date2,
     store: createStoreMock(store),
     stocks: stocks ?? [],
     ...rest,
@@ -128,6 +134,18 @@ export const createCartItemMock = (
   ...baseCartItemMock,
   ...overrides,
 });
+/**
+ * [완성본] GetCartItemRawData 팩토리
+ */
+export const createCartItemDetailMock = (
+  overrides: Partial<GetCartItemDetailRawData> = {},
+): GetCartItemDetailRawData => {
+  const { cart, ...baseOverrides } = overrides;
+  return {
+    ...createGetCartItemMock(baseOverrides),
+    cart: createCartBaseMock(cart),
+  };
+};
 
 // ============================================
 // Response 객체 조립

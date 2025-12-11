@@ -4,8 +4,13 @@
 import { CartService } from '../../src/domains/cart/cart.service';
 import { CartRepository } from '../../src/domains/cart/cart.repository';
 import { beforeEach, describe, expect, it, jest } from '@jest/globals';
-import { BadRequestError, NotFoundError } from '../../src/common/utils/errors';
-import { createCartBaseMock, createCartItemMock, createCartMock } from '../mocks/cart.mock.ts';
+import { BadRequestError, NotFoundError, ForbiddenError } from '../../src/common/utils/errors';
+import {
+  createCartBaseMock,
+  createCartItemDetailMock,
+  createCartItemMock,
+  createCartMock,
+} from '../mocks/cart.mock.ts';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { PrismaClient } from '@prisma/client';
 
@@ -17,6 +22,7 @@ describe('CartService', () => {
   const userId = 'buyer-id-1';
   const productId = 'product-id-1';
   const cartId = 'cart-id-1';
+  const cartItemId = 'cartItem-id-1';
   const sizeId = 1;
   const quantity = 1;
   const sizes = [
@@ -124,6 +130,40 @@ describe('CartService', () => {
       await expect(mockCartService.updateCart({ userId, productId, sizes })).rejects.toThrow(
         BadRequestError,
       );
+    });
+  });
+  describe('장바구니 아이템 상세 조회', () => {
+    it('아이템 상세 조회', async () => {
+      // given
+      const cartItemRawData = createCartItemDetailMock();
+      mockCartRepo.findCartItemDetail.mockResolvedValue(cartItemRawData);
+
+      // when
+      const result = await mockCartService.getCartItem(userId, cartItemId);
+
+      // then
+      expect(result).toEqual(cartItemRawData);
+      expect(mockCartRepo.findCartItemDetail).toHaveBeenCalledWith(cartItemId);
+      expect(mockCartRepo.findCartItemDetail).toHaveBeenCalledTimes(1);
+    });
+    it('해당 유저 장바구니의 아이템이 아닌경우 403 에러 반환', async () => {
+      // given
+      const cartItemRawData = createCartItemDetailMock({
+        cart: {
+          buyerId: 'buyer-id-2',
+        },
+      });
+      mockCartRepo.findCartItemDetail.mockResolvedValue(cartItemRawData);
+      // when
+      // then
+      await expect(mockCartService.getCartItem(userId, cartItemId)).rejects.toThrow(ForbiddenError);
+    });
+    it('해당 아이템이 없는 경우 404 에러 반환', async () => {
+      // given
+      mockCartRepo.findCartItemDetail.mockResolvedValue(null);
+      // when
+      // then
+      await expect(mockCartService.getCartItem(userId, cartItemId)).rejects.toThrow(NotFoundError);
     });
   });
 });
