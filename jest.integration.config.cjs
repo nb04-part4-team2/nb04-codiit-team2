@@ -1,11 +1,11 @@
 module.exports = {
-  setupFilesAfterEnv: ['./__tests__/setup.ts'],
+  setupFilesAfterEnv: ['./__tests__/setup.integration.ts'],
 
   preset: 'ts-jest/presets/default-esm',
   extensionsToTreatAsEsm: ['.ts'],
   testEnvironment: 'node',
   verbose: true,
-  testMatch: ['**/*.test.ts'],
+  testMatch: ['**/*.spec.ts'],
   transform: {
     '^.+\\.ts$': [
       'ts-jest',
