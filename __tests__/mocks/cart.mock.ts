@@ -26,7 +26,6 @@ const date2 = new Date('2025-12-04T05:05:00.861Z');
 export const baseCartMock = {
   id: 'cart-id-1',
   buyerId: 'buyer-id-1',
-  quantity: 1,
   createdAt: date1,
   updatedAt: date2,
 };
@@ -83,6 +82,8 @@ export const createProductMock = (overrides: Partial<ProductRawData> = {}): Prod
     discountRate: 0,
     discountStartTime: null,
     discountEndTime: null,
+    reviewsRating: 1,
+    categoryId: 'category-id-1',
     createdAt: date1,
     updatedAt: date2,
     store: createStoreMock(store),

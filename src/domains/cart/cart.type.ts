@@ -2,7 +2,6 @@
 export interface CartBase<TDate> {
   id: string;
   buyerId: string;
-  quantity: number;
   createdAt: TDate;
   updatedAt: TDate;
 }
@@ -48,6 +47,8 @@ interface ProductBase<TStocks, TStore, TTime> {
   discountEndTime: TTime | null;
   createdAt: TTime;
   updatedAt: TTime;
+  reviewsRating: number;
+  categoryId: string;
   store: TStore;
   stocks: TStocks[];
 }
@@ -64,6 +65,7 @@ export interface SizeRawData {
 
 interface SizeResponse {
   id: number;
+  name: string;
   size: {
     en: string;
     ko: string;

@@ -27,7 +27,6 @@ export class CartRepository {
       select: {
         id: true,
         buyerId: true,
-        quantity: true,
         createdAt: true,
         updatedAt: true,
         items: {
@@ -51,6 +50,8 @@ export class CartRepository {
                 discountEndTime: true,
                 createdAt: true,
                 updatedAt: true,
+                reviewsRating: true,
+                categoryId: true,
                 store: {
                   select: {
                     id: true,
@@ -174,6 +175,8 @@ export class CartRepository {
             discountEndTime: true,
             createdAt: true,
             updatedAt: true,
+            reviewsRating: true,
+            categoryId: true,
             store: {
               select: {
                 id: true,
@@ -209,7 +212,6 @@ export class CartRepository {
           select: {
             id: true,
             buyerId: true,
-            quantity: true,
             createdAt: true,
             updatedAt: true,
           },
