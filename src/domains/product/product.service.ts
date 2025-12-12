@@ -142,7 +142,7 @@ export class ProductService {
 
     // 권한 검증: 요청한 유저가 해당 상품이 등록된 스토어의 주인이 아닌 경우
     if (product.store.userId !== userId) {
-      throw new ForbiddenError('권한이 없습니다.');
+      throw new ForbiddenError('상품 삭제 권한이 없습니다.');
     }
 
     // 삭제 수행

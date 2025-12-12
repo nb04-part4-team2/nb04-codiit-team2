@@ -1,4 +1,4 @@
-import { PrismaClient, Prisma, Product } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 
 // 목록 조회용 가벼운 타입 추가
 export type ProductListWithRelations = Prisma.ProductGetPayload<{
@@ -297,8 +297,8 @@ export class ProductRepository {
     });
   }
 
-  async delete(id: string): Promise<Product> {
-    return await this.prisma.product.delete({
+  async delete(id: string): Promise<void> {
+    await this.prisma.product.delete({
       where: {
         id,
       },
