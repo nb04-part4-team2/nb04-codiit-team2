@@ -4,9 +4,10 @@ import {
   DetailProductResponse,
   ProductListQueryDto,
   ProductListResponse,
+  UpdateProductDto,
 } from './product.dto.js';
 import { ProductMapper } from './product.mapper.js';
-import { NotFoundError } from '@/common/utils/errors.js';
+import { NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
 
 export class ProductService {
   constructor(private productRepository: ProductRepository) {}
@@ -67,5 +68,67 @@ export class ProductService {
     }
 
     return ProductMapper.toDetailResponse(product);
+  }
+
+  // 상품 수정
+  async updateProduct(
+    userId: string,
+    productId: string,
+    data: UpdateProductDto,
+  ): Promise<DetailProductResponse> {
+    const product = await this.productRepository.findById(productId);
+    if (!product) {
+      throw new NotFoundError('상품을 찾을 수 없습니다.');
+    }
+
+    // 권한 검증 (내 스토어의 상품인지 확인)
+    const store = await this.productRepository.findStoreByUserId(userId);
+    if (!store) {
+      // 판매자 계정이지만 스토어가 등록되지 않은 경우
+      throw new NotFoundError('스토어를 찾을 수 없습니다.');
+    }
+
+    if (product.storeId !== store.id) {
+      throw new ForbiddenError('상품 수정 권한이 없습니다.');
+    }
+
+    // 3. 카테고리 변경 시 검증 및 ID 조회
+    let categoryId: string | undefined = undefined;
+    if (data.categoryName) {
+      const category = await this.productRepository.findCategoryByName(data.categoryName);
+      if (!category) {
+        throw new NotFoundError('카테고리가 없습니다.');
+      }
+      categoryId = category.id;
+    }
+
+    const discountStartTime =
+      data.discountStartTime === null
+        ? null
+        : data.discountStartTime
+          ? new Date(data.discountStartTime)
+          : undefined;
+
+    const discountEndTime =
+      data.discountEndTime === null
+        ? null
+        : data.discountEndTime
+          ? new Date(data.discountEndTime)
+          : undefined;
+
+    const updatedProduct = await this.productRepository.update(productId, {
+      name: data.name,
+      price: data.price,
+      content: data.content,
+      image: data.image,
+      discountRate: data.discountRate,
+      isSoldOut: data.isSoldOut,
+      stocks: data.stocks, // 재고는 필수값이므로 그대로 전달
+      categoryId,
+      discountStartTime,
+      discountEndTime,
+    });
+
+    return ProductMapper.toDetailResponse(updatedProduct);
   }
 }
