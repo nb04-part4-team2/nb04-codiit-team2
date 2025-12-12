@@ -23,6 +23,16 @@ const tableNames = [
   'size',
 ];
 
+// Size 시딩 데이터 (Lookup 테이블 - 시스템 상수)
+const SIZE_SEED_DATA = [
+  { id: 1, en: 'XS', ko: '엑스스몰' },
+  { id: 2, en: 'S', ko: '스몰' },
+  { id: 3, en: 'M', ko: '미디엄' },
+  { id: 4, en: 'L', ko: '라지' },
+  { id: 5, en: 'XL', ko: '엑스라지' },
+  { id: 6, en: 'FREE', ko: '프리' },
+];
+
 // 테스트 중 console 출력 억제 (디버깅 시 주석 처리)
 const originalConsoleError = console.error;
 const originalConsoleLog = console.log;
@@ -37,6 +47,11 @@ beforeEach(async () => {
   await prisma.$executeRawUnsafe(
     `TRUNCATE TABLE ${tableNames.join(', ')} RESTART IDENTITY CASCADE;`,
   );
+
+  // Size Lookup 테이블 시딩 (Cart, Order, Stock 테스트에 필요)
+  await prisma.size.createMany({
+    data: SIZE_SEED_DATA,
+  });
 });
 
 afterAll(async () => {
