@@ -8,6 +8,8 @@ export const productId = 'product-id-1';
 export const userId = 'user-id-1';
 export const storeId = 'store-id-1';
 export const categoryId = 'category-id-1';
+const date1 = new Date('2025-12-04T05:05:00.861Z');
+const date2 = new Date('2025-12-04T05:05:00.861Z');
 
 // ============================================
 // 목 데이터 팩토리 함수
@@ -27,8 +29,8 @@ export const createProductMock = (overrides: Partial<Product> = {}): Product => 
   salesCount: 0,
   reviewsCount: 0,
   reviewsRating: 0.0,
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: date1,
+  updatedAt: date2,
   storeId: storeId,
   categoryId: categoryId,
   ...overrides,
@@ -41,8 +43,8 @@ export const createInquiryMock = (overrides: Partial<Inquiry> = {}): Inquiry => 
   content: '문의 내용',
   status: InquiryStatus.WaitingAnswer,
   isSecret: false,
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: date1,
+  updatedAt: date2,
   userId: userId,
   productId: productId,
   ...overrides,
@@ -52,8 +54,8 @@ export const createInquiryMock = (overrides: Partial<Inquiry> = {}): Inquiry => 
 export const createReplyMock = (overrides: Partial<Reply> = {}): Reply => ({
   id: replyId,
   content: '답변 내용',
-  createdAt: new Date(),
-  updatedAt: new Date(),
+  createdAt: date1,
+  updatedAt: date2,
   userId: userId,
   inquiryId: inquiryId,
   ...overrides,
@@ -90,9 +92,12 @@ export const mockInquiries = [
 // 모든 문의 조회 (사용자 본인의 문의)
 export const mockAllInquiries = [
   {
-    ...createInquiryMock({
-      id: 'inquiry-1',
-    }),
+    id: 'inquiry-1',
+    title: '문의 제목',
+    content: '문의 내용',
+    status: InquiryStatus.WaitingAnswer,
+    isSecret: false,
+    createdAt: date1,
     user: {
       id: userId,
       name: '테스트 사용자 1',
@@ -108,9 +113,12 @@ export const mockAllInquiries = [
     },
   },
   {
-    ...createInquiryMock({
-      id: 'inquiry-2',
-    }),
+    id: 'inquiry-2',
+    title: '문의 제목',
+    content: '문의 내용',
+    status: InquiryStatus.WaitingAnswer,
+    isSecret: false,
+    createdAt: date1,
     user: {
       id: userId,
       name: '테스트 사용자 1',
