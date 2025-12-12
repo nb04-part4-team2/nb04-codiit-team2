@@ -71,7 +71,7 @@ app.use((req, res) => {
 app.use(prismaErrorHandler);
 app.use(zodErrorHandler);
 app.use(businessErrorHandler);
-app.use(catchAllErrorHandler);
 app.use(uploadErrorHandler);
+app.use(catchAllErrorHandler);
 
 export { app };
