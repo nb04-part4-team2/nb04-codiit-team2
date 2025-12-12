@@ -129,4 +129,23 @@ export class ProductService {
 
     return ProductMapper.toDetailResponse(updatedProduct);
   }
+
+  // 상품 삭제
+  async deleteProduct(userId: string, productId: string): Promise<void> {
+    // 상품 존재 여부 및 소유권 정보 조회
+    const product = await this.productRepository.findProductOwnership(productId);
+
+    // 상품이 존재하지 않는 경우
+    if (!product) {
+      throw new NotFoundError('상품을 찾을 수 없습니다.');
+    }
+
+    // 권한 검증: 요청한 유저가 해당 상품이 등록된 스토어의 주인이 아닌 경우
+    if (product.store.userId !== userId) {
+      throw new ForbiddenError('권한이 없습니다.');
+    }
+
+    // 삭제 수행
+    await this.productRepository.delete(productId);
+  }
 }
