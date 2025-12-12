@@ -61,4 +61,3 @@ docker-compose.override.yml
 # Documentation
 docs/
 /generated/prisma
-s3_도메인_연동_가이드.md
