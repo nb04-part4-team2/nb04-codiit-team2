@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { ProductService } from './product.service.js';
-import { CreateProductDto, ProductListQueryDto } from './product.dto.js';
+import { CreateProductDto, ProductListQueryDto, UpdateProductDto } from './product.dto.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 
 export class ProductController {
@@ -39,5 +39,20 @@ export class ProductController {
     const product = await this.productService.getProduct(productId);
 
     res.status(200).json(product);
+  };
+
+  update = async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new UnauthorizedError('로그인이 필요합니다.');
+    }
+
+    const userId = req.user.id;
+    const { productId } = req.params;
+    const requestBody = req.body as UpdateProductDto;
+
+    // 서비스 호출 (수정된 상품 정보 반환)
+    const updatedProduct = await this.productService.updateProduct(userId, productId, requestBody);
+
+    res.status(200).json(updatedProduct);
   };
 }
