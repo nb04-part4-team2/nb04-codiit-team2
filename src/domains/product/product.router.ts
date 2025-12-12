@@ -33,6 +33,7 @@ productRouter.get(
 // 문의 중첩 라우터
 productRouter.use('/:productId/inquiries', nestedInquiryRouter);
 
+// 상품 상세 조회 API
 productRouter.get(
   '/:productId',
   validate(productDetailSchema, 'params'),
