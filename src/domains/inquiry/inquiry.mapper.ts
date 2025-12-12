@@ -28,10 +28,13 @@ import {
 } from './inquiry.dto.js';
 
 // 특정 상품의 모든 문의 조회
-export const toGetInquiriesResponse = (
-  inquiries: GetInquiriesRepository[],
-  totalCount: number,
-): GetInquiriesResponse => ({
+export const toGetInquiriesResponse = ({
+  list: inquiries,
+  totalCount,
+}: {
+  list: GetInquiriesRepository[];
+  totalCount: number;
+}): GetInquiriesResponse => ({
   list: inquiries.map((item) => getInquiriesSchema.parse(item)),
   totalCount: totalCount,
 });
@@ -44,10 +47,13 @@ export const toCreateInquiryResponse = (
 };
 
 // 모든 문의 조회 (사용자 본인의 문의)
-export const toGetAllInquiriesRespons = (
-  inquiries: GetAllInquiriesRepository[],
-  totalCount: number,
-): GetAllInquiriesResponse => ({
+export const toGetAllInquiriesResponse = ({
+  list: inquiries,
+  totalCount,
+}: {
+  list: GetAllInquiriesRepository[];
+  totalCount: number;
+}): GetAllInquiriesResponse => ({
   list: inquiries.map((item) => getAllInquiriesSchema.parse(item)),
   totalCount: totalCount,
 });

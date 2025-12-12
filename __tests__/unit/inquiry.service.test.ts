@@ -4,7 +4,6 @@ import { InquiryService } from '../../src/domains/inquiry/inquiry.service.js';
 import { InquiryStatus } from '@prisma/client';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { inquiryId, replyId, productId, userId } from '../mocks/inquiry.mock.js';
-import { toExpectedList, toExpectedWithIsoDate } from '../helpers/inquiry.helper.js';
 import {
   createInquiryMock,
   createReplyMock,
@@ -37,7 +36,6 @@ describe('InquiryService 유닛 테스트', () => {
   describe('getInquiries', () => {
     it('특정 상품의 모든 문의 조회 성공', async () => {
       // --- 준비 (Arrange) ---
-      const expectedList = toExpectedList(mockInquiries);
       inquiryRepository.findProductByProductId.mockResolvedValue(mockFindProduct);
       inquiryRepository.countInquiries.mockResolvedValue(2);
       inquiryRepository.getInquiries.mockResolvedValue(mockInquiries);
@@ -64,7 +62,7 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.getInquiries).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.getInquiries).toHaveBeenCalledWith(getQuery);
       expect(result).toEqual({
-        list: expectedList,
+        list: mockInquiries,
         totalCount: 2,
       });
     });
@@ -90,7 +88,6 @@ describe('InquiryService 유닛 테스트', () => {
         isSecret: false,
       };
       const mockInquiry = createInquiryMock(data);
-      const expectedResult = toExpectedWithIsoDate(mockInquiry);
       inquiryRepository.findProductByProductId.mockResolvedValue(mockFindProduct);
       inquiryRepository.createInquiry.mockResolvedValue(mockInquiry);
 
@@ -118,7 +115,7 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.findProductByProductId).toHaveBeenCalledWith(productId);
       expect(inquiryRepository.createInquiry).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.createInquiry).toHaveBeenCalledWith(createData);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockInquiry);
     });
 
     it('상품이 존재하지 않을때 NotFoundError 발생', async () => {
@@ -146,7 +143,6 @@ describe('InquiryService 유닛 테스트', () => {
         pageSize: '100',
         status: InquiryStatus.WaitingAnswer,
       };
-      const expectedList = toExpectedList(mockAllInquiries);
       inquiryRepository.getAllInquiries.mockResolvedValue(mockAllInquiries);
       inquiryRepository.countInquiries.mockResolvedValue(2);
 
@@ -172,7 +168,7 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.getAllInquiries).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.getAllInquiries).toHaveBeenCalledWith(getQuery);
       expect(result).toEqual({
-        list: expectedList,
+        list: mockAllInquiries,
         totalCount: 2,
       });
     });
@@ -233,7 +229,6 @@ describe('InquiryService 유닛 테스트', () => {
   describe('getInquiry', () => {
     it('특정 문의 조회 성공', async () => {
       // --- 준비 (Arrange) ---
-      const expectedResult = toExpectedWithIsoDate(mockInquiry);
       inquiryRepository.getInquiryById.mockResolvedValue(mockInquiry);
 
       // --- 실행 (Act) ---
@@ -242,7 +237,7 @@ describe('InquiryService 유닛 테스트', () => {
       // --- 검증 (Assert) ---
       expect(inquiryRepository.getInquiryById).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.getInquiryById).toHaveBeenCalledWith(inquiryId);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockInquiry);
     });
 
     it('문의가 존재하지 않을때 NotFoundError 발생', async () => {
@@ -266,7 +261,6 @@ describe('InquiryService 유닛 테스트', () => {
         isSecret: true,
       };
       const mockInquiry = createInquiryMock(data);
-      const expectedResult = toExpectedWithIsoDate(mockInquiry);
       inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry);
       inquiryRepository.updateInquiry.mockResolvedValue(mockInquiry);
 
@@ -284,7 +278,7 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.findInquiryById).toHaveBeenCalledWith(inquiryId);
       expect(inquiryRepository.updateInquiry).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.updateInquiry).toHaveBeenCalledWith(inquiryId, updateData);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockInquiry);
     });
 
     it('문의가 존재하지 않을때 NotFoundError 발생', async () => {
@@ -355,7 +349,6 @@ describe('InquiryService 유닛 테스트', () => {
     it('문의 삭제 성공', async () => {
       // --- 준비 (Arrange) ---
       const mockInquiry = createInquiryMock();
-      const expectedResult = toExpectedWithIsoDate(mockInquiry);
       inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry);
       inquiryRepository.deleteInquiry.mockResolvedValue(mockInquiry);
 
@@ -367,7 +360,7 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.findInquiryById).toHaveBeenCalledWith(inquiryId);
       expect(inquiryRepository.deleteInquiry).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.deleteInquiry).toHaveBeenCalledWith(inquiryId);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockInquiry);
     });
 
     it('문의가 존재하지 않을때 NotFoundError 발생', async () => {
@@ -403,7 +396,6 @@ describe('InquiryService 유닛 테스트', () => {
         content: '답변 내용',
       };
       const mockReply = createReplyMock(data);
-      const expectedResult = toExpectedWithIsoDate(mockReply);
       inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry);
       inquiryRepository.createReply.mockResolvedValue(mockReply);
 
@@ -432,7 +424,7 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.findInquiryById).toHaveBeenCalledWith(inquiryId);
       expect(inquiryRepository.createReply).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.createReply).toHaveBeenCalledWith(createData, inquiryId, updateData);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockReply);
     });
 
     it('문의가 존재하지 않을때 NotFoundError 발생', async () => {
@@ -478,7 +470,6 @@ describe('InquiryService 유닛 테스트', () => {
         content: '답변 내용 수정',
       };
       const mockReply = createReplyMock(data);
-      const expectedResult = toExpectedWithIsoDate(mockReply);
       inquiryRepository.findReplyById.mockResolvedValue(mockFindReply);
       inquiryRepository.updateReply.mockResolvedValue(mockReply);
 
@@ -494,7 +485,7 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.findReplyById).toHaveBeenCalledWith(replyId);
       expect(inquiryRepository.updateReply).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.updateReply).toHaveBeenCalledWith(replyId, updateData);
-      expect(result).toEqual(expectedResult);
+      expect(result).toEqual(mockReply);
     });
 
     it('답변이 존재하지 않을때 NotFoundError 발생', async () => {
