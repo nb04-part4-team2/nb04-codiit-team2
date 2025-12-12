@@ -51,6 +51,23 @@ export interface CreateProductData {
   }[];
 }
 
+// DB 업데이트용 데이터 타입
+export interface UpdateProductData {
+  name?: string;
+  price?: number;
+  content?: string;
+  image?: string;
+  discountRate?: number;
+  discountStartTime?: Date | null;
+  discountEndTime?: Date | null;
+  categoryId?: string;
+  isSoldOut?: boolean;
+  stocks: {
+    sizeId: number;
+    quantity: number;
+  }[];
+}
+
 // 레포지토리 조회용 파라미터 인터페이스
 export interface FindProductsParams {
   page: number;
@@ -216,6 +233,47 @@ export class ProductRepository {
           },
         },
         // 리뷰
+        reviews: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+  }
+
+  async update(id: string, data: UpdateProductData): Promise<ProductDetailWithRelations> {
+    const { stocks, categoryId, ...productData } = data;
+
+    return this.prisma.product.update({
+      where: { id },
+      data: {
+        ...productData,
+        // 카테고리 업데이트 (값이 있는 경우에만 연결)
+        ...(categoryId && { category: { connect: { id: categoryId } } }),
+
+        // 재고 업데이트 로직: 기존 재고를 모두 삭제하고 요청받은 재고로 새로 생성
+        stocks: {
+          deleteMany: {},
+          create: stocks.map((stock) => ({
+            size: { connect: { id: stock.sizeId } },
+            quantity: stock.quantity,
+          })),
+        },
+      },
+      // 응답 포맷 맞추기 위해 include 옵션 사용 (findById와 동일)
+      include: {
+        stocks: { include: { size: true } },
+        store: { select: { id: true, name: true } },
+        category: true,
+        inquiries: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            reply: {
+              include: {
+                user: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
         reviews: {
           orderBy: { createdAt: 'desc' },
         },
