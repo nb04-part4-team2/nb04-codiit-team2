@@ -101,3 +101,7 @@ export const updateProductSchema = z
       path: ['discountEndTime'],
     },
   );
+
+export const deleteProductSchema = z.object({
+  productId: z.string().cuid('유효한 상품 ID 형식이 아닙니다.'),
+});

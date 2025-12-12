@@ -296,4 +296,12 @@ export class ProductRepository {
       },
     });
   }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.product.delete({
+      where: {
+        id,
+      },
+    });
+  }
 }

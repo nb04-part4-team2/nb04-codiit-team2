@@ -8,6 +8,7 @@ import {
   productListSchema,
   productDetailSchema,
   updateProductSchema,
+  deleteProductSchema,
 } from './product.schema.js';
 import { nestedInquiryRouter } from '../inquiry/inquiry.router.js';
 
@@ -48,6 +49,15 @@ productRouter.patch(
   validate(productDetailSchema, 'params'),
   validate(updateProductSchema, 'body'),
   asyncHandler(productController.update),
+);
+
+// 상품 삭제 API
+productRouter.delete(
+  '/:productId',
+  authenticate,
+  onlySeller,
+  validate(deleteProductSchema, 'params'),
+  asyncHandler(productController.delete),
 );
 
 export default productRouter;
