@@ -66,3 +66,38 @@ export const productListSchema = z.object({
 export const productDetailSchema = z.object({
   productId: z.string().cuid('유효한 상품 ID 형식이 아닙니다.'),
 });
+
+export const updateProductSchema = z
+  .object({
+    id: z.string().cuid('유효한 상품 ID 형식이 아닙니다.'),
+    name: z.string().min(1).max(100).optional(),
+    price: z.number().min(0).optional(),
+    content: z.string().min(1).optional(),
+    image: z.string().url().optional(),
+    discountRate: z.number().min(0).max(100).optional(),
+    discountStartTime: z.string().datetime().nullish(),
+    discountEndTime: z.string().datetime().nullish(),
+    categoryName: z.string().min(1).optional(),
+    isSoldOut: z.boolean().optional(),
+    // 재고는 필수(required)라고 명시되어 있으므로 optional 처리를 하지 않음 (기존 stocks 교체)
+    stocks: z
+      .array(
+        z.object({
+          sizeId: z.number().int().positive(),
+          quantity: z.number().int().nonnegative(), // 수정 시엔 0개도 가능할 수 있으나, 보통 품절 처리는 isSoldOut으로 함. 여기선 0 이상 허용.
+        }),
+      )
+      .min(1, '최소 1개 이상의 재고 옵션이 필요합니다.'),
+  })
+  .refine(
+    (data) => {
+      if (data.discountStartTime && data.discountEndTime) {
+        return new Date(data.discountStartTime) < new Date(data.discountEndTime);
+      }
+      return true;
+    },
+    {
+      message: '할인 종료일은 시작일보다 뒤여야 합니다.',
+      path: ['discountEndTime'],
+    },
+  );
