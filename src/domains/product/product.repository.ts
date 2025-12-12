@@ -99,6 +99,22 @@ export class ProductRepository {
       select: { id: true },
     });
   }
+  // 권한 검증을 위해 상품과 스토어 주인 ID만 조회하는 최적화된 메서드
+  async findProductOwnership(productId: string) {
+    return this.prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        storeId: true,
+        store: {
+          select: {
+            id: true,
+            userId: true, // 판매자 ID 확인용
+          },
+        },
+      },
+    });
+  }
 
   // 상품 생성
   async create(storeId: string, data: CreateProductData): Promise<ProductWithRelations> {

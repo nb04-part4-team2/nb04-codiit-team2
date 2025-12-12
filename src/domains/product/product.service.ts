@@ -76,19 +76,17 @@ export class ProductService {
     productId: string,
     data: UpdateProductDto,
   ): Promise<DetailProductResponse> {
-    const product = await this.productRepository.findById(productId);
-    if (!product) {
+    const productData = await this.productRepository.findProductOwnership(productId);
+
+    if (!productData) {
       throw new NotFoundError('상품을 찾을 수 없습니다.');
     }
 
-    // 권한 검증 (내 스토어의 상품인지 확인)
-    const store = await this.productRepository.findStoreByUserId(userId);
-    if (!store) {
-      // 판매자 계정이지만 스토어가 등록되지 않은 경우
-      throw new NotFoundError('스토어를 찾을 수 없습니다.');
+    if (!productData.store) {
+      throw new NotFoundError('상품에 연결된 스토어 정보가 없습니다.');
     }
 
-    if (product.storeId !== store.id) {
+    if (productData.store.userId !== userId) {
       throw new ForbiddenError('상품 수정 권한이 없습니다.');
     }
 
