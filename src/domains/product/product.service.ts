@@ -92,7 +92,7 @@ export class ProductService {
       throw new ForbiddenError('상품 수정 권한이 없습니다.');
     }
 
-    // 3. 카테고리 변경 시 검증 및 ID 조회
+    // 카테고리 변경 시 검증 및 ID 조회
     let categoryId: string | undefined = undefined;
     if (data.categoryName) {
       const category = await this.productRepository.findCategoryByName(data.categoryName);
