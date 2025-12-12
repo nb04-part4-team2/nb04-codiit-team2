@@ -25,6 +25,12 @@ cartRouter
     onlyBuyer,
     validate(cartItemIdParamSchema, 'params'),
     asyncHandler(cartController.getCartItem),
+  )
+  .delete(
+    authenticate,
+    onlyBuyer,
+    validate(cartItemIdParamSchema, 'params'),
+    asyncHandler(cartController.deleteCartItem),
   );
 
 export default cartRouter;
