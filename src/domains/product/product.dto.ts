@@ -1,10 +1,16 @@
 import { z } from 'zod';
-import { createProductSchema, productListSchema, updateProductSchema } from './product.schema.js';
+import {
+  createProductSchema,
+  productListSchema,
+  updateProductSchema,
+  deleteProductSchema,
+} from './product.schema.js';
 
 // Zod 스키마로부터 타입 추론
 export type CreateProductDto = z.infer<typeof createProductSchema>;
 export type ProductListQueryDto = z.infer<typeof productListSchema>;
 export type UpdateProductDto = z.infer<typeof updateProductSchema>;
+export type DeleteProductParams = z.infer<typeof deleteProductSchema>;
 
 // --- 응답 DTO ---
 

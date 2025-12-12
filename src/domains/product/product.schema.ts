@@ -103,7 +103,5 @@ export const updateProductSchema = z
   );
 
 export const deleteProductSchema = z.object({
-  params: z.object({
-    productId: z.string().cuid(),
-  }),
+  productId: z.string().cuid('유효한 상품 ID 형식이 아닙니다.'),
 });
