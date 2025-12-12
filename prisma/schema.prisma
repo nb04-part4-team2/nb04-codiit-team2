@@ -143,7 +143,7 @@ model Product {
 
   // FK
   storeId    String
-  store      Store    @relation(fields: [storeId], references: [id])
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade) // 스토어 삭제 시 상품 삭제
   categoryId String
   category   Category @relation(fields: [categoryId], references: [id])
 
@@ -172,7 +172,7 @@ model Stock {
 
   // FK
   productId String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품 삭제 시 재고 삭제
   sizeId    Int
   size      Size    @relation(fields: [sizeId], references: [id])
 
@@ -191,7 +191,7 @@ model Cart {
 
   // FK
   buyerId String @unique
-  buyer   User   @relation(fields: [buyerId], references: [id])
+  buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 장바구니 삭제
 
   items CartItem[]
 
@@ -208,7 +208,7 @@ model CartItem {
   cartId    String
   cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
   productId String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품이 삭제되면 장바구니 내역에서도 삭제
   sizeId    Int
   size      Size    @relation(fields: [sizeId], references: [id])
 
@@ -232,7 +232,7 @@ model Order {
 
   // 비회원 주문에 대한 내용은 추후 확장
   buyerId String
-  buyer   User   @relation(fields: [buyerId], references: [id])
+  buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 주문 내역 삭제
 
   orderItems   OrderItem[]
   payment      Payment?
@@ -250,7 +250,7 @@ model OrderItem {
   orderId   String
   order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
   productId String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품 삭제 시 주문 상세 내역 삭제
   sizeId    Int
   size      Size    @relation(fields: [sizeId], references: [id])
 
@@ -286,9 +286,9 @@ model Review {
 
   // FK
   userId      String
-  user        User      @relation(fields: [userId], references: [id])
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 달린 리뷰 삭제
   productId   String
-  product     Product   @relation(fields: [productId], references: [id])
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품 삭제 시 달린 리뷰 삭제
   orderItemId String    @unique // 리뷰는 특정 구매 건에 종속
   orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
 
@@ -306,9 +306,9 @@ model Inquiry {
 
   // FK
   userId    String
-  user      User    @relation(fields: [userId], references: [id])
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 작성한 문의 삭제
   productId String
-  product   Product @relation(fields: [productId], references: [id])
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품 삭제 시 달린 문의 삭제
 
   reply Reply?
 
@@ -323,7 +323,7 @@ model Reply {
 
   // FK
   userId    String
-  user      User    @relation(fields: [userId], references: [id])
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 작성한 답변 삭제
   inquiryId String  @unique
   inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
 
@@ -352,7 +352,7 @@ model PointHistory {
 
   // FK
   userId  String
-  user    User    @relation(fields: [userId], references: [id])
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 포인트 내역 삭제
   orderId String? // 주문과 관련된 포인트일 경우
   order   Order?  @relation(fields: [orderId], references: [id])
 
@@ -368,7 +368,7 @@ model Notification {
 
   // FK
   userId String
-  user   User   @relation(fields: [userId], references: [id])
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 알림 삭제
 
   @@map("notifications")
 }
