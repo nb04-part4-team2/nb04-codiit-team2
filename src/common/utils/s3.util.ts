@@ -1,5 +1,6 @@
 import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client-s3';
 import { randomUUID } from 'crypto';
+import path from 'path';
 import { env } from '@/config/constants.js';
 
 let s3Client: S3Client;
@@ -33,8 +34,8 @@ interface FileUploadParams {
 
 export const uploadFile = async ({ buffer, originalname, mimetype }: FileUploadParams) => {
   const client = getS3Client();
-  const sanitizedFilename = originalname.replace(/[^a-zA-Z0-9._-]/g, '');
-  const key = `${randomUUID()}_${sanitizedFilename}`;
+  const ext = path.extname(originalname);
+  const key = `${randomUUID()}${ext}`;
 
   const command = new PutObjectCommand({
     Bucket: env.AWS_S3_BUCKET,
@@ -45,7 +46,8 @@ export const uploadFile = async ({ buffer, originalname, mimetype }: FileUploadP
 
   try {
     await client.send(command);
-    return `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+    const url = `https://${env.AWS_S3_BUCKET}.s3.${env.AWS_REGION}.amazonaws.com/${key}`;
+    return { url, key };
   } catch (error) {
     console.error('S3 파일 업로드 에러:', error);
     throw new Error(`파일 업로드에 실패했습니다. (Bucket: ${env.AWS_S3_BUCKET}, Key: ${key})`);
@@ -61,6 +63,7 @@ export const deleteFile = async (fileKey: string) => {
 
   try {
     await client.send(command);
+    return { success: true, fileKey };
   } catch (error) {
     console.error('S3 파일 삭제 에러:', error);
     throw new Error(`파일 삭제에 실패했습니다. (Key: ${fileKey})`);
