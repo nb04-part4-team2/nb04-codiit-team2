@@ -7,6 +7,16 @@ import type {
   UpdateReplyBody,
 } from './inquiry.dto.js';
 import type { InquiryRepository } from './inquiry.repository.js';
+import {
+  toGetInquiriesResponse,
+  toCreateInquiryResponse,
+  toGetAllInquiriesRespons,
+  toGetInquiryByIdResponse,
+  toUpdateInquiryResponse,
+  toDeleteInquiryResponse,
+  toCreateReplyResponse,
+  toUpdateReplyResponse,
+} from './inquiry.mapper.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/common/utils/errors.js';
 
 export class InquiryService {
@@ -34,10 +44,7 @@ export class InquiryService {
       this.inquiryRepository.getInquiries(getQuery),
     ]);
 
-    return {
-      list: inquiries,
-      totalCount,
-    };
+    return toGetInquiriesResponse(inquiries, totalCount);
   };
 
   // 문의 생성
@@ -66,7 +73,7 @@ export class InquiryService {
 
     const inquiry = await this.inquiryRepository.createInquiry(createData);
 
-    return inquiry;
+    return toCreateInquiryResponse(inquiry);
   };
 
   // 모든 문의 조회 (사용자 본인의 문의)
@@ -106,10 +113,7 @@ export class InquiryService {
       this.inquiryRepository.getAllInquiries(getQuery),
     ]);
 
-    return {
-      list: inquiries,
-      totalCount,
-    };
+    return toGetAllInquiriesRespons(inquiries, totalCount);
   };
 
   // 특정 문의 조회
@@ -117,7 +121,7 @@ export class InquiryService {
     const inquiry = await this.inquiryRepository.getInquiryById(id);
     if (!inquiry) throw new NotFoundError('문의가 존재하지 않습니다.');
 
-    return inquiry;
+    return toGetInquiryByIdResponse(inquiry);
   };
 
   // 문의 수정
@@ -143,7 +147,7 @@ export class InquiryService {
 
     const inquiry = await this.inquiryRepository.updateInquiry(id, updateData);
 
-    return inquiry;
+    return toUpdateInquiryResponse(inquiry);
   };
 
   // 문의 삭제
@@ -155,7 +159,7 @@ export class InquiryService {
 
     const inquiry = await this.inquiryRepository.deleteInquiry(id);
 
-    return inquiry;
+    return toDeleteInquiryResponse(inquiry);
   };
 
   // 답변 생성
@@ -189,9 +193,10 @@ export class InquiryService {
     // 트랜잭션 사용
     const reply = await this.inquiryRepository.createReply(createData, id, updateData);
 
-    return reply;
+    return toCreateReplyResponse(reply);
   };
 
+  // 답변 수정
   public updateReply = async (id: string, userId: string, data: UpdateReplyBody) => {
     // 답변 존재 및 인가 확인
     const findReply = await this.inquiryRepository.findReplyById(id);
@@ -210,6 +215,6 @@ export class InquiryService {
 
     const reply = await this.inquiryRepository.updateReply(id, updateData);
 
-    return reply;
+    return toUpdateReplyResponse(reply);
   };
 }
