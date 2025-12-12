@@ -3,7 +3,12 @@ import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 import { validate } from '@/common/middlewares/validate.middleware.js';
 import { authenticate, onlySeller } from '@/common/middlewares/auth.middleware.js'; // onlySeller 추가
 import { productController } from './product.container.js';
-import { createProductSchema, productListSchema } from './product.schema.js';
+import {
+  createProductSchema,
+  productListSchema,
+  productDetailSchema,
+  updateProductSchema,
+} from './product.schema.js';
 import { nestedInquiryRouter } from '../inquiry/inquiry.router.js';
 
 const productRouter = Router();
@@ -25,9 +30,24 @@ productRouter.get(
   asyncHandler(productController.getProducts),
 );
 
-productRouter.get('/:productId', asyncHandler(productController.getOne));
-
 // 문의 중첩 라우터
 productRouter.use('/:productId/inquiries', nestedInquiryRouter);
+
+// 상품 상세 조회 API
+productRouter.get(
+  '/:productId',
+  validate(productDetailSchema, 'params'),
+  asyncHandler(productController.getOne),
+);
+
+// 상품 수정 API
+productRouter.patch(
+  '/:productId',
+  authenticate,
+  onlySeller,
+  validate(productDetailSchema, 'params'),
+  validate(updateProductSchema, 'body'),
+  asyncHandler(productController.update),
+);
 
 export default productRouter;
