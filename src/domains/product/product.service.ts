@@ -4,9 +4,10 @@ import {
   DetailProductResponse,
   ProductListQueryDto,
   ProductListResponse,
+  UpdateProductDto,
 } from './product.dto.js';
 import { ProductMapper } from './product.mapper.js';
-import { NotFoundError } from '@/common/utils/errors.js';
+import { NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
 
 export class ProductService {
   constructor(private productRepository: ProductRepository) {}
@@ -67,5 +68,65 @@ export class ProductService {
     }
 
     return ProductMapper.toDetailResponse(product);
+  }
+
+  // 상품 수정
+  async updateProduct(
+    userId: string,
+    productId: string,
+    data: UpdateProductDto,
+  ): Promise<DetailProductResponse> {
+    const productData = await this.productRepository.findProductOwnership(productId);
+
+    if (!productData) {
+      throw new NotFoundError('상품을 찾을 수 없습니다.');
+    }
+
+    if (!productData.store) {
+      throw new NotFoundError('상품에 연결된 스토어 정보가 없습니다.');
+    }
+
+    if (productData.store.userId !== userId) {
+      throw new ForbiddenError('상품 수정 권한이 없습니다.');
+    }
+
+    // 카테고리 변경 시 검증 및 ID 조회
+    let categoryId: string | undefined = undefined;
+    if (data.categoryName) {
+      const category = await this.productRepository.findCategoryByName(data.categoryName);
+      if (!category) {
+        throw new NotFoundError('카테고리가 없습니다.');
+      }
+      categoryId = category.id;
+    }
+
+    const discountStartTime =
+      data.discountStartTime === null
+        ? null
+        : data.discountStartTime
+          ? new Date(data.discountStartTime)
+          : undefined;
+
+    const discountEndTime =
+      data.discountEndTime === null
+        ? null
+        : data.discountEndTime
+          ? new Date(data.discountEndTime)
+          : undefined;
+
+    const updatedProduct = await this.productRepository.update(productId, {
+      name: data.name,
+      price: data.price,
+      content: data.content,
+      image: data.image,
+      discountRate: data.discountRate,
+      isSoldOut: data.isSoldOut,
+      stocks: data.stocks, // 재고는 필수값이므로 그대로 전달
+      categoryId,
+      discountStartTime,
+      discountEndTime,
+    });
+
+    return ProductMapper.toDetailResponse(updatedProduct);
   }
 }
