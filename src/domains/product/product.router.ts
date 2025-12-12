@@ -25,13 +25,13 @@ productRouter.get(
   asyncHandler(productController.getProducts),
 );
 
+// 문의 중첩 라우터
+productRouter.use('/:productId/inquiries', nestedInquiryRouter);
+
 productRouter.get(
   '/:productId',
   validate(productDetailSchema, 'params'),
   asyncHandler(productController.getOne),
 );
-
-// 문의 중첩 라우터
-productRouter.use('/:productId/inquiries', nestedInquiryRouter);
 
 export default productRouter;
