@@ -55,4 +55,20 @@ export class ProductController {
 
     res.status(200).json(updatedProduct);
   };
+
+  // 상품 삭제
+  delete = async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new UnauthorizedError('로그인이 필요합니다.');
+    }
+
+    const userId = req.user.id;
+    const { productId } = req.params;
+
+    await this.productService.deleteProduct(userId, productId);
+
+    res.status(200).json({
+      message: '상품이 정상적으로 삭제 되었습니다.',
+    });
+  };
 }
