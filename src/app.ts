@@ -7,6 +7,7 @@ import { prismaErrorHandler } from '@/common/middlewares/errorHandlers/prismaErr
 import { zodErrorHandler } from '@/common/middlewares/errorHandlers/zodErrorHandler.js';
 import { catchAllErrorHandler } from '@/common/middlewares/errorHandlers/catchAllErrorHandler.js';
 import { businessErrorHandler } from '@/common/middlewares/errorHandlers/businessErrorHandler.js';
+import { uploadErrorHandler } from '@/common/middlewares/upload.middleware.js';
 import { env } from '@/config/constants.js';
 
 // 라우터 import
@@ -21,6 +22,7 @@ import { inquiryRouter } from '@/domains/inquiry/inquiry.router.js';
 import { notificationRouter } from '@/domains/notification/notification.router.js';
 // import dashboardRouter from '@/domains/dashboard/dashboard.router.js';
 // import metadataRouter from '@/domains/metadata/metadata.router.js';
+import s3Router from '@/domains/s3/s3.router.js';
 
 const app = express();
 
@@ -58,6 +60,7 @@ app.use('/api/inquiries', inquiryRouter);
 app.use('/api/notifications', notificationRouter);
 // app.use('/api/dashboard', dashboardRouter);
 // app.use('/api/metadata', metadataRouter);
+app.use('/api/s3', s3Router);
 
 // 404 핸들러
 app.use((req, res) => {
@@ -69,5 +72,6 @@ app.use(prismaErrorHandler);
 app.use(zodErrorHandler);
 app.use(businessErrorHandler);
 app.use(catchAllErrorHandler);
+app.use(uploadErrorHandler);
 
 export { app };
