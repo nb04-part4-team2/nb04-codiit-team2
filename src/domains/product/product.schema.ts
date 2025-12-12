@@ -101,3 +101,9 @@ export const updateProductSchema = z
       path: ['discountEndTime'],
     },
   );
+
+export const deleteProductSchema = z.object({
+  params: z.object({
+    productId: z.string().cuid(),
+  }),
+});
