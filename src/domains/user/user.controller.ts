@@ -3,11 +3,7 @@ import { UserService } from './user.service.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 
 export class UserController {
-  private userService: UserService;
-
-  constructor() {
-    this.userService = new UserService();
-  }
+  constructor(private userService: UserService) {}
 
   createUser = async (req: Request, res: Response): Promise<void> => {
     const result = await this.userService.createUser(req.body);
