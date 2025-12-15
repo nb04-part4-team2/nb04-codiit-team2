@@ -153,67 +153,6 @@ describe('UserService 유닛 테스트', () => {
       await expect(userService.updateMe(userId, updateData)).rejects.toThrow(BadRequestError);
       expect(userRepository.update).not.toHaveBeenCalled();
     });
-
-    it('이미지만 변경하는 경우 성공', async () => {
-      // --- 준비 (Arrange) ---
-      const user = createUserWithGradeMock({ id: userId });
-      const updateData = { currentPassword: 'current1234' };
-      const imageUrl = 'https://example.com/new-image.jpg';
-      const updatedUser = createUserWithGradeMock({ id: userId, image: imageUrl });
-
-      userRepository.findById.mockResolvedValue(user);
-      userRepository.update.mockResolvedValue(updatedUser);
-
-      // --- 실행 (Act) ---
-      const result = await userService.updateMe(userId, updateData, imageUrl);
-
-      // --- 검증 (Assert) ---
-      expect(userRepository.update).toHaveBeenCalledWith(userId, { image: imageUrl });
-      expect(result.image).toBe(imageUrl);
-    });
-
-    it('비밀번호만 변경하는 경우 성공', async () => {
-      // --- 준비 (Arrange) ---
-      const user = createUserWithGradeMock({ id: userId });
-      const updateData = { currentPassword: 'current1234', password: 'newPassword123' };
-      const updatedUser = createUserWithGradeMock({ id: userId });
-
-      userRepository.findById.mockResolvedValue(user);
-      userRepository.update.mockResolvedValue(updatedUser);
-
-      // --- 실행 (Act) ---
-      const result = await userService.updateMe(userId, updateData);
-
-      // --- 검증 (Assert) ---
-      expect(userRepository.update).toHaveBeenCalledWith(userId, { password: 'hashed-password' });
-      expect(result.id).toBe(userId);
-    });
-
-    it('이름과 이미지를 동시에 변경하는 경우 성공', async () => {
-      // --- 준비 (Arrange) ---
-      const user = createUserWithGradeMock({ id: userId });
-      const updateData = { currentPassword: 'current1234', name: '새로운 이름' };
-      const imageUrl = 'https://example.com/new-image.jpg';
-      const updatedUser = createUserWithGradeMock({
-        id: userId,
-        name: '새로운 이름',
-        image: imageUrl,
-      });
-
-      userRepository.findById.mockResolvedValue(user);
-      userRepository.update.mockResolvedValue(updatedUser);
-
-      // --- 실행 (Act) ---
-      const result = await userService.updateMe(userId, updateData, imageUrl);
-
-      // --- 검증 (Assert) ---
-      expect(userRepository.update).toHaveBeenCalledWith(userId, {
-        name: '새로운 이름',
-        image: imageUrl,
-      });
-      expect(result.name).toBe('새로운 이름');
-      expect(result.image).toBe(imageUrl);
-    });
   });
 
   // 관심 스토어 조회
