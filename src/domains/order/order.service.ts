@@ -83,13 +83,11 @@ export class OrderService {
       const order = await this.orderRepository.createOrder(orderData, tx);
 
       // 1-2. 주문 아이템들 생성 및 주문에 연결
-      orderItemsData = buildedData.matchedOrderItems.map(
-        (orderItem) => ({
-          ...orderItem,
-          orderId: order.id,
-        }),
-        await this.orderRepository.createOrderItems(orderItemsData, tx),
-      );
+      orderItemsData = buildedData.matchedOrderItems.map((orderItem) => ({
+        ...orderItem,
+        orderId: order.id,
+      }));
+      await this.orderRepository.createOrderItems(orderItemsData, tx);
 
       // 1-3. 포인트를 사용한 경우 포인트 차감
       if (usePoint > 0) {
