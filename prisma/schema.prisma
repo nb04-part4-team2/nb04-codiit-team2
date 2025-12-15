@@ -176,6 +176,7 @@ model Stock {
   sizeId    Int
   size      Size    @relation(fields: [sizeId], references: [id])
 
+  @@unique([productId, sizeId])
   @@map("stocks")
 }
 
@@ -235,7 +236,7 @@ model Order {
   buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 주문 내역 삭제
 
   orderItems   OrderItem[]
-  payment      Payment?
+  payments     Payment?
   pointHistory PointHistory[]
 
   @@map("orders")
