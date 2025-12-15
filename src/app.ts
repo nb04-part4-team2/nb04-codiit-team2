@@ -18,7 +18,7 @@ import cartRouter from '@/domains/cart/cart.router.js';
 // import orderRouter from '@/domains/order/order.router.js';
 import { inquiryRouter } from '@/domains/inquiry/inquiry.router.js';
 // import reviewRouter from '@/domains/review/review.router.js';
-// import notificationRouter from '@/domains/notification/notification.router.js';
+import { notificationRouter } from '@/domains/notification/notification.router.js';
 // import dashboardRouter from '@/domains/dashboard/dashboard.router.js';
 // import metadataRouter from '@/domains/metadata/metadata.router.js';
 
@@ -55,7 +55,7 @@ app.use('/api/cart', cartRouter);
 // app.use('/api/orders', orderRouter);
 app.use('/api/inquiries', inquiryRouter);
 // app.use('/api/reviews', reviewRouter);
-// app.use('/api/notifications', notificationRouter);
+app.use('/api/notifications', notificationRouter);
 // app.use('/api/dashboard', dashboardRouter);
 // app.use('/api/metadata', metadataRouter);
 
