@@ -83,31 +83,35 @@ export class OrderService {
       const order = await this.orderRepository.createOrder(orderData, tx);
 
       // 1-2. 주문 아이템들 생성 및 주문에 연결
-      orderItemsData = {
-        ...buildedData.matchedOrderItems.map((orderItem) => ({
+      orderItemsData = buildedData.matchedOrderItems.map(
+        (orderItem) => ({
           ...orderItem,
           orderId: order.id,
-        })),
-      };
-      await this.orderRepository.createOrderItems(orderItemsData, tx);
+        }),
+        await this.orderRepository.createOrderItems(orderItemsData, tx),
+      );
 
-      // 1-3. payment 생성 및 연결
+      // 1-3. 포인트를 사용한 경우 포인트 차감
+      if (usePoint > 0) {
+        // 1-3-1. 포인트 차감
+        await this.orderRepository.updatePoint({ userId, usePoint }, tx);
+        // 1-3-2. 포인트 히스토리 생성
+        await this.orderRepository.createPointHistory({ userId, orderId: order.id, usePoint }, tx);
+      }
+
+      // 1-4. payment 생성 및 연결
       // 현재는 임의로 completedPayment 상태로 그냥 생성하는 것 같음
       // 실제로 외부 결제모듈을 연결한다면 어떻게 하는건지 우리 프로젝트에 실제로 결제 되도록 적용 가능한지 검토 필요
+      const finalPaymentPrice = buildedData.subtotal - usePoint; // 결제 금액은 총액 - 포인트 사용액
+      if (finalPaymentPrice < 0) {
+        throw new BadRequestError('사용 포인트가 상품 총액을 초과할 수 없습니다.');
+      }
       paymentData = {
         orderId: order.id,
-        price: buildedData.subtotal,
+        price: finalPaymentPrice,
         status: PaymentStatus.CompletedPayment,
       };
       await this.orderRepository.createPayment(paymentData, tx);
-
-      // 1-4. 포인트를 사용한 경우 포인트 차감
-      if (usePoint > 0) {
-        // 1-4-1. 포인트 차감
-        await this.orderRepository.updatePoint({ userId, usePoint }, tx);
-        // 1-4-2. 포인트 히스토리 생성
-        await this.orderRepository.createPointHistory({ userId, orderId: order.id, usePoint }, tx);
-      }
 
       // 1-5. 재고 감소 처리
       const stockUpdatePromises = buildedData.matchedOrderItems.map(async (orderItem) => {
