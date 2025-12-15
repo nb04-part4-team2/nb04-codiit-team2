@@ -1,7 +1,8 @@
 import type { Request, Response } from 'express';
 import type { NotificationService } from './notification.service.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
-import { sseManager } from '../../common/utils/sse.manager.js';
+import { sseManager } from '@/common/utils/sse.manager.js';
+import { toGetNotifications } from './notification.mapper.js';
 
 export class NotificationController {
   constructor(private notificationService: NotificationService) {}
@@ -12,7 +13,7 @@ export class NotificationController {
     const userId = req.user.id;
 
     const notifications = await this.notificationService.getNotifications(userId);
-    return res.status(200).json(notifications);
+    return res.status(200).json(toGetNotifications(notifications));
   };
 
   // sse 연결
@@ -32,10 +33,10 @@ export class NotificationController {
       sseManager.removeClient(userId);
     });
 
-    // 200초마다 더미 데이터 전송 (연결 유지)
+    // 30초마다 더미 데이터 전송 (연결 유지)
     const intervalId = setInterval(() => {
       res.write(': keep-alive\n\n');
-    }, 200000);
+    }, 30000);
 
     // 연결 종료 시 클리어
     res.on('close', () => {

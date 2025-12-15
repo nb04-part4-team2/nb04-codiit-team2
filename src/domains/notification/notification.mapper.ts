@@ -3,7 +3,7 @@ import { getNotificationsResponse } from './notification.dto.js';
 
 // 사용자 모든 알람 조회
 export const toGetNotifications = (
-  notifications: GetNotificationsRepository,
-): GetNotificationsResponse => {
-  return getNotificationsResponse.parse(notifications);
+  notifications: GetNotificationsRepository[],
+): GetNotificationsResponse[] => {
+  return notifications.map((notification) => getNotificationsResponse.parse(notification));
 };
