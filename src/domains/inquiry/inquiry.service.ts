@@ -192,6 +192,7 @@ export class InquiryService {
     return reply;
   };
 
+  // 답변 수정
   public updateReply = async (id: string, userId: string, data: UpdateReplyBody) => {
     // 답변 존재 및 인가 확인
     const findReply = await this.inquiryRepository.findReplyById(id);

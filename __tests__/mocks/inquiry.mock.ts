@@ -90,9 +90,12 @@ export const mockInquiries = [
 // 모든 문의 조회 (사용자 본인의 문의)
 export const mockAllInquiries = [
   {
-    ...createInquiryMock({
-      id: 'inquiry-1',
-    }),
+    id: 'inquiry-1',
+    title: '문의 제목',
+    content: '문의 내용',
+    status: InquiryStatus.WaitingAnswer,
+    isSecret: false,
+    createdAt: new Date(),
     user: {
       id: userId,
       name: '테스트 사용자 1',
@@ -108,9 +111,12 @@ export const mockAllInquiries = [
     },
   },
   {
-    ...createInquiryMock({
-      id: 'inquiry-2',
-    }),
+    id: 'inquiry-2',
+    title: '문의 제목',
+    content: '문의 내용',
+    status: InquiryStatus.WaitingAnswer,
+    isSecret: false,
+    createdAt: new Date(),
     user: {
       id: userId,
       name: '테스트 사용자 1',
