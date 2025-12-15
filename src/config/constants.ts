@@ -22,18 +22,18 @@ const envSchema = z.object({
   // Bcrypt
   BCRYPT_ROUNDS: z.string().default('10'),
 
-  // AWS (optional for now)
-  AWS_REGION: z.string().optional(),
-  AWS_ACCESS_KEY_ID: z.string().optional(),
-  AWS_SECRET_ACCESS_KEY: z.string().optional(),
-  AWS_S3_BUCKET: z.string().optional(),
+  // AWS
+  AWS_REGION: z.string(),
+  AWS_ACCESS_KEY_ID: z.string(),
+  AWS_SECRET_ACCESS_KEY: z.string(),
+  AWS_S3_BUCKET: z.string(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);
 
 if (!parsedEnv.success) {
-  console.error('❌ Invalid environment variables:');
-  console.error(parsedEnv.error.format());
+  const missing = parsedEnv.error.issues.map((i) => i.path.join('.')).join(', ');
+  console.error(`❌ Missing environment variables: ${missing}`);
   process.exit(1);
 }
 
