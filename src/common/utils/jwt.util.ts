@@ -1,11 +1,7 @@
 import type { UserType } from '@prisma/client';
 import jwt, { type SignOptions, type Secret } from 'jsonwebtoken';
 import { env } from '@/config/constants.js';
-
-export interface JwtPayload {
-  userId: string;
-  type: UserType;
-}
+import type { JwtPayload } from '@/common/types/jwt.types.js';
 
 export interface AuthUser {
   id: string;

@@ -1,7 +1,7 @@
 import type { User, Grade, StoreLike, Store } from '@prisma/client';
 import type { CreateUserDto, UpdateUserDto } from '../../src/domains/user/user.schema.js';
 import type { UserWithGrade } from '../../src/domains/user/user.dto.js';
-import type { JwtPayload } from '../../src/common/utils/jwt.util.js';
+import type { JwtPayload } from '../../src/common/types/jwt.types.ts';
 import { toUserResponse, toStoreLikeResponse } from '../../src/domains/user/user.mapper.js';
 
 // ============================================
