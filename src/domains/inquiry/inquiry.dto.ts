@@ -260,7 +260,7 @@ export const getAllInquiriesResponse = z.object({
 export type GetAllInquiriesResponse = z.infer<typeof getAllInquiriesResponse>;
 
 // 특정 문의 조회
-const getInquiryByIdRplySchema = replyOmit.extend({
+const getInquiryByIdReplySchema = replyOmit.extend({
   createdAt: dateToISOString,
   updatedAt: dateToISOString,
   user: userBaseSchema,
@@ -269,7 +269,7 @@ const getInquiryByIdRplySchema = replyOmit.extend({
 export const getInquiryByIdResponse = inquiryBaseSchema.extend({
   createdAt: dateToISOString,
   updatedAt: dateToISOString,
-  reply: getInquiryByIdRplySchema.nullable(),
+  reply: getInquiryByIdReplySchema.nullable(),
 });
 
 export type GetInquiryByIdResponse = z.infer<typeof getInquiryByIdResponse>;
