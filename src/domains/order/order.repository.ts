@@ -3,7 +3,7 @@ import {
   CreateOrderItemRepoInput,
   CreateOrderRepoInput,
   CreatePaymentRepoInput,
-  createPointHistoryRepoInput,
+  CreatePointHistoryRepoInput,
   GetOrderRawData,
   UpdatePointRepoInput,
   UpdateStockRepoInput,
@@ -36,7 +36,7 @@ export class OrderRepository {
             quantity: true,
             productId: true,
             review: {
-              // isReviewd 생성용
+              // isReviewed 생성용
               select: {
                 id: true,
               },
@@ -199,7 +199,7 @@ export class OrderRepository {
    * 포인트 히스토리 생성
    **/
   async createPointHistory(
-    { userId, orderId, usePoint }: createPointHistoryRepoInput,
+    { userId, orderId, usePoint }: CreatePointHistoryRepoInput,
     tx?: Prisma.TransactionClient,
   ) {
     const db = tx ?? this.prisma;

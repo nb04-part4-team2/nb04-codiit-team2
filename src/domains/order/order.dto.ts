@@ -29,7 +29,7 @@ export interface UpdatePointRepoInput {
   usePoint: number;
 }
 
-export interface createPointHistoryRepoInput extends UpdatePointRepoInput {
+export interface CreatePointHistoryRepoInput extends UpdatePointRepoInput {
   orderId: string;
 }
 
