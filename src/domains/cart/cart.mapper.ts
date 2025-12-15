@@ -66,7 +66,7 @@ const toStoreResponse = (storeRawData: StoreRawData): StoreResponse => {
   return store;
 };
 
-const toProductResponse = (productRawData: ProductRawData): ProductResponse => ({
+export const toProductResponse = (productRawData: ProductRawData): ProductResponse => ({
   id: productRawData.id,
   storeId: productRawData.storeId,
   name: productRawData.name,

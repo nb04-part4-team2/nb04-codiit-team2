@@ -63,7 +63,7 @@ export interface SizeRawData {
   ko: string;
 }
 
-interface SizeResponse {
+export interface SizeResponse {
   id: number;
   name: string;
   size: {
