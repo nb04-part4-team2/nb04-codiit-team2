@@ -80,11 +80,11 @@ export const toDeleteInquiryResponse = (
 };
 
 // 답변 생성
-export const toCreateReplyResponse = (inquiry: CreateReplyRepository): CreateReplyResponse => {
-  return createReplyResponse.parse(inquiry);
+export const toCreateReplyResponse = (Reply: CreateReplyRepository): CreateReplyResponse => {
+  return createReplyResponse.parse(Reply);
 };
 
 // 답변 수정
-export const toUpdateReplyResponse = (inquiry: UpdateReplyRepository): UpdateReplyResponse => {
-  return updateReplyResponse.parse(inquiry);
+export const toUpdateReplyResponse = (Reply: UpdateReplyRepository): UpdateReplyResponse => {
+  return updateReplyResponse.parse(Reply);
 };
