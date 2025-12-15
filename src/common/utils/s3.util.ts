@@ -2,6 +2,7 @@ import { S3Client, PutObjectCommand, DeleteObjectCommand } from '@aws-sdk/client
 import { randomUUID } from 'crypto';
 import path from 'path';
 import { env } from '@/config/constants.js';
+import { InternalServerError } from './errors.js';
 
 let s3Client: S3Client;
 
@@ -13,7 +14,7 @@ const getS3Client = () => {
       !env.AWS_ACCESS_KEY_ID ||
       !env.AWS_SECRET_ACCESS_KEY
     ) {
-      throw new Error('S3 설정에 필요한 환경 변수가 누락되었습니다.');
+      throw new InternalServerError('S3 설정에 필요한 환경 변수가 누락되었습니다.');
     }
     s3Client = new S3Client({
       region: env.AWS_REGION,
@@ -50,7 +51,9 @@ export const uploadFile = async ({ buffer, originalname, mimetype }: FileUploadP
     return { url, key };
   } catch (error) {
     console.error('S3 파일 업로드 에러:', error);
-    throw new Error(`파일 업로드에 실패했습니다. (Bucket: ${env.AWS_S3_BUCKET}, Key: ${key})`);
+    throw new InternalServerError(
+      `파일 업로드에 실패했습니다. (Bucket: ${env.AWS_S3_BUCKET}, Key: ${key})`,
+    );
   }
 };
 
@@ -66,6 +69,6 @@ export const deleteFile = async (fileKey: string) => {
     return { success: true, fileKey };
   } catch (error) {
     console.error('S3 파일 삭제 에러:', error);
-    throw new Error(`파일 삭제에 실패했습니다. (Key: ${fileKey})`);
+    throw new InternalServerError(`파일 삭제에 실패했습니다. (Key: ${fileKey})`);
   }
 };

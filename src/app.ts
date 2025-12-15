@@ -7,7 +7,7 @@ import { prismaErrorHandler } from '@/common/middlewares/errorHandlers/prismaErr
 import { zodErrorHandler } from '@/common/middlewares/errorHandlers/zodErrorHandler.js';
 import { catchAllErrorHandler } from '@/common/middlewares/errorHandlers/catchAllErrorHandler.js';
 import { businessErrorHandler } from '@/common/middlewares/errorHandlers/businessErrorHandler.js';
-import { uploadErrorHandler } from '@/common/middlewares/upload.middleware.js';
+import { uploadErrorHandler } from '@/common/middlewares/errorHandlers/uploadErrorHandler.js';
 import { env } from '@/config/constants.js';
 
 // 라우터 import
@@ -70,8 +70,8 @@ app.use((req, res) => {
 // 글로벌 에러 핸들러 (항상 마지막에 등록)
 app.use(prismaErrorHandler);
 app.use(zodErrorHandler);
-app.use(businessErrorHandler);
 app.use(uploadErrorHandler);
+app.use(businessErrorHandler);
 app.use(catchAllErrorHandler);
 
 export { app };
