@@ -1,5 +1,10 @@
-import { ProductRawData, ProductResponse, SizeRawData, SizeResponse } from '../cart/cart.type.js';
-import { CreateOrderItemBody } from './order.schema.js';
+import {
+  ProductRawData,
+  ProductResponse,
+  SizeRawData,
+  SizeResponse,
+} from '@/domains/cart/cart.type.js';
+import { CreateOrderItemBody } from '@/domains/order/order.schema.js';
 
 // 주문 베이스
 export interface OrderBase<TDate> {
@@ -28,6 +33,8 @@ interface ReviewResponse {
   isReviewed: boolean;
 }
 
+export type OrderItemSizeResponse = Omit<SizeResponse, 'name'>;
+
 export interface CreateOrderItemInputWithPrice extends CreateOrderItemBody {
   price: number;
 }
@@ -44,4 +51,4 @@ export interface GetOrderItemRawData extends GetOrderItemBase<ProductRawData, Si
 
 // response 응답용 data type
 export interface GetOrderItemResponseData
-  extends GetOrderItemBase<ProductResponse, SizeResponse>, ReviewResponse {}
+  extends GetOrderItemBase<ProductResponse, OrderItemSizeResponse>, ReviewResponse {}

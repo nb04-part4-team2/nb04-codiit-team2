@@ -7,7 +7,7 @@ import {
   GetOrderRawData,
   UpdatePointRepoInput,
   UpdateStockRepoInput,
-} from './order.dto.js';
+} from '@/domains/order/order.dto.js';
 
 export class OrderRepository {
   constructor(private prisma: PrismaClient) {}
@@ -53,6 +53,8 @@ export class OrderRepository {
                 discountEndTime: true,
                 createdAt: true,
                 updatedAt: true,
+                reviewsRating: true,
+                categoryId: true,
                 store: {
                   select: {
                     id: true,

@@ -1,12 +1,13 @@
-import { toProductResponse } from '../cart/cart.mapper.js';
-import { SizeRawData, SizeResponse } from '../cart/cart.type.js';
-import { GetOrderRawData, GetOrderResponseData } from './order.dto.js';
+import { toProductResponse } from '@/domains/cart/cart.mapper.js';
+import { SizeRawData } from '@/domains/cart/cart.type.js';
+import { GetOrderRawData, GetOrderResponseData } from '@/domains/order/order.dto.js';
 import {
   GetOrderItemRawData,
   GetOrderItemResponseData,
   OrderBase,
   OrderItemBase,
-} from './order.type.js';
+  OrderItemSizeResponse,
+} from '@/domains/order/order.type.js';
 
 const toOrderBaseResponse = (order: OrderBase<Date>): OrderBase<string> => ({
   id: order.id,
@@ -26,7 +27,7 @@ const toOrderItemBaseResponse = (orderItem: OrderItemBase): OrderItemBase => ({
   productId: orderItem.productId,
 });
 
-const toSizeResponse = (size: SizeRawData): SizeResponse => ({
+const toSizeResponse = (size: SizeRawData): OrderItemSizeResponse => ({
   id: size.id,
   size: {
     en: size.en,

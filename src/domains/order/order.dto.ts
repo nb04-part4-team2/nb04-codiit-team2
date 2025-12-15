@@ -1,11 +1,11 @@
 import { PaymentStatus } from '@prisma/client';
-import { CreateOrderBody, CreateOrderItemBody } from './order.schema.js';
+import { CreateOrderBody, CreateOrderItemBody } from '@/domains/order/order.schema.js';
 import {
   CreateOrderItemInputWithPrice,
   GetOrderItemRawData,
   GetOrderItemResponseData,
   OrderBase,
-} from './order.type.js';
+} from '@/domains/order/order.type.js';
 
 // Repo input
 export interface CreateOrderRepoInput extends Omit<CreateOrderBody, 'orderItems'> {
