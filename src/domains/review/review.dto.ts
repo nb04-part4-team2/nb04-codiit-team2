@@ -29,3 +29,10 @@ export interface ReviewListResponseDto {
     hasNextPage: boolean;
   };
 }
+
+// 리뷰 목록 응답 DTO (페이지네이션 포함)
+export interface ReviewListResponseDto {
+  list: ReviewResponseDto[];
+  totalCount: number;
+  totalPage: number;
+}
