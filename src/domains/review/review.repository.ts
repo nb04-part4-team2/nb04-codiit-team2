@@ -19,6 +19,14 @@ export class ReviewRepository {
     });
   }
 
+  // 상품 존재 여부 확인용 (Service에서 404 처리를 위함)
+  async findProductById(productId: string) {
+    return this.prisma.product.findUnique({
+      where: { id: productId },
+      select: { id: true },
+    });
+  }
+
   // 리뷰 생성
   async create(userId: string, productId: string, data: CreateReviewDto) {
     return this.prisma.review.create({
@@ -29,6 +37,23 @@ export class ReviewRepository {
         rating: data.rating,
         content: data.content,
       },
+    });
+  }
+
+  // 리뷰 목록 조회 (페이지네이션)
+  async findAllByProductId(productId: string, skip: number, take: number) {
+    return this.prisma.review.findMany({
+      where: { productId },
+      orderBy: { createdAt: 'desc' }, // 최신순 정렬
+      skip,
+      take,
+    });
+  }
+
+  // 특정 상품의 총 리뷰 개수 조회
+  async countByProductId(productId: string) {
+    return this.prisma.review.count({
+      where: { productId },
     });
   }
 }
