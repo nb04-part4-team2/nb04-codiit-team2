@@ -2,7 +2,8 @@ import bcrypt from 'bcrypt';
 import { env } from '@/config/constants.js';
 import { CreateUserDto, UpdateUserDto } from './user.schema.js';
 import { UserRepository } from './user.repository.js';
-import type { UserResponseDto, UserWithGrade, StoreLikeResponseDto } from './user.dto.js';
+import type { UserResponseDto, StoreLikeResponseDto } from './user.dto.js';
+import { toUserResponse, toStoreLikeResponse } from './user.mapper.js';
 import {
   BadRequestError,
   ConflictError,
@@ -11,11 +12,7 @@ import {
 } from '@/common/utils/errors.js';
 
 export class UserService {
-  private userRepository: UserRepository;
-
-  constructor() {
-    this.userRepository = new UserRepository();
-  }
+  constructor(private userRepository: UserRepository) {}
 
   async createUser(dto: CreateUserDto): Promise<UserResponseDto> {
     const { name, email, password, type } = dto;
@@ -35,7 +32,7 @@ export class UserService {
       gradeId: 'grade_green',
     });
 
-    return this.toUserResponse(user);
+    return toUserResponse(user);
   }
 
   async getMe(userId: string): Promise<UserResponseDto> {
@@ -45,7 +42,7 @@ export class UserService {
       throw new NotFoundError('유저를 찾을 수 없습니다.');
     }
 
-    return this.toUserResponse(user);
+    return toUserResponse(user);
   }
 
   async updateMe(userId: string, dto: UpdateUserDto, imageUrl?: string): Promise<UserResponseDto> {
@@ -83,26 +80,7 @@ export class UserService {
 
     const updatedUser = await this.userRepository.update(userId, updateData);
 
-    return this.toUserResponse(updatedUser);
-  }
-
-  private toUserResponse(user: UserWithGrade): UserResponseDto {
-    return {
-      id: user.id,
-      name: user.name,
-      email: user.email,
-      type: user.type,
-      points: user.point,
-      createdAt: user.createdAt,
-      updatedAt: user.updatedAt,
-      image: user.image,
-      grade: {
-        id: user.grade.id,
-        name: user.grade.name,
-        rate: user.grade.rate,
-        minAmount: user.grade.minAmount,
-      },
-    };
+    return toUserResponse(updatedUser);
   }
 
   async getLikedStores(userId: string): Promise<StoreLikeResponseDto[]> {
@@ -114,20 +92,7 @@ export class UserService {
 
     const storeLikes = await this.userRepository.findLikedStores(userId);
 
-    return storeLikes.map((like) => ({
-      store: {
-        id: like.store.id,
-        userId: like.store.userId,
-        name: like.store.name,
-        address: like.store.address,
-        phoneNumber: like.store.phoneNumber,
-        content: like.store.content,
-        image: like.store.image,
-        createdAt: like.store.createdAt,
-        updatedAt: like.store.updatedAt,
-        detailAddress: like.store.detailAddress,
-      },
-    }));
+    return storeLikes.map((like) => toStoreLikeResponse(like));
   }
 
   async deleteMe(userId: string): Promise<void> {
