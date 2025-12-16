@@ -9,6 +9,7 @@ import type {
 import type { InquiryRepository } from './inquiry.repository.js';
 import type { NotificationService } from '@/domains/notification/notification.service.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/common/utils/errors.js';
+import { sseManager } from '@/common/utils/sse.manager.js';
 
 export class InquiryService {
   constructor(
@@ -70,9 +71,9 @@ export class InquiryService {
     };
 
     // 트랜잭션 사용
-    const inquiry = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 문의 생성
-      const createInquiry = await this.inquiryRepository.createInquiry(createData, tx);
+      const inquiry = await this.inquiryRepository.createInquiry(createData, tx);
 
       // 본인 상품에 타인의 문의가 생성될 경우 알림 생성
       if (findProduct.store.userId !== userId) {
@@ -82,13 +83,22 @@ export class InquiryService {
         };
 
         // 알림 생성
-        await this.notificationService.createNotification(notificationData, tx);
+        const notification = await this.notificationService.createNotification(
+          notificationData,
+          tx,
+        );
+        return { inquiry, notification };
       }
 
-      return createInquiry;
+      return { inquiry, notification: null };
     });
 
-    return inquiry;
+    // sse 전송
+    if (result.notification) {
+      sseManager.sendMessage(result.notification.userId, result.notification);
+    }
+
+    return result.inquiry;
   };
 
   // 모든 문의 조회 (사용자 본인의 문의)
@@ -209,9 +219,9 @@ export class InquiryService {
     };
 
     // 트랜잭션 사용
-    const reply = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 답변 생성
-      const createReply = await this.inquiryRepository.createReply(createData, tx);
+      const reply = await this.inquiryRepository.createReply(createData, tx);
       // 문의 상태 변경
       await this.inquiryRepository.updateStatusInquiry(updateData, id, tx);
 
@@ -223,13 +233,22 @@ export class InquiryService {
         };
 
         // 알림 생성
-        await this.notificationService.createNotification(notificationData, tx);
+        const notification = await this.notificationService.createNotification(
+          notificationData,
+          tx,
+        );
+        return { reply, notification };
       }
 
-      return createReply;
+      return { reply, notification: null };
     });
 
-    return reply;
+    // sse 전송
+    if (result.notification) {
+      sseManager.sendMessage(result.notification.userId, result.notification);
+    }
+
+    return result.reply;
   };
 
   // 답변 수정
