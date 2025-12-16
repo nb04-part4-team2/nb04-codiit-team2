@@ -4,10 +4,15 @@ import { NotificationRepository } from '../../src/domains/notification/notificat
 import { NotificationService } from '../../src/domains/notification/notification.service.js';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { userId, createNotificationMock, mockNotifications } from '../mocks/notification.mock.js';
+import { sseManager } from '../../src/common/utils/sse.manager.js';
+
+// sse 타입 정의
+type SendMessageFn = (userId: string, message: Notification) => void;
 
 describe('NotificationService 유닛 테스트', () => {
   let notificationService: NotificationService;
   let notificationRepository: DeepMockProxy<NotificationRepository>;
+  let sendMessageSpy: SendMessageFn & jest.Mock;
   const tx = mockDeep<Prisma.TransactionClient>();
 
   // 테스트 케이스가 실행되기 전에 매번 실행
@@ -15,6 +20,11 @@ describe('NotificationService 유닛 테스트', () => {
     // 의존성 주입
     notificationRepository = mockDeep<NotificationRepository>();
     notificationService = new NotificationService(notificationRepository);
+
+    // sse 스파이
+    sendMessageSpy = jest
+      .spyOn(sseManager, 'sendMessage')
+      .mockImplementation(() => {}) as SendMessageFn & jest.Mock;
   });
 
   // 각 테스트가 끝난 후 모든 모의(mock)를 원래대로 복원
@@ -72,6 +82,8 @@ describe('NotificationService 유닛 테스트', () => {
       // --- 검증 (Assert) ---
       expect(notificationRepository.createNotification).toHaveBeenCalledTimes(1);
       expect(notificationRepository.createNotification).toHaveBeenCalledWith(createData, undefined);
+      expect(sendMessageSpy).toHaveBeenCalledTimes(1);
+      expect(sendMessageSpy).toHaveBeenCalledWith(userId, mockNotification);
       expect(result).toEqual(mockNotification);
     });
 
@@ -99,6 +111,7 @@ describe('NotificationService 유닛 테스트', () => {
       // --- 검증 (Assert) ---
       expect(notificationRepository.createNotification).toHaveBeenCalledTimes(1);
       expect(notificationRepository.createNotification).toHaveBeenCalledWith(createData, tx);
+      expect(sendMessageSpy).not.toHaveBeenCalled();
       expect(result).toEqual(mockNotification);
     });
   });

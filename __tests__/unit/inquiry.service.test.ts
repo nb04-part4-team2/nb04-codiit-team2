@@ -20,12 +20,17 @@ import {
 } from '../mocks/inquiry.mock.js';
 import { createNotificationMock } from '../mocks/notification.mock.js';
 import type { TxMock } from '../helpers/test.type.js';
+import { sseManager } from '../../src/common/utils/sse.manager.js';
+
+// sse 타입 정의
+type SendMessageFn = (userId: string, message: Notification) => void;
 
 describe('InquiryService 유닛 테스트', () => {
   let inquiryService: InquiryService;
   let inquiryRepository: DeepMockProxy<InquiryRepository>;
   let notificationService: DeepMockProxy<NotificationService>;
   let prisma: DeepMockProxy<PrismaClient>;
+  let sendMessageSpy: SendMessageFn & jest.Mock;
 
   // 테스트 케이스가 실행되기 전에 매번 실행
   beforeEach(() => {
@@ -34,6 +39,11 @@ describe('InquiryService 유닛 테스트', () => {
     notificationService = mockDeep<NotificationService>();
     prisma = mockDeep<PrismaClient>();
     inquiryService = new InquiryService(inquiryRepository, notificationService, prisma);
+
+    // sse 스파이
+    sendMessageSpy = jest
+      .spyOn(sseManager, 'sendMessage')
+      .mockImplementation(() => {}) as SendMessageFn & jest.Mock;
   });
 
   // 각 테스트가 끝난 후 모든 모의(mock)를 원래대로 복원
@@ -138,6 +148,8 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.createInquiry).toHaveBeenCalledWith(createData, prisma);
       expect(notificationService.createNotification).toHaveBeenCalledTimes(1);
       expect(notificationService.createNotification).toHaveBeenCalledWith(notificationData, prisma);
+      expect(sendMessageSpy).toHaveBeenCalledTimes(1);
+      expect(sendMessageSpy).toHaveBeenCalledWith(mockNotification.userId, mockNotification);
       expect(result).toEqual(mockInquiry);
     });
 
@@ -188,6 +200,7 @@ describe('InquiryService 유닛 테스트', () => {
       expect(inquiryRepository.createInquiry).toHaveBeenCalledTimes(1);
       expect(inquiryRepository.createInquiry).toHaveBeenCalledWith(createData, prisma);
       expect(notificationService.createNotification).not.toHaveBeenCalled();
+      expect(sendMessageSpy).not.toHaveBeenCalled();
       expect(result).toEqual(mockInquiry);
     });
 
@@ -475,7 +488,7 @@ describe('InquiryService 유닛 테스트', () => {
         cb(prisma as Prisma.TransactionClient),
       );
       inquiryRepository.createReply.mockResolvedValue(mockReply);
-      inquiryRepository.updateInquiry.mockResolvedValue(mockUpdateInquiryStatus);
+      inquiryRepository.updateStatusInquiry.mockResolvedValue(mockUpdateInquiryStatus);
       notificationService.createNotification.mockResolvedValue(mockNotification);
 
       // --- 실행 (Act) ---
@@ -517,10 +530,12 @@ describe('InquiryService 유닛 테스트', () => {
       );
       expect(notificationService.createNotification).toHaveBeenCalledTimes(1);
       expect(notificationService.createNotification).toHaveBeenCalledWith(notificationData, prisma);
+      expect(sendMessageSpy).toHaveBeenCalledTimes(1);
+      expect(sendMessageSpy).toHaveBeenCalledWith(mockNotification.userId, mockNotification);
       expect(result).toEqual(mockReply);
     });
 
-    it('문의 생성 성공 (자신 문의에 답변하여 알림이 생성되지 않음)', async () => {
+    it('답변 생성 성공 (자신 문의에 답변하여 알림이 생성되지 않음)', async () => {
       // --- 준비 (Arrange) ---
       const data = {
         content: '답변 내용',
@@ -531,7 +546,7 @@ describe('InquiryService 유닛 테스트', () => {
         cb(prisma as Prisma.TransactionClient),
       );
       inquiryRepository.createReply.mockResolvedValue(mockReply);
-      inquiryRepository.updateInquiry.mockResolvedValue(mockUpdateInquiryStatus);
+      inquiryRepository.updateStatusInquiry.mockResolvedValue(mockUpdateInquiryStatus);
 
       // --- 실행 (Act) ---
       const result = await inquiryService.createReply(inquiryId, userId, data);
@@ -566,6 +581,7 @@ describe('InquiryService 유닛 테스트', () => {
         prisma,
       );
       expect(notificationService.createNotification).not.toHaveBeenCalled();
+      expect(sendMessageSpy).not.toHaveBeenCalled();
       expect(result).toEqual(mockReply);
     });
 
