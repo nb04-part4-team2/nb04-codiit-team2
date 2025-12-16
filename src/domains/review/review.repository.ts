@@ -37,6 +37,11 @@ export class ReviewRepository {
         rating: data.rating,
         content: data.content,
       },
+      include: {
+        user: {
+          select: { name: true },
+        },
+      },
     });
   }
 
@@ -44,9 +49,14 @@ export class ReviewRepository {
   async findAllByProductId(productId: string, skip: number, take: number) {
     return this.prisma.review.findMany({
       where: { productId },
-      orderBy: { createdAt: 'desc' }, // 최신순 정렬
+      orderBy: { createdAt: 'desc' },
       skip,
       take,
+      include: {
+        user: {
+          select: { name: true }, // 유저 이름만 선택적으로 가져옴
+        },
+      },
     });
   }
 

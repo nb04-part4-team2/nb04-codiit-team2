@@ -58,30 +58,35 @@ export class ReviewService {
 
   // 리뷰 목록 조회
   async getReviews(productId: string, query: ReviewListQueryDto): Promise<ReviewListResponseDto> {
-    // 상품 존재 여부 확인 (존재하지 않으면 404)
+    // 리턴 타입 변경
+    // 상품 존재 확인
     const product = await this.reviewRepository.findProductById(productId);
     if (!product) {
       throw new NotFoundError('요청한 리소스를 찾을 수 없습니다.');
     }
 
-    // 페이지네이션 오프셋 계산
     const { page, limit } = query;
     const skip = (page - 1) * limit;
 
-    // 리뷰 데이터 및 전체 개수 조회 (병렬 처리)
+    // 데이터 조회
     const [reviews, totalCount] = await Promise.all([
       this.reviewRepository.findAllByProductId(productId, skip, limit),
       this.reviewRepository.countByProductId(productId),
     ]);
 
-    // 총 페이지 수 계산
-    const totalPage = Math.ceil(totalCount / limit);
+    // 메타데이터 계산
+    // 현재 가져온 개수 + 건너뛴 개수가 전체보다 작으면 다음 페이지가 있음
+    const hasNextPage = totalCount > skip + limit;
 
-    // 응답 DTO 반환
+    // 구조 조립 후 반환
     return {
-      list: ReviewMapper.toResponseList(reviews),
-      totalCount,
-      totalPage,
+      items: ReviewMapper.toResponseList(reviews),
+      meta: {
+        total: totalCount,
+        page,
+        limit,
+        hasNextPage,
+      },
     };
   }
 }

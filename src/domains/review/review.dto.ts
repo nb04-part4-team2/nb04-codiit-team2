@@ -4,19 +4,28 @@ import { createReviewSchema, reviewListQuerySchema } from './review.schema.js';
 export type CreateReviewDto = z.infer<typeof createReviewSchema>;
 export type ReviewListQueryDto = z.infer<typeof reviewListQuerySchema>;
 
-// 응답용 DTO
+// 개별 리뷰 응답 (user.name 포함)
 export interface ReviewResponseDto {
   id: string;
   userId: string;
   productId: string;
-  rating: number;
   content: string;
+  rating: number;
   createdAt: string;
+  updatedAt: string;
+  orderItemId: string;
+  user: {
+    name: string;
+  };
 }
 
-// 리뷰 목록 응답 DTO (페이지네이션 포함)
+// 전체 목록 응답
 export interface ReviewListResponseDto {
-  list: ReviewResponseDto[];
-  totalCount: number;
-  totalPage: number;
+  items: ReviewResponseDto[];
+  meta: {
+    total: number;
+    page: number;
+    limit: number;
+    hasNextPage: boolean;
+  };
 }

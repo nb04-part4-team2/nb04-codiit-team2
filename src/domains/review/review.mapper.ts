@@ -1,20 +1,31 @@
 import { Review } from '@prisma/client';
 import { ReviewResponseDto } from './review.dto.js';
 
+// Prisma 결과 타입 정의
+type ReviewWithUser = Review & {
+  user: {
+    name: string;
+  };
+};
+
 export class ReviewMapper {
-  static toResponse(review: Review): ReviewResponseDto {
+  static toResponse(review: ReviewWithUser): ReviewResponseDto {
     return {
       id: review.id,
       userId: review.userId,
       productId: review.productId,
-      rating: review.rating,
       content: review.content,
+      rating: review.rating,
       createdAt: review.createdAt.toISOString(),
+      updatedAt: review.updatedAt.toISOString(),
+      orderItemId: review.orderItemId,
+      user: {
+        name: review.user.name,
+      },
     };
   }
 
-  // 리뷰 배열을 DTO 배열로 변환하는 헬퍼 메서드
-  static toResponseList(reviews: Review[]): ReviewResponseDto[] {
+  static toResponseList(reviews: ReviewWithUser[]): ReviewResponseDto[] {
     return reviews.map((review) => this.toResponse(review));
   }
 }
