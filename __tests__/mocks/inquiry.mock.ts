@@ -6,6 +6,7 @@ export const inquiryId = 'inquiry-id-1';
 export const replyId = 'reply-id-1';
 export const productId = 'product-id-1';
 export const userId = 'user-id-1';
+export const userId2 = 'user-id-2';
 export const storeId = 'store-id-1';
 export const categoryId = 'category-id-1';
 
@@ -140,11 +141,16 @@ export const mockInquiry = {
 };
 
 // 상품 찾기
-export const mockFindProduct = createProductMock({
-  id: productId,
-  storeId,
-  categoryId,
-});
+export const mockFindProduct = {
+  ...createProductMock({
+    id: productId,
+    storeId,
+    categoryId,
+  }),
+  store: {
+    userId: userId2,
+  },
+};
 
 // 문의 찾기
 export const mockFindInquiry = {
@@ -154,10 +160,23 @@ export const mockFindInquiry = {
     productId,
   }),
   product: {
+    name: '상품 이름',
     store: {
-      userId: userId,
+      userId,
     },
   },
+};
+
+export const mockInquiryOwnedByOtherUser = {
+  ...mockFindInquiry,
+  userId: 'other-user-id-1',
+};
+
+// 문의 상태 변경
+export const mockUpdateInquiryStatus = {
+  ...createInquiryMock({
+    status: InquiryStatus.CompletedAnswer,
+  }),
 };
 
 // 답변 찾기
