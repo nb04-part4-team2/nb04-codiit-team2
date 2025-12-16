@@ -7,8 +7,9 @@ export class OrderController {
   constructor(private orderService: OrderService) {}
   getOrder = async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const { id: userId } = req.user;
     const { orderId } = req.params;
-    const order = await this.orderService.getOrder(orderId);
+    const order = await this.orderService.getOrder(userId, orderId);
     return res.status(200).json(toGetOrderResponse(order));
   };
   createOrder = async (req: Request, res: Response) => {

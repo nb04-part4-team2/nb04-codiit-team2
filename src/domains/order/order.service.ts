@@ -7,17 +7,25 @@ import {
 import { OrderRepository } from '@/domains/order/order.repository.js';
 import { PaymentStatus, PrismaClient } from '@prisma/client';
 import { CreateOrderItemInputWithPrice } from '@/domains/order/order.type.js';
-import { BadRequestError, NotFoundError, UnauthorizedError } from '@/common/utils/errors.js';
+import {
+  BadRequestError,
+  ForbiddenError,
+  NotFoundError,
+  UnauthorizedError,
+} from '@/common/utils/errors.js';
 
 export class OrderService {
   constructor(
     private orderRepository: OrderRepository,
     private prisma: PrismaClient,
   ) {}
-  async getOrder(orderId: string) {
+  async getOrder(userId: string, orderId: string) {
     const order = await this.orderRepository.findById(orderId);
     if (!order) {
       throw new NotFoundError('주문을 찾을 수 없습니다.');
+    }
+    if (order.buyerId !== userId) {
+      throw new ForbiddenError('접근 권한이 없습니다.');
     }
     return order;
   }

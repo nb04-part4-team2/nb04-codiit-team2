@@ -42,10 +42,13 @@ const toReviewResponse = (review: ReviewRawData): ReviewResponse => ({
   createdAt: review.createdAt.toISOString(),
 });
 
-const toProductResponse = (product: ProductRawData, review: ReviewResponse[]): ProductResponse => ({
+const toProductResponse = (
+  product: ProductRawData,
+  reviews: ReviewResponse[],
+): ProductResponse => ({
   name: product.name,
   image: product.image,
-  reviews: review,
+  reviews: reviews,
 });
 
 const toSizeResponse = (size: SizeRawData): OrderItemSizeResponse => ({

@@ -23,6 +23,7 @@ export class OrderRepository {
       },
       select: {
         id: true,
+        buyerId: true,
         name: true,
         phoneNumber: true,
         address: true,

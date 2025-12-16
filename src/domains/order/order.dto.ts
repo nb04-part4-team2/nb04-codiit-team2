@@ -37,6 +37,7 @@ export type UpdateStockRepoInput = CreateOrderItemBody;
 
 // repo output
 export interface GetOrderRawData extends OrderBase<Date> {
+  buyerId: string;
   orderItems: GetOrderItemRawData[];
 }
 
