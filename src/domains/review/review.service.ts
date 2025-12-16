@@ -1,6 +1,11 @@
 import { Prisma } from '@prisma/client';
 import { ReviewRepository } from './review.repository.js';
-import { CreateReviewDto, ReviewResponseDto } from './review.dto.js';
+import {
+  CreateReviewDto,
+  ReviewListQueryDto,
+  ReviewListResponseDto,
+  ReviewResponseDto,
+} from './review.dto.js';
 import { ReviewMapper } from './review.mapper.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/common/utils/errors.js';
 
@@ -49,5 +54,39 @@ export class ReviewService {
       // 예상치 못한 다른 에러는 그대로 던짐
       throw error;
     }
+  }
+
+  // 리뷰 목록 조회
+  async getReviews(productId: string, query: ReviewListQueryDto): Promise<ReviewListResponseDto> {
+    // 리턴 타입 변경
+    // 상품 존재 확인
+    const product = await this.reviewRepository.findProductById(productId);
+    if (!product) {
+      throw new NotFoundError('요청한 리소스를 찾을 수 없습니다.');
+    }
+
+    const { page, limit } = query;
+    const skip = (page - 1) * limit;
+
+    // 데이터 조회
+    const [reviews, totalCount] = await Promise.all([
+      this.reviewRepository.findAllByProductId(productId, skip, limit),
+      this.reviewRepository.countByProductId(productId),
+    ]);
+
+    // 메타데이터 계산
+    // 현재 가져온 개수 + 건너뛴 개수가 전체보다 작으면 다음 페이지가 있음
+    const hasNextPage = totalCount > skip + limit;
+
+    // 구조 조립 후 반환
+    return {
+      items: ReviewMapper.toResponseList(reviews),
+      meta: {
+        total: totalCount,
+        page,
+        limit,
+        hasNextPage,
+      },
+    };
   }
 }
