@@ -227,6 +227,13 @@ export class InquiryRepository {
   public findProductByProductId = async (productId: string) => {
     const product = await this.prisma.product.findUnique({
       where: { id: productId },
+      include: {
+        store: {
+          select: {
+            userId: true,
+          },
+        },
+      },
     });
 
     return product;

@@ -7,10 +7,14 @@ import type {
   UpdateReplyBody,
 } from './inquiry.dto.js';
 import type { InquiryRepository } from './inquiry.repository.js';
+import type { NotificationService } from '@/domains/notification/notification.service.js';
 import { NotFoundError, ForbiddenError, BadRequestError } from '@/common/utils/errors.js';
 
 export class InquiryService {
-  constructor(private inquiryRepository: InquiryRepository) {}
+  constructor(
+    private inquiryRepository: InquiryRepository,
+    private notificationService: NotificationService,
+  ) {}
 
   // 특정 상품의 모든 문의 조회
   public getInquiries = async (productId: string) => {
@@ -65,6 +69,16 @@ export class InquiryService {
     };
 
     const inquiry = await this.inquiryRepository.createInquiry(createData);
+
+    // 자신의 문의가 아닐 경우 알림 생성
+    if (findProduct.store?.userId !== userId) {
+      const notificationData = {
+        userId: findProduct.store!.userId,
+        content: `${findProduct.name}에 새로운 문의가 등록되었습니다.`,
+      };
+
+      await this.notificationService.createNotification(notificationData);
+    }
 
     return inquiry;
   };
