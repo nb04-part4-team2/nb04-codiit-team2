@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { ReviewService } from './review.service.js';
-import { CreateReviewDto } from './review.dto.js';
+import { CreateReviewDto, ReviewListQueryDto } from './review.dto.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 
 export class ReviewController {
@@ -18,5 +18,15 @@ export class ReviewController {
     const review = await this.reviewService.createReview(userId, productId, requestBody);
 
     res.status(201).json(review);
+  };
+
+  getReviews = async (req: Request, res: Response) => {
+    const { productId } = req.params;
+    // 쿼리 파라미터는 Zod 미들웨어를 통과하며 타입 변환됨
+    const query = req.query as unknown as ReviewListQueryDto;
+
+    const result = await this.reviewService.getReviews(productId, query);
+
+    res.status(200).json(result);
   };
 }
