@@ -3,6 +3,7 @@ import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 import { validate } from '@/common/middlewares/validate.middleware.js';
 import { authenticate, onlySeller } from '@/common/middlewares/auth.middleware.js'; // onlySeller 추가
 import { productController } from './product.container.js';
+import { nestedReviewRouter } from '../review/review.router.js';
 import {
   createProductSchema,
   productListSchema,
@@ -33,6 +34,9 @@ productRouter.get(
 
 // 문의 중첩 라우터
 productRouter.use('/:productId/inquiries', nestedInquiryRouter);
+
+// 리뷰 중첩 라우터
+productRouter.use('/:productId/reviews', nestedReviewRouter);
 
 // 상품 상세 조회 API
 productRouter.get(
