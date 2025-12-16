@@ -5,7 +5,7 @@ import { authenticate } from '@/common/middlewares/auth.middleware.js';
 
 const notificationRouter = Router();
 
-// 사용자 모든 알람 조회
+// 사용자 모든 알림 조회
 notificationRouter.get(
   '/',
   authenticate,

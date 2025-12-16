@@ -44,8 +44,12 @@ export class InquiryRepository {
   };
 
   // 문의 생성
-  public createInquiry = async (createData: Prisma.InquiryCreateInput) => {
-    const inquiry = await this.prisma.inquiry.create({
+  public createInquiry = async (
+    createData: Prisma.InquiryCreateInput,
+    tx?: Prisma.TransactionClient,
+  ) => {
+    const prismaClient = tx ?? this.prisma;
+    const inquiry = await prismaClient.inquiry.create({
       data: createData,
       select: {
         id: true,
@@ -177,32 +181,22 @@ export class InquiryRepository {
   // 답변 생성
   public createReply = async (
     createData: Prisma.ReplyCreateInput,
-    id: string,
-    updateData: Prisma.InquiryUpdateInput,
+    tx?: Prisma.TransactionClient,
   ) => {
-    // 트랜잭션 사용
-    return this.prisma.$transaction(async (tx) => {
-      // 답변 생성
-      const reply = await tx.reply.create({
-        data: createData,
-        select: {
-          id: true,
-          inquiryId: true,
-          userId: true,
-          content: true,
-          createdAt: true,
-          updatedAt: true,
-        },
-      });
-
-      // 문의 상태 변경
-      await tx.inquiry.update({
-        where: { id },
-        data: updateData,
-      });
-
-      return reply;
+    const prismaClient = tx ?? this.prisma;
+    const reply = await prismaClient.reply.create({
+      data: createData,
+      select: {
+        id: true,
+        inquiryId: true,
+        userId: true,
+        content: true,
+        createdAt: true,
+        updatedAt: true,
+      },
     });
+
+    return reply;
   };
 
   // 답변 수정
@@ -246,6 +240,7 @@ export class InquiryRepository {
       include: {
         product: {
           select: {
+            name: true,
             store: {
               select: {
                 userId: true,
@@ -266,6 +261,19 @@ export class InquiryRepository {
     });
 
     return reply;
+  };
+
+  // 문의 상태 변경
+  public updateStatusInquiry = async (
+    updateData: Prisma.InquiryUpdateInput,
+    id: string,
+    tx?: Prisma.TransactionClient,
+  ) => {
+    const prismaClient = tx ?? this.prisma;
+    return await prismaClient.inquiry.update({
+      where: { id },
+      data: updateData,
+    });
   };
 
   // 문의 카운트

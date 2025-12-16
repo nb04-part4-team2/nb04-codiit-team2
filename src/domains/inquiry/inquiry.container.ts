@@ -6,6 +6,6 @@ import { notificationService } from '@/domains/notification/notification.contain
 
 // 의존성 주입
 const inquiryRepository = new InquiryRepository(prisma);
-const inquiryService = new InquiryService(inquiryRepository, notificationService);
+const inquiryService = new InquiryService(inquiryRepository, notificationService, prisma);
 
 export const inquiryController = new InquiryController(inquiryService);

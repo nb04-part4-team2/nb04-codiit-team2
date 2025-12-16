@@ -21,8 +21,12 @@ export class NotificationRepository {
   };
 
   // 알림 생성
-  createNotification = async (createData: Prisma.NotificationCreateInput) => {
-    const notification = await this.prisma.notification.create({
+  createNotification = async (
+    createData: Prisma.NotificationCreateInput,
+    tx?: Prisma.TransactionClient,
+  ) => {
+    const prismaClient = tx ?? this.prisma;
+    const notification = await prismaClient.notification.create({
       data: createData,
     });
 

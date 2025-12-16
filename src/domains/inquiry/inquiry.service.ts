@@ -1,4 +1,4 @@
-import type { Prisma } from '@prisma/client';
+import type { PrismaClient, Prisma } from '@prisma/client';
 import type {
   OffsetQuery,
   CreateInquiryBody,
@@ -14,6 +14,7 @@ export class InquiryService {
   constructor(
     private inquiryRepository: InquiryRepository,
     private notificationService: NotificationService,
+    private prisma: PrismaClient,
   ) {}
 
   // 특정 상품의 모든 문의 조회
@@ -68,17 +69,24 @@ export class InquiryService {
       },
     };
 
-    const inquiry = await this.inquiryRepository.createInquiry(createData);
+    // 트랜잭션 사용
+    const inquiry = await this.prisma.$transaction(async (tx) => {
+      // 문의 생성
+      const createInquiry = await this.inquiryRepository.createInquiry(createData, tx);
 
-    // 자신의 문의가 아닐 경우 알림 생성
-    if (findProduct.store?.userId !== userId) {
-      const notificationData = {
-        userId: findProduct.store!.userId,
-        content: `${findProduct.name}에 새로운 문의가 등록되었습니다.`,
-      };
+      // 본인 상품에 타인의 문의가 생성될 경우 알림 생성
+      if (findProduct.store.userId !== userId) {
+        const notificationData = {
+          userId: findProduct.store.userId,
+          content: `${findProduct.name}에 새로운 문의가 등록되었습니다.`,
+        };
 
-      await this.notificationService.createNotification(notificationData);
-    }
+        // 알림 생성
+        await this.notificationService.createNotification(notificationData, tx);
+      }
+
+      return createInquiry;
+    });
 
     return inquiry;
   };
@@ -201,7 +209,25 @@ export class InquiryService {
     };
 
     // 트랜잭션 사용
-    const reply = await this.inquiryRepository.createReply(createData, id, updateData);
+    const reply = await this.prisma.$transaction(async (tx) => {
+      // 답변 생성
+      const createReply = await this.inquiryRepository.createReply(createData, tx);
+      // 문의 상태 변경
+      await this.inquiryRepository.updateStatusInquiry(updateData, id, tx);
+
+      // 본인 문의에 타인의 답변이 생성될 경우 알림 생성
+      if (findInquiry.userId !== userId) {
+        const notificationData = {
+          userId: findInquiry.userId,
+          content: `${findInquiry.product.name}에 대한 문의에 답변이 달렸습니다.`,
+        };
+
+        // 알림 생성
+        await this.notificationService.createNotification(notificationData, tx);
+      }
+
+      return createReply;
+    });
 
     return reply;
   };

@@ -21,8 +21,11 @@ export class NotificationService {
   };
 
   // 알림 생성
-  createNotification = async (data: CreateNotificationBody) => {
-    const { userId, content } = data;
+  createNotification = async (
+    notificationData: CreateNotificationBody,
+    tx?: Prisma.TransactionClient,
+  ) => {
+    const { userId, content } = notificationData;
 
     const createData: Prisma.NotificationCreateInput = {
       user: {
@@ -33,7 +36,7 @@ export class NotificationService {
       content,
     };
 
-    const notification = await this.notificationRepository.createNotification(createData);
+    const notification = await this.notificationRepository.createNotification(createData, tx);
 
     // sse 전송
     sseManager.sendMessage(userId, notification);
