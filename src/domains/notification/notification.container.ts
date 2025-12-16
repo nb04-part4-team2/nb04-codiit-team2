@@ -5,6 +5,6 @@ import { NotificationService } from './notification.service.js';
 
 // 의존성 주입
 const notificationRepository = new NotificationRepository(prisma);
-const notificationService = new NotificationService(notificationRepository);
+export const notificationService = new NotificationService(notificationRepository);
 
 export const notificationController = new NotificationController(notificationService);
