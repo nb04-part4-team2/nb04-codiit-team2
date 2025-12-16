@@ -91,21 +91,4 @@ export class ReviewRepository {
       where: { productId },
     });
   }
-
-  // 리뷰 목록 조회 (페이지네이션)
-  async findAllByProductId(productId: string, skip: number, take: number) {
-    return this.prisma.review.findMany({
-      where: { productId },
-      orderBy: { createdAt: 'desc' }, // 최신순 정렬
-      skip,
-      take,
-    });
-  }
-
-  // 특정 상품의 총 리뷰 개수 조회
-  async countByProductId(productId: string) {
-    return this.prisma.review.count({
-      where: { productId },
-    });
-  }
 }
