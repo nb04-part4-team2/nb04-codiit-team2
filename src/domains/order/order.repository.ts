@@ -1,6 +1,7 @@
 import { Prisma, PrismaClient } from '@prisma/client';
 import {
   CreateOrderItemRepoInput,
+  CreateOrderRawData,
   CreateOrderRepoInput,
   CreatePaymentRepoInput,
   CreatePointHistoryRepoInput,
@@ -36,54 +37,18 @@ export class OrderRepository {
             quantity: true,
             productId: true,
             review: {
-              // isReviewed 생성용
+              // isReviewed, product내부 reviews 생성용
               select: {
                 id: true,
+                rating: true,
+                content: true,
+                createdAt: true,
               },
             },
             product: {
               select: {
-                id: true,
-                storeId: true,
                 name: true,
-                price: true,
                 image: true,
-                discountRate: true,
-                discountStartTime: true,
-                discountEndTime: true,
-                createdAt: true,
-                updatedAt: true,
-                reviewsRating: true,
-                categoryId: true,
-                store: {
-                  select: {
-                    id: true,
-                    userId: true,
-                    name: true,
-                    address: true,
-                    detailAddress: true,
-                    phoneNumber: true,
-                    content: true,
-                    image: true,
-                    createdAt: true,
-                    updatedAt: true,
-                  },
-                },
-                stocks: {
-                  select: {
-                    id: true,
-                    productId: true,
-                    sizeId: true,
-                    quantity: true,
-                    size: {
-                      select: {
-                        id: true,
-                        en: true,
-                        ko: true,
-                      },
-                    },
-                  },
-                },
               },
             },
             size: {
@@ -101,8 +66,6 @@ export class OrderRepository {
             price: true,
             status: true,
             createdAt: true,
-            updatedAt: true,
-            orderId: true,
           },
         },
       },
@@ -111,7 +74,10 @@ export class OrderRepository {
   /**
    * 주문 생성
    **/
-  async createOrder(data: CreateOrderRepoInput, tx?: Prisma.TransactionClient) {
+  async createOrder(
+    data: CreateOrderRepoInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<CreateOrderRawData> {
     const db = tx ?? this.prisma;
     return await db.order.create({
       data: {
