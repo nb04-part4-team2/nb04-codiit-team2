@@ -37,11 +37,6 @@ export class ReviewRepository {
         rating: data.rating,
         content: data.content,
       },
-      include: {
-        user: {
-          select: { name: true },
-        },
-      },
     });
   }
 
@@ -57,23 +52,6 @@ export class ReviewRepository {
           select: { name: true }, // 유저 이름만 선택적으로 가져옴
         },
       },
-    });
-  }
-
-  // 특정 상품의 총 리뷰 개수 조회
-  async countByProductId(productId: string) {
-    return this.prisma.review.count({
-      where: { productId },
-    });
-  }
-
-  // 리뷰 목록 조회 (페이지네이션)
-  async findAllByProductId(productId: string, skip: number, take: number) {
-    return this.prisma.review.findMany({
-      where: { productId },
-      orderBy: { createdAt: 'desc' }, // 최신순 정렬
-      skip,
-      take,
     });
   }
 
