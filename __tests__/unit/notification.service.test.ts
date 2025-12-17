@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import type { Prisma } from '@prisma/client';
+import type { Prisma, Notification } from '@prisma/client';
 import { NotificationRepository } from '../../src/domains/notification/notification.repository.js';
 import { NotificationService } from '../../src/domains/notification/notification.service.js';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';

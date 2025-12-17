@@ -1,5 +1,5 @@
 import { jest } from '@jest/globals';
-import type { PrismaClient, Prisma } from '@prisma/client';
+import type { PrismaClient, Prisma, Notification } from '@prisma/client';
 import { InquiryRepository } from '../../src/domains/inquiry/inquiry.repository.js';
 import { InquiryService } from '../../src/domains/inquiry/inquiry.service.js';
 import { NotificationService } from '../../src/domains/notification/notification.service.js';
