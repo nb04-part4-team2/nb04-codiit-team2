@@ -23,7 +23,7 @@ export const createNotificationMock = (overrides: Partial<Notification> = {}): N
 // Repository 목 데이터
 // ============================================
 
-// 사용자 모든 알람 조회
+// 사용자 모든 알림 조회
 export const mockNotifications = [
   {
     ...createNotificationMock({
@@ -36,3 +36,6 @@ export const mockNotifications = [
     }),
   },
 ];
+
+// 알림 찾기
+export const mockFindNotification = createNotificationMock();

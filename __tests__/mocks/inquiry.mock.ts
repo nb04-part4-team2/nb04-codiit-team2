@@ -167,11 +167,6 @@ export const mockFindInquiry = {
   },
 };
 
-export const mockInquiryOwnedByOtherUser = {
-  ...mockFindInquiry,
-  userId: 'other-user-id-1',
-};
-
 // 문의 상태 변경
 export const mockUpdateInquiryStatus = {
   ...createInquiryMock({

@@ -14,7 +14,6 @@ import {
   mockInquiry,
   mockFindProduct,
   mockFindInquiry,
-  mockInquiryOwnedByOtherUser,
   mockUpdateInquiryStatus,
   mockFindReply,
 } from '../mocks/inquiry.mock.js';
@@ -385,11 +384,11 @@ describe('InquiryService 유닛 테스트', () => {
       const data = {
         title: '문의 제목 수정',
       };
-      const mockFindInquiry_userId = {
+      const mockInquiryOwnedByOtherUser = {
         ...mockFindInquiry,
         userId: '다른 사용자 ID',
       };
-      inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry_userId);
+      inquiryRepository.findInquiryById.mockResolvedValue(mockInquiryOwnedByOtherUser);
 
       // --- 실행 및 검증 (Act & Assert) ---
       await expect(inquiryService.updateInquiry(inquiryId, userId, data)).rejects.toThrow(
@@ -417,11 +416,11 @@ describe('InquiryService 유닛 테스트', () => {
       const data = {
         title: '문의 제목 수정',
       };
-      const mockFindInquiry_status = {
+      const mockFindInquiryWithCompletedAnswer = {
         ...mockFindInquiry,
         status: InquiryStatus.CompletedAnswer,
       };
-      inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry_status);
+      inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiryWithCompletedAnswer);
 
       // --- 실행 및 검증 (Act & Assert) ---
       await expect(inquiryService.updateInquiry(inquiryId, userId, data)).rejects.toThrow(
@@ -461,11 +460,11 @@ describe('InquiryService 유닛 테스트', () => {
 
     it('문의를 삭제할 권한이 없을때 ForbiddenError 발생', async () => {
       // --- 준비 (Arrange) ---
-      const mockFindInquiry_userId = {
+      const mockInquiryOwnedByOtherUser = {
         ...mockFindInquiry,
         userId: '다른 사용자 ID',
       };
-      inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry_userId);
+      inquiryRepository.findInquiryById.mockResolvedValue(mockInquiryOwnedByOtherUser);
 
       // --- 실행 및 검증 (Act & Assert) ---
       await expect(inquiryService.deleteInquiry(inquiryId, userId)).rejects.toThrow(
@@ -480,6 +479,10 @@ describe('InquiryService 유닛 테스트', () => {
       // --- 준비 (Arrange) ---
       const data = {
         content: '답변 내용',
+      };
+      const mockInquiryOwnedByOtherUser = {
+        ...mockFindInquiry,
+        userId: '다른 사용자 ID',
       };
       const mockReply = createReplyMock(data);
       const mockNotification = createNotificationMock();
@@ -603,7 +606,7 @@ describe('InquiryService 유닛 테스트', () => {
       const data = {
         content: '답변 내용',
       };
-      const mockFindInquiry_userId = {
+      const mockFindInquiryOwnedByOtherUser = {
         ...mockFindInquiry,
         product: {
           name: '상품 이름',
@@ -612,7 +615,7 @@ describe('InquiryService 유닛 테스트', () => {
           },
         },
       };
-      inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiry_userId);
+      inquiryRepository.findInquiryById.mockResolvedValue(mockFindInquiryOwnedByOtherUser);
 
       // --- 실행 및 검증 (Act & Assert) ---
       await expect(inquiryService.createReply(inquiryId, userId, data)).rejects.toThrow(
@@ -665,11 +668,11 @@ describe('InquiryService 유닛 테스트', () => {
       const data = {
         content: '답변 내용 수정',
       };
-      const mockFindReply_userId = {
+      const mockFindReplyOwnedByOtherUser = {
         ...mockFindReply,
         userId: '다른 사용자 ID',
       };
-      inquiryRepository.findReplyById.mockResolvedValue(mockFindReply_userId);
+      inquiryRepository.findReplyById.mockResolvedValue(mockFindReplyOwnedByOtherUser);
 
       // --- 실행 및 검증 (Act & Assert) ---
       await expect(inquiryService.updateReply(replyId, userId, data)).rejects.toThrow(

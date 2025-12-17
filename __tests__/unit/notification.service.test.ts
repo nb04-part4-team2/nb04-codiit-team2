@@ -1,10 +1,17 @@
 import { jest } from '@jest/globals';
 import type { Prisma, Notification } from '@prisma/client';
-import { NotificationRepository } from '../../src/domains/notification/notification.repository.js';
-import { NotificationService } from '../../src/domains/notification/notification.service.js';
+import { NotificationRepository } from '@/domains/notification/notification.repository.js';
+import { NotificationService } from '@/domains/notification/notification.service.js';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import { userId, createNotificationMock, mockNotifications } from '../mocks/notification.mock.js';
-import { sseManager } from '../../src/common/utils/sse.manager.js';
+import {
+  userId,
+  notificationId,
+  createNotificationMock,
+  mockNotifications,
+  mockFindNotification,
+} from '../mocks/notification.mock.js';
+import { sseManager } from '@/common/utils/sse.manager.js';
+import { NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
 
 // sse 타입 정의
 type SendMessageFn = (userId: string, message: Notification) => void;
@@ -113,6 +120,77 @@ describe('NotificationService 유닛 테스트', () => {
       expect(notificationRepository.createNotification).toHaveBeenCalledWith(createData, tx);
       expect(sendMessageSpy).not.toHaveBeenCalled();
       expect(result).toEqual(mockNotification);
+    });
+  });
+
+  // 알림 수정 (읽음 처리)
+  describe('createNotification', () => {
+    it('알림 수정 성공', async () => {
+      // --- 준비 (Arrange) ---
+      const mockNotification = createNotificationMock();
+      notificationRepository.findNotificationById.mockResolvedValue(mockFindNotification);
+      notificationRepository.updateNotification.mockResolvedValue(mockNotification);
+
+      // --- 실행 (Act) ---
+      const result = await notificationService.updateNotification(notificationId, userId);
+
+      const updateData = {
+        isChecked: true,
+      };
+
+      // --- 검증 (Assert) ---
+      expect(notificationRepository.findNotificationById).toHaveBeenCalledTimes(1);
+      expect(notificationRepository.findNotificationById).toHaveBeenCalledWith(notificationId);
+      expect(notificationRepository.updateNotification).toHaveBeenCalledTimes(1);
+      expect(notificationRepository.updateNotification).toHaveBeenCalledWith(
+        notificationId,
+        updateData,
+      );
+      expect(result).toEqual(mockNotification);
+    });
+
+    it('알림 수정 성공(이미 읽음)', async () => {
+      // --- 준비 (Arrange) ---
+      const mockFindNotificationChecked = {
+        ...mockFindNotification,
+        isChecked: true,
+      };
+      notificationRepository.findNotificationById.mockResolvedValue(mockFindNotificationChecked);
+
+      // --- 실행 (Act) ---
+      const result = await notificationService.updateNotification(notificationId, userId);
+
+      // --- 검증 (Assert) ---
+      expect(notificationRepository.findNotificationById).toHaveBeenCalledTimes(1);
+      expect(notificationRepository.findNotificationById).toHaveBeenCalledWith(notificationId);
+      expect(notificationRepository.updateNotification).not.toHaveBeenCalled();
+      expect(result).toEqual(mockFindNotificationChecked);
+    });
+
+    it('알림이 존재하지 않을때 NotFoundError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      notificationRepository.findNotificationById.mockResolvedValue(null);
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(notificationService.updateNotification(notificationId, userId)).rejects.toThrow(
+        NotFoundError,
+      );
+    });
+
+    it('알림을 수정할 권한이 없을때 ForbiddenError 발생', async () => {
+      // --- 준비 (Arrange) ---
+      const mockFindNotificationOwnedByOtherUser = {
+        ...mockFindNotification,
+        userId: '다른 사용자 ID',
+      };
+      notificationRepository.findNotificationById.mockResolvedValue(
+        mockFindNotificationOwnedByOtherUser,
+      );
+
+      // --- 실행 및 검증 (Act & Assert) ---
+      await expect(notificationService.updateNotification(notificationId, userId)).rejects.toThrow(
+        ForbiddenError,
+      );
     });
   });
 });
