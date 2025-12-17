@@ -1,8 +1,7 @@
 import type { User, Grade, StoreLike, Store } from '@prisma/client';
-import type { CreateUserDto, UpdateUserDto } from '../../src/domains/user/user.schema.js';
-import type { UserWithGrade } from '../../src/domains/user/user.dto.js';
-import type { JwtPayload } from '../../src/common/utils/jwt.util.js';
-import { toUserResponse, toStoreLikeResponse } from '../../src/domains/user/user.mapper.js';
+import type { CreateUserDto, UpdateUserDto } from '@/domains/user/user.schema.js';
+import type { JwtPayload } from '@/common/utils/jwt.util.js';
+import { toUserResponse, toStoreLikeResponse } from '@/domains/user/user.mapper.js';
 
 // ============================================
 // 공통 날짜
@@ -41,23 +40,24 @@ export const createUserMock = (overrides: Partial<User> = {}): User => ({
 
 // ============================================
 // UserWithGrade Mock (Repository 반환 형태)
+// Prisma의 실제 반환 타입: User & { grade: Grade }
 // ============================================
-export const createUserWithGradeMock = (overrides: Partial<UserWithGrade> = {}): UserWithGrade => ({
+type UserWithGradeFromPrisma = User & { grade: Grade };
+
+export const createUserWithGradeMock = (
+  overrides: Partial<UserWithGradeFromPrisma> = {},
+): UserWithGradeFromPrisma => ({
   id: 'user-id-1',
   name: '테스트 유저',
   email: 'test@example.com',
+  password: 'hashed-password',
   type: 'BUYER',
   point: 0,
   image: null,
   createdAt: now,
   updatedAt: now,
-  grade: {
-    id: 'grade_green',
-    name: 'green',
-    rate: 5,
-    minAmount: 0,
-    ...(overrides.grade || {}),
-  },
+  gradeId: 'grade_green',
+  grade: createGradeMock(overrides.grade),
   ...overrides,
 });
 
@@ -65,7 +65,7 @@ export const createUserWithGradeMock = (overrides: Partial<UserWithGrade> = {}):
 // Response Mock (mapper 기반)
 // Raw → Mapper → ResponseDto
 // ============================================
-export const createUserResponseMock = (overrides: Partial<UserWithGrade> = {}) => {
+export const createUserResponseMock = (overrides: Partial<UserWithGradeFromPrisma> = {}) => {
   const raw = createUserWithGradeMock(overrides);
   return toUserResponse(raw);
 };

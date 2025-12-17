@@ -1,19 +1,19 @@
 import { jest, beforeEach, afterEach, describe, it, expect } from '@jest/globals';
-import { UserRepository } from '../../src/domains/user/user.repository';
-import { UserService } from '../../src/domains/user/user.service';
+import { UserRepository } from '@/domains/user/user.repository.js';
+import { UserService } from '@/domains/user/user.service.js';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import {
   createUserWithGradeMock,
   createUserInputMock,
   updateUserInputMock,
   createStoreLikeRawMock,
-} from '../mocks/user.mock';
+} from '../mocks/user.mock.js';
 import {
   NotFoundError,
   ConflictError,
   UnauthorizedError,
   BadRequestError,
-} from '../../src/common/utils/errors';
+} from '@/common/utils/errors.js';
 import bcrypt from 'bcrypt';
 
 describe('UserService 유닛 테스트', () => {
