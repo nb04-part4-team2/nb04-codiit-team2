@@ -56,6 +56,17 @@ export class ReviewService {
     }
   }
 
+  // 리뷰 상세 조회
+  async getReview(reviewId: string): Promise<ReviewResponseDto> {
+    const review = await this.reviewRepository.findById(reviewId);
+
+    if (!review) {
+      throw new NotFoundError('요청한 리소스를 찾을 수 없습니다.');
+    }
+
+    return ReviewMapper.toResponse(review);
+  }
+
   // 리뷰 목록 조회
   async getReviews(productId: string, query: ReviewListQueryDto): Promise<ReviewListResponseDto> {
     // 상품 존재 여부 확인
