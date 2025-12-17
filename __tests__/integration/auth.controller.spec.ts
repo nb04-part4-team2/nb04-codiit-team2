@@ -29,9 +29,10 @@ describe('Auth API Integration Test', () => {
       expect(response.body.user.grade).toBeDefined();
 
       // refreshToken 쿠키 설정 확인
-      const cookies = response.headers['set-cookie'] as unknown as string[] | undefined;
-      expect(cookies).toBeDefined();
-      expect(cookies?.some((cookie: string) => cookie.startsWith('refreshToken='))).toBe(true);
+      const rawCookies = response.headers['set-cookie'];
+      const cookies = Array.isArray(rawCookies) ? rawCookies : rawCookies ? [rawCookies] : [];
+      expect(cookies.length).toBeGreaterThan(0);
+      expect(cookies.some((cookie) => cookie.startsWith('refreshToken='))).toBe(true);
     });
 
     it('201: 판매자 로그인 성공', async () => {
@@ -143,18 +144,15 @@ describe('Auth API Integration Test', () => {
       expect(response.body.message).toBe('로그아웃 되었습니다.');
 
       // refreshToken 쿠키 클리어 확인
-      const cookies = response.headers['set-cookie'] as unknown as string[] | undefined;
-      if (cookies) {
-        const refreshTokenCookie = cookies.find((cookie: string) =>
-          cookie.startsWith('refreshToken='),
-        );
-        if (refreshTokenCookie) {
-          // 쿠키가 클리어되면 값이 비어있거나 만료됨
-          expect(
-            refreshTokenCookie.includes('refreshToken=;') ||
-              refreshTokenCookie.includes('Expires=Thu, 01 Jan 1970'),
-          ).toBe(true);
-        }
+      const rawCookies = response.headers['set-cookie'];
+      const cookies = Array.isArray(rawCookies) ? rawCookies : rawCookies ? [rawCookies] : [];
+      const refreshTokenCookie = cookies.find((cookie) => cookie.startsWith('refreshToken='));
+      if (refreshTokenCookie) {
+        // 쿠키가 클리어되면 값이 비어있거나 만료됨
+        expect(
+          refreshTokenCookie.includes('refreshToken=;') ||
+            refreshTokenCookie.includes('Expires=Thu, 01 Jan 1970'),
+        ).toBe(true);
       }
     });
 
