@@ -15,6 +15,19 @@ export class OrderRepository {
   constructor(private prisma: PrismaClient) {}
   // order 오리지널 쿼리들
   /**
+   * 주문 상태 조회
+   */
+  async findStatusById(orderId: string) {
+    return await this.prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+      select: {
+        status: true,
+      },
+    });
+  }
+  /**
    * 주문 owner 조회
    **/
   async findOwnerById(orderId: string) {
@@ -120,6 +133,16 @@ export class OrderRepository {
         name: data.name,
         phoneNumber: data.phone,
         address: data.address,
+      },
+    });
+  }
+  /**
+   * 주문 삭제(현재는 물리적 삭제 추후 논리적 삭제로 리팩토링)
+   */
+  async deleteOrder(orderId: string) {
+    await this.prisma.order.delete({
+      where: {
+        id: orderId,
       },
     });
   }
@@ -231,6 +254,17 @@ export class OrderRepository {
       data: {
         quantity: { decrement: quantity },
       },
+    });
+  }
+  /**
+   * 결제 상태 조회
+   **/
+  async findPaymentStatusById(orderId: string) {
+    return await this.prisma.payment.findUnique({
+      where: {
+        orderId,
+      },
+      select: { status: true },
     });
   }
 }

@@ -42,4 +42,11 @@ export class OrderController {
     });
     return res.status(200).json(toOrderResponse(order));
   };
+  deleteOrder = async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const { id: userId } = req.user;
+    const { orderId } = req.params;
+    await this.orderService.deleteOrder(userId, orderId);
+    return res.status(200).json({ message: '주문이 취소되었습니다.' }); // swagger 예시 없음 임의로 작성
+  };
 }

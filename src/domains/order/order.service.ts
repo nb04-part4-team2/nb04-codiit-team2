@@ -6,7 +6,7 @@ import {
   UpdateOrderServiceInput,
 } from '@/domains/order/order.dto.js';
 import { OrderRepository } from '@/domains/order/order.repository.js';
-import { PaymentStatus, PrismaClient } from '@prisma/client';
+import { OrderStatus, PaymentStatus, PrismaClient } from '@prisma/client';
 import { CreateOrderItemInputWithPrice } from '@/domains/order/order.type.js';
 import {
   BadRequestError,
@@ -152,11 +152,37 @@ export class OrderService {
     if (owner.buyerId !== userId) {
       throw new ForbiddenError('접근 권한이 없습니다.');
     }
+    const orderStatus = await this.orderRepository.findStatusById(orderId);
+    if (!orderStatus) {
+      throw new InternalServerError('주문 정보를 불러오던 중 오류가 발생했습니다.');
+    }
+    if (orderStatus.status !== OrderStatus.WaitingPayment) {
+      throw new BadRequestError('현재 상태에서는 주문 정보 수정이 불가능합니다.'); // 메시지는 주문 삭제 api 실제 리스폰스를 참고했습니다.
+    }
     await this.orderRepository.updateOrder({ orderId, name, phone, address });
     const updatedOrder = await this.orderRepository.findById(orderId);
     if (!updatedOrder) {
       throw new InternalServerError();
     }
     return updatedOrder;
+  }
+  async deleteOrder(userId: string, orderId: string) {
+    const owner = await this.orderRepository.findOwnerById(orderId);
+    if (!owner) {
+      throw new NotFoundError('주문을 찾을 수 없습니다.');
+    }
+    if (owner.buyerId !== userId) {
+      throw new ForbiddenError('접근 권한이 없습니다.');
+    }
+    const orderStatus = await this.orderRepository.findStatusById(orderId);
+    if (!orderStatus) {
+      throw new InternalServerError('주문 정보를 불러오던 중 오류가 발생했습니다.');
+    }
+    if (orderStatus.status !== OrderStatus.WaitingPayment) {
+      throw new BadRequestError('현재 상태에서는 주문을 취소할 수 없습니다.'); // 메시지는 주문 삭제 api 실제 리스폰스를 참고했습니다.
+    }
+    // 일단 실제로 주문 내역 삭제
+    // 추후 논리적 삭제로 리팩토링
+    await this.orderRepository.deleteOrder(orderId);
   }
 }
