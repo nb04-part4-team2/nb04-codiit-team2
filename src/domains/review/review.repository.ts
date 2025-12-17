@@ -40,6 +40,13 @@ export class ReviewRepository {
     });
   }
 
+  // 라뷰 상세 조회 (ID 기반)
+  async findById(reviewId: string) {
+    return this.prisma.review.findUnique({
+      where: { id: reviewId },
+    });
+  }
+
   // 리뷰 목록 조회 (페이지네이션)
   async findAllByProductId(productId: string, skip: number, take: number) {
     return this.prisma.review.findMany({
