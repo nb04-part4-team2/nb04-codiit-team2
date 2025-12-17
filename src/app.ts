@@ -56,7 +56,7 @@ app.use('/api/products', productRouter);
 app.use('/api/cart', cartRouter);
 app.use('/api/orders', orderRouter);
 app.use('/api/inquiries', inquiryRouter);
-app.use('/api/reviews', reviewRouter);
+app.use('/api/review', reviewRouter);
 app.use('/api/notifications', notificationRouter);
 // app.use('/api/dashboard', dashboardRouter);
 // app.use('/api/metadata', metadataRouter);
