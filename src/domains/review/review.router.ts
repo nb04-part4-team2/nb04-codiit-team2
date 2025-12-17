@@ -25,3 +25,11 @@ nestedReviewRouter.get(
   validate(reviewListQuerySchema, 'query'),
   asyncHandler(reviewController.getReviews),
 );
+
+export const reviewRouter = Router();
+
+reviewRouter.get(
+  '/:reviewId',
+  validate(reviewParamSchema, 'params'), // reviewId 검증
+  asyncHandler(reviewController.getReview),
+);
