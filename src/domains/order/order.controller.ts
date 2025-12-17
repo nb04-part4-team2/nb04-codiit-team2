@@ -1,7 +1,7 @@
 import { UnauthorizedError } from '@/common/utils/errors.js';
 import { Request, Response } from 'express';
 import { OrderService } from '@/domains/order/order.service.js';
-import { toCreateOrderResponse, toGetOrderResponse } from '@/domains/order/order.mapper.js';
+import { toOrderResponse } from '@/domains/order/order.mapper.js';
 
 export class OrderController {
   constructor(private orderService: OrderService) {}
@@ -10,7 +10,7 @@ export class OrderController {
     const { id: userId } = req.user;
     const { orderId } = req.params;
     const order = await this.orderService.getOrder(userId, orderId);
-    return res.status(200).json(toGetOrderResponse(order));
+    return res.status(200).json(toOrderResponse(order));
   };
   createOrder = async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
@@ -26,6 +26,20 @@ export class OrderController {
       usePoint,
       orderItems,
     });
-    return res.status(201).json(toCreateOrderResponse(order));
+    return res.status(201).json(toOrderResponse(order));
+  };
+  updateOrder = async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const { id: userId } = req.user;
+    const { orderId } = req.params;
+    const { name, phone, address } = req.body;
+    const order = await this.orderService.updateOrder({
+      userId,
+      orderId,
+      name,
+      phone,
+      address,
+    });
+    return res.status(200).json(toOrderResponse(order));
   };
 }
