@@ -12,7 +12,7 @@
     "test:db:reset": "docker compose -f docker-compose.test.yml down -v && docker compose -f docker-compose.test.yml up -d --wait && dotenv -e .env.test -- prisma migrate deploy",
     "test:db:migrate": "dotenv -e .env.test -- prisma migrate deploy",
     "dev": "tsx watch src/server.ts",
-    "build": "tsc && tsc-alias",
+    "build": "tsc -p tsconfig.build.json && tsc-alias -p tsconfig.build.json",
     "start": "node dist/server.js",
     "lint": "eslint src __tests__ --ext .ts",
     "lint:fix": "eslint src __tests__ --ext .ts --fix",
@@ -20,7 +20,11 @@
     "format:fix": "prettier --write \"src/**/*.ts\" \"__tests__/**/*.ts\"",
     "check": "npm run lint && npm run format",
     "fix": "npm run lint:fix && npm run format:fix",
-    "typecheck": "tsc --noEmit",
+    "typecheck": "tsc -p tsconfig.build.json --noEmit",
+    "typecheck:test": "tsc -p tsconfig.test.json --noEmit",
+    "typecheck:all": "npm run typecheck && npm run typecheck:test",
+    "test:watch": "NODE_OPTIONS=--experimental-vm-modules jest --watch --runInBand",
+    "test:cov": "NODE_OPTIONS=--experimental-vm-modules jest --coverage --runInBand",
     "prepare": "husky"
   },
   "prisma": {

@@ -3,8 +3,6 @@
     "target": "ES2022",
     "module": "nodenext",
     "lib": ["ES2022"],
-    "outDir": "./dist",
-    "rootDir": "./src",
     "strict": true,
     "esModuleInterop": true,
     "skipLibCheck": true,
@@ -12,11 +10,11 @@
     "resolveJsonModule": true,
     "moduleResolution": "nodenext",
     "isolatedModules": true,
+    "baseUrl": ".",
     "paths": {
       "@/*": ["./src/*"]
     },
     "types": ["node", "jest"]
   },
-  "include": ["src/**/*"],
   "exclude": ["node_modules", "dist", "scripts"]
 }
