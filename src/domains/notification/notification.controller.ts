@@ -2,7 +2,7 @@ import type { Request, Response } from 'express';
 import type { NotificationService } from './notification.service.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 import { sseManager } from '@/common/utils/sse.manager.js';
-import { toGetNotifications } from './notification.mapper.js';
+import { toGetNotifications, toUpdateNotification } from './notification.mapper.js';
 
 export class NotificationController {
   constructor(private notificationService: NotificationService) {}
@@ -43,5 +43,16 @@ export class NotificationController {
       clearInterval(intervalId);
       res.end();
     });
+  };
+
+  // 알림 수정 (읽음 처리)
+  updateNotification = async (req: Request, res: Response) => {
+    const { id } = req.params;
+
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const userId = req.user.id;
+
+    const notification = await this.notificationService.updateNotification(id, userId);
+    return res.status(200).json(toUpdateNotification(notification));
   };
 }

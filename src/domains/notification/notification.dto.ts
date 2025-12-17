@@ -1,6 +1,19 @@
 import { z } from 'zod';
 
 // ============================================
+// Request
+// ============================================
+
+// params
+export const idSchema = z
+  .object({
+    id: z.cuid('유효한 ID를 입력하세요.'),
+  })
+  .strict();
+
+export type IdParam = z.infer<typeof idSchema>;
+
+// ============================================
 // Repository base
 // ============================================
 
@@ -23,6 +36,11 @@ export const getNotificationsRepository = notificationBaseSchema;
 
 export type GetNotificationsRepository = z.infer<typeof getNotificationsRepository>;
 
+// 알림 수정 (읽음 처리)
+export const updateNotificationRepository = notificationBaseSchema;
+
+export type UpdateNotificationRepository = z.infer<typeof updateNotificationRepository>;
+
 // ============================================
 // Response
 // ============================================
@@ -37,3 +55,11 @@ export const getNotificationsResponse = notificationBaseSchema.extend({
 });
 
 export type GetNotificationsResponse = z.infer<typeof getNotificationsResponse>;
+
+// 알림 수정 (읽음 처리)
+export const updateNotificationResponse = notificationBaseSchema.extend({
+  createdAt: dateToISOString,
+  updatedAt: dateToISOString,
+});
+
+export type UpdateNotificationResponse = z.infer<typeof updateNotificationResponse>;

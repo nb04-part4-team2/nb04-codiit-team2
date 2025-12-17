@@ -32,4 +32,39 @@ export class NotificationRepository {
 
     return notification;
   };
+
+  // 알림 수정 (읽음 처리)
+  updateNotification = async (id: string, updateData: Prisma.NotificationUpdateInput) => {
+    const notification = await this.prisma.notification.update({
+      where: { id },
+      data: updateData,
+      select: {
+        id: true,
+        userId: true,
+        content: true,
+        isChecked: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return notification;
+  };
+
+  // 알림 찾기
+  findNotificationById = async (id: string) => {
+    const notification = await this.prisma.notification.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        userId: true,
+        content: true,
+        isChecked: true,
+        createdAt: true,
+        updatedAt: true,
+      },
+    });
+
+    return notification;
+  };
 }
