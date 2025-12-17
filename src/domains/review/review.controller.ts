@@ -20,6 +20,15 @@ export class ReviewController {
     res.status(201).json(review);
   };
 
+  // 리뷰 상세 조회
+  getReview = async (req: Request, res: Response) => {
+    const { reviewId } = req.params;
+
+    const review = await this.reviewService.getReview(reviewId);
+
+    res.status(200).json(review);
+  };
+
   getReviews = async (req: Request, res: Response) => {
     const { productId } = req.params;
     // 쿼리 파라미터는 Zod 미들웨어를 통과하며 타입 변환됨
