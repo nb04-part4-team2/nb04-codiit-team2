@@ -6,6 +6,7 @@ import {
   CreatePaymentRepoInput,
   CreatePointHistoryRepoInput,
   GetOrderRawData,
+  UpdateOrderRepoInput,
   UpdatePointRepoInput,
   UpdateStockRepoInput,
 } from '@/domains/order/order.dto.js';
@@ -13,6 +14,19 @@ import {
 export class OrderRepository {
   constructor(private prisma: PrismaClient) {}
   // order 오리지널 쿼리들
+  /**
+   * 주문 owner 조회
+   **/
+  async findOwnerById(orderId: string) {
+    return await this.prisma.order.findUnique({
+      where: {
+        id: orderId,
+      },
+      select: {
+        buyerId: true,
+      },
+    });
+  }
   /**
    * 주문 조회
    **/
@@ -67,6 +81,8 @@ export class OrderRepository {
             price: true,
             status: true,
             createdAt: true,
+            updatedAt: true,
+            orderId: true,
           },
         },
       },
@@ -89,6 +105,21 @@ export class OrderRepository {
         usePoint: data.usePoint,
         subtotal: data.subtotal,
         totalQuantity: data.totalQuantity,
+      },
+    });
+  }
+  /**
+   * 주문 수정
+   **/
+  async updateOrder(data: UpdateOrderRepoInput) {
+    return await this.prisma.order.update({
+      where: {
+        id: data.orderId,
+      },
+      data: {
+        name: data.name,
+        phoneNumber: data.phone,
+        address: data.address,
       },
     });
   }
