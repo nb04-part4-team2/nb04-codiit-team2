@@ -1,5 +1,5 @@
 import type { UserType } from '@prisma/client';
-import { generateAccessToken } from '../../src/common/utils/jwt.util.js';
+import { generateAccessToken } from '@/common/utils/jwt.util.js';
 
 /**
  * 테스트용 Access Token 생성

@@ -150,9 +150,9 @@ describe('CartService', () => {
     it('해당 유저 장바구니의 아이템이 아닌경우 403 에러 반환', async () => {
       // given
       const cartItemRawData = createCartItemDetailMock({
-        cart: {
+        cart: createCartBaseMock({
           buyerId: 'buyer-id-2',
-        },
+        }),
       });
       mockCartRepo.findCartItemDetail.mockResolvedValue(cartItemRawData);
       // when

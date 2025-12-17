@@ -1,6 +1,6 @@
 import { jest } from '@jest/globals';
-import { StoreRepository } from '../../src/domains/store/store.repository.js';
-import { StoreService } from '../../src/domains/store/store.service.js';
+import { StoreRepository } from '@/domains/store/store.repository.js';
+import { StoreService } from '@/domains/store/store.service.js';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import {
   createStoreMock,
@@ -8,7 +8,7 @@ import {
   updateStoreInputMock,
   createStoreLikeMock,
 } from '../mocks/store.mock.js';
-import { NotFoundError, ForbiddenError, ConflictError } from '../../src/common/utils/errors.js';
+import { NotFoundError, ForbiddenError, ConflictError } from '@/common/utils/errors.js';
 
 describe('StoreService 유닛 테스트', () => {
   let storeService: StoreService;
