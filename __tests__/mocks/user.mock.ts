@@ -57,15 +57,7 @@ export const createUserWithGradeMock = (
   createdAt: now,
   updatedAt: now,
   gradeId: 'grade_green',
-  grade: {
-    id: 'grade_green',
-    name: 'green',
-    rate: 5,
-    minAmount: 0,
-    createdAt: now,
-    updatedAt: now,
-    ...(overrides.grade || {}),
-  },
+  grade: createGradeMock(overrides.grade),
   ...overrides,
 });
 

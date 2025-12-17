@@ -150,8 +150,14 @@ export interface TestContext {
   buyer: User;
 }
 
-export const createTestContext = async (): Promise<TestContext> => {
-  const grade = await createTestGrade();
+interface CreateTestContextOptions {
+  grade?: CreateGradeOptions;
+}
+
+export const createTestContext = async (
+  options: CreateTestContextOptions = {},
+): Promise<TestContext> => {
+  const grade = await createTestGrade(options.grade);
   const seller = await createTestSeller(grade.id);
   const buyer = await createTestBuyer(grade.id);
 
@@ -167,8 +173,10 @@ export interface SellerWithProductContext extends TestContext {
   product: Product;
 }
 
-export const createSellerWithProduct = async (): Promise<SellerWithProductContext> => {
-  const { grade, seller, buyer } = await createTestContext();
+export const createSellerWithProduct = async (
+  options: CreateTestContextOptions = {},
+): Promise<SellerWithProductContext> => {
+  const { grade, seller, buyer } = await createTestContext(options);
   const store = await createTestStore(seller.id);
   const category = await createTestCategory();
   const product = await createTestProduct({
