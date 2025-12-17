@@ -43,18 +43,19 @@ export class ReviewMapper {
   static toDetailResponse(review: ReviewWithDetail): ReviewDetailResponseDto {
     return {
       reviewId: review.id,
-      productName: review.product.name,
+      productName: review.product?.name ?? '상품 정보 없음',
       size: {
-        en: review.orderItem.size.en,
-        ko: review.orderItem.size.ko,
+        en: review.orderItem?.size?.en ?? '',
+        ko: review.orderItem?.size?.ko ?? '',
       },
-      price: review.orderItem.price,
-      quantity: review.orderItem.quantity,
+      price: review.orderItem?.price ?? 0,
+      quantity: review.orderItem?.quantity ?? 0,
+
       rating: review.rating,
       content: review.content,
-      reviewer: review.user.name,
+      reviewer: review.user?.name ?? '알 수 없음',
       reviewCreatedAt: review.createdAt.toISOString(),
-      purchasedAt: review.orderItem.order.createdAt.toISOString(),
+      purchasedAt: review.orderItem?.order?.createdAt?.toISOString() ?? '',
     };
   }
 }
