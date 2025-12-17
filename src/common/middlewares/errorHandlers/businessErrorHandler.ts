@@ -27,6 +27,11 @@ export function businessErrorHandler(err: Error, req: Request, res: Response, ne
       name: err.name,
       message: err.message,
     });
+  } else if (err instanceof jwt.JsonWebTokenError) {
+    return res.status(401).json({
+      name: err.name,
+      message: '유효하지 않은 토큰입니다.',
+    }); //모든 jwt 검증 실패에 대한 401 반환
   }
   // AppError가 아니라면, 처리할 수 없는 에러이므로 다음 핸들러로
   return next(err);
