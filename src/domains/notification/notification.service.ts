@@ -51,9 +51,9 @@ export class NotificationService {
   updateNotification = async (id: string, userId: string) => {
     // 알림 존재 및 인가 확인
     const findNotification = await this.notificationRepository.findNotificationById(id);
-    if (!findNotification) throw new NotFoundError('알람을 찾을 수 없습니다.');
+    if (!findNotification) throw new NotFoundError('알림을 찾을 수 없습니다.');
     if (findNotification.userId !== userId)
-      throw new ForbiddenError('해당 알람에 대한 접근 권한이 없습니다.');
+      throw new ForbiddenError('해당 알림에 대한 접근 권한이 없습니다.');
 
     // 이미 체크 된 알림은 얼리 리턴 사용
     // 코드잇 배포 사이트에서는 매번 DB에 쿼리를 날리는데 불필요하다고 생각됨

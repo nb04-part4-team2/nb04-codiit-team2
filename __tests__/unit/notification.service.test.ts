@@ -124,7 +124,7 @@ describe('NotificationService 유닛 테스트', () => {
   });
 
   // 알림 수정 (읽음 처리)
-  describe('createNotification', () => {
+  describe('updateNotification', () => {
     it('알림 수정 성공', async () => {
       // --- 준비 (Arrange) ---
       const mockNotification = createNotificationMock();
