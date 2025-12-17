@@ -11,11 +11,14 @@ import {
   OrderBase,
   OrderItemBase,
   OrderItemSizeResponse,
+  PaymentRawData,
+  PaymentResponse,
   ProductRawData,
   ProductResponse,
   ReviewRawData,
   ReviewResponse,
 } from '@/domains/order/order.type.js';
+import { InternalServerError } from '../../common/utils/errors.js';
 
 const toOrderBaseResponse = (order: OrderBase<Date>): OrderBase<string> => ({
   id: order.id,
@@ -40,6 +43,15 @@ const toReviewResponse = (review: ReviewRawData): ReviewResponse => ({
   rating: review.rating,
   content: review.content,
   createdAt: review.createdAt.toISOString(),
+});
+
+const toPaymentResponse = (payment: PaymentRawData): PaymentResponse => ({
+  id: payment.id,
+  orderId: payment.orderId,
+  price: payment.price,
+  status: payment.status,
+  createdAt: payment.createdAt.toISOString(),
+  updatedAt: payment.updatedAt.toISOString(),
 });
 
 const toProductResponse = (
@@ -70,13 +82,26 @@ const toOrderItemResponse = (orderItemRawData: GetOrderItemRawData): GetOrderIte
 };
 /**
  * GET - /api/orders/{orderId} 주문 상세 조회 Response
+ * POST - /api/orders 주문 생성 Response
+ * PATCH - /api/orders/{orderId} 주문 수정 Response
  */
-export const toGetOrderResponse = (rawOrder: GetOrderRawData): GetOrderResponseData => ({
-  ...toOrderBaseResponse(rawOrder),
-  orderItems: rawOrder.orderItems.map(toOrderItemResponse),
-});
+export const toOrderResponse = (rawOrder: GetOrderRawData): GetOrderResponseData => {
+  if (!rawOrder.payments) {
+    // prisma에서 findUnique를 쓰니 타입상으로는 nullable 하지만
+    // payment가 status를 통해 결제 상태(결제 진행중인지 완료된건지 안된건지)를 파악하므로
+    // payment 객체 자체는 반드시 존재해야함
+    console.error(`[Critical] Order ${rawOrder.id} has NO payment record!`);
+    throw new InternalServerError('주문에 연결된 결제 정보가 없습니다.');
+  }
+  return {
+    ...toOrderBaseResponse(rawOrder),
+    orderItems: rawOrder.orderItems.map(toOrderItemResponse),
+    payments: toPaymentResponse(rawOrder.payments),
+  };
+};
 /**
  * POST - /api/orders 주문 생성 Response
+ * @deprecated 주문 생성 response를 프론트에서 사용하지 않고, 리스폰스를 임의로 지정하면 된다고 해 swagger에 따름
  */
 export const toCreateOrderResponse = (rawOrder: CreateOrderRawData): CreateOrderResponseData => ({
   ...toOrderBaseResponse(rawOrder),
