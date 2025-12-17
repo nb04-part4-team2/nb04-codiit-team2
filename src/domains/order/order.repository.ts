@@ -139,8 +139,9 @@ export class OrderRepository {
   /**
    * 주문 삭제(현재는 물리적 삭제 추후 논리적 삭제로 리팩토링)
    */
-  async deleteOrder(orderId: string) {
-    await this.prisma.order.delete({
+  async deleteOrder(orderId: string, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    await db.order.delete({
       where: {
         id: orderId,
       },
@@ -202,9 +203,35 @@ export class OrderRepository {
     });
   }
   /**
+   * 결제 정보 삭제
+   * 추후 논리적 삭제로 리팩토링
+   */
+  async deletePayment(paymentId: string, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    return await db.payment.delete({
+      where: {
+        id: paymentId,
+      },
+    });
+  }
+  /**
+   * 포인트 증가
+   **/
+  async increasePoint({ userId, usePoint }: UpdatePointRepoInput, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    return await db.user.update({
+      where: {
+        id: userId,
+      },
+      data: {
+        point: { increment: usePoint },
+      },
+    });
+  }
+  /**
    * 포인트 차감
    **/
-  async updatePoint({ userId, usePoint }: UpdatePointRepoInput, tx?: Prisma.TransactionClient) {
+  async decreasePoint({ userId, usePoint }: UpdatePointRepoInput, tx?: Prisma.TransactionClient) {
     const db = tx ?? this.prisma;
     return await db.user.update({
       where: {
@@ -217,9 +244,28 @@ export class OrderRepository {
     });
   }
   /**
-   * 포인트 히스토리 생성
+   * 포인트 복구 히스토리 생성
    **/
-  async createPointHistory(
+  async createSavePointHistory(
+    // 적립 -> Save? Get? Receive?
+    { userId, orderId, usePoint }: CreatePointHistoryRepoInput,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return await db.pointHistory.create({
+      data: {
+        userId: userId,
+        orderId: orderId,
+        amount: usePoint,
+        type: 'save', // 이부분은 따로 enum타입 같은게 없어서 논의 해봐야 할 것 같습니다.
+        // 제가 사용하는 용도는 적립이라기보다 포인트 복구라서 save 대신 restore로 해야할지 고민이 됩니다.
+      },
+    });
+  }
+  /**
+   * 포인트 사용 히스토리 생성
+   **/
+  async createUsePointHistory(
     { userId, orderId, usePoint }: CreatePointHistoryRepoInput,
     tx?: Prisma.TransactionClient,
   ) {
@@ -234,9 +280,29 @@ export class OrderRepository {
     });
   }
   /**
+   * 재고 증가 처리
+   **/
+  async increaseStock(
+    { productId, sizeId, quantity }: UpdateStockRepoInput,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return await db.stock.update({
+      where: {
+        productId_sizeId: {
+          productId,
+          sizeId,
+        },
+      },
+      data: {
+        quantity: { increment: quantity },
+      },
+    });
+  }
+  /**
    * 재고 감소 처리
    **/
-  async updateStock(
+  async decreaseStock(
     { productId, sizeId, quantity }: UpdateStockRepoInput,
     tx?: Prisma.TransactionClient,
   ) {
