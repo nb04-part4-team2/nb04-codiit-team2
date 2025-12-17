@@ -32,3 +32,20 @@ export interface ReviewListResponseDto {
     hasNextPage: boolean;
   };
 }
+
+// 상세 조회용 DTO
+export interface ReviewDetailResponseDto {
+  reviewId: string;
+  productName: string;
+  size: {
+    en: string;
+    ko: string;
+  };
+  price: number;
+  quantity: number;
+  rating: number;
+  content: string;
+  reviewer: string;
+  reviewCreatedAt: string;
+  purchasedAt: string;
+}
