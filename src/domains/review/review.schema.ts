@@ -11,7 +11,8 @@ export const createReviewSchema = z.object({
 });
 
 export const reviewParamSchema = z.object({
-  productId: z.string().cuid('유효한 상품 ID 형식이 아닙니다.'),
+  productId: z.string().cuid().optional(), // 기존 목록 조회용
+  reviewId: z.string().cuid().optional(), // 상세 조회용
 });
 
 // 리뷰 목록 조회 쿼리 스키마
