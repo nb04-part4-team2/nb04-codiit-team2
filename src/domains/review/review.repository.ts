@@ -1,6 +1,28 @@
-import { PrismaClient } from '@prisma/client';
+import { PrismaClient, Prisma } from '@prisma/client';
 import { CreateReviewDto } from './review.dto.js';
 
+// 상세 조회 시 사용할 include 옵션 정의
+const reviewDetailInclude = {
+  user: {
+    select: { name: true },
+  },
+  product: {
+    select: { name: true },
+  },
+  orderItem: {
+    include: {
+      size: true,
+      order: {
+        select: { createdAt: true },
+      },
+    },
+  },
+} satisfies Prisma.ReviewInclude;
+
+// include 옵션이 적용된 결과 타입을 추출하여 export
+export type ReviewWithDetail = Prisma.ReviewGetPayload<{
+  include: typeof reviewDetailInclude;
+}>;
 export class ReviewRepository {
   constructor(private prisma: PrismaClient) {}
 
@@ -37,11 +59,14 @@ export class ReviewRepository {
         rating: data.rating,
         content: data.content,
       },
-      include: {
-        user: {
-          select: { name: true },
-        },
-      },
+    });
+  }
+
+  // 리뷰 상세 조회 (ID 기반)
+  async findById(reviewId: string) {
+    return this.prisma.review.findUnique({
+      where: { id: reviewId },
+      include: reviewDetailInclude,
     });
   }
 

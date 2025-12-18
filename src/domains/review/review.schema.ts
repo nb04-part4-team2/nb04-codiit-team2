@@ -10,12 +10,17 @@ export const createReviewSchema = z.object({
   orderItemId: z.string().cuid('유효한 주문 아이템 ID 형식이 아닙니다.'),
 });
 
-export const reviewParamSchema = z.object({
+// GET /api/products/:productId/reviews
+export const productReviewParamSchema = z.object({
   productId: z.string().cuid('유효한 상품 ID 형식이 아닙니다.'),
 });
 
-// 리뷰 목록 조회 쿼리 스키마
+// GET /api/reviews/:reviewId
+export const reviewDetailParamSchema = z.object({
+  reviewId: z.string().cuid('유효한 리뷰 ID 형식이 아닙니다.'),
+});
+
 export const reviewListQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
-  limit: z.coerce.number().min(1).max(100).default(10), // 최대 100개 제한
+  limit: z.coerce.number().min(1).default(10),
 });
