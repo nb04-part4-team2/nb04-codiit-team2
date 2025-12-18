@@ -1,3 +1,4 @@
+import { OrderStatus } from '@prisma/client';
 import * as z from 'zod';
 
 export const createOrderItemSchema = z.object({
@@ -23,6 +24,13 @@ export const orderIdParamSchema = z
   })
   .strict();
 
+export const orderQuerySchema = z.object({
+  status: z.enum(OrderStatus),
+  limit: z.coerce.number().int().min(1).default(3), // 기본값은 swagger 참고
+  page: z.coerce.number().int().min(1).default(1),
+});
+
 export type CreateOrderBody = z.infer<typeof createOrderSchema>;
 export type CreateOrderItemBody = z.infer<typeof createOrderItemSchema>;
 export type UpdateOrderBody = z.infer<typeof orderSchema>;
+export type OrderQuery = z.infer<typeof orderQuerySchema>;

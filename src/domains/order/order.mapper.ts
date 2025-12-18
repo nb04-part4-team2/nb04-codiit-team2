@@ -4,10 +4,12 @@ import {
   CreateOrderResponseData,
   GetOrderRawData,
   GetOrderResponseData,
+  GetOrdersResponseData,
 } from '@/domains/order/order.dto.js';
 import {
   GetOrderItemRawData,
   GetOrderItemResponseData,
+  GetOrdersMapperInput,
   OrderBase,
   OrderItemBase,
   OrderItemSizeResponse,
@@ -97,6 +99,25 @@ export const toOrderResponse = (rawOrder: GetOrderRawData): GetOrderResponseData
     ...toOrderBaseResponse(rawOrder),
     orderItems: rawOrder.orderItems.map(toOrderItemResponse),
     payments: toPaymentResponse(rawOrder.payments),
+  };
+};
+/**
+ * GET - /api/orders 주문 목록 조회 Response
+ */
+export const toGetOrdersResponse = ({
+  rawOrders,
+  totalCount,
+  page,
+  limit,
+}: GetOrdersMapperInput): GetOrdersResponseData => {
+  return {
+    data: rawOrders.map(toOrderResponse),
+    meta: {
+      total: totalCount,
+      page,
+      limit,
+      totalPages: Math.ceil(totalCount / limit),
+    },
   };
 };
 /**

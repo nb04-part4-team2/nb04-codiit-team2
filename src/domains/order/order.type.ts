@@ -1,6 +1,7 @@
 import { SizeRawData, SizeResponse } from '@/domains/cart/cart.type.js';
 import { CreateOrderItemBody } from '@/domains/order/order.schema.js';
 import { PaymentStatus } from '@prisma/client';
+import { GetOrdersRawData } from '@/domains/order/order.dto.js';
 
 // 타입 베이스들
 // 주문 베이스
@@ -47,6 +48,11 @@ interface GetOrderItemBase<TProduct, TSize> extends OrderItemBase {
   product: TProduct;
   size: TSize;
 }
+// 메타 데이터 베이스
+interface MetaBase {
+  page: number;
+  limit: number;
+}
 
 // db 조회 결과 RawData들
 // 상품 RawData
@@ -78,9 +84,19 @@ export type OrderItemSizeResponse = Omit<SizeResponse, 'name'>;
 // 주문 아이템 조회 Response
 export interface GetOrderItemResponseData
   extends GetOrderItemBase<ProductResponse, OrderItemSizeResponse>, OrderItemsReviewResponse {}
+// 주문 목록 조회 메타데이터 Response
+export interface MetaResponse extends MetaBase {
+  total: number;
+  totalPages: number;
+}
 
 // 그 외 객체 타입
 // 주문 아이템 repo input 생성용 객체 타입
 export interface CreateOrderItemInputWithPrice extends CreateOrderItemBody {
   price: number;
+}
+// 주문 목록 조회 mapper input
+export interface GetOrdersMapperInput extends MetaBase {
+  rawOrders: GetOrdersRawData;
+  totalCount: number;
 }

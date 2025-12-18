@@ -1,13 +1,15 @@
-import { PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus } from '@prisma/client';
 import {
   CreateOrderBody,
   CreateOrderItemBody,
+  OrderQuery,
   UpdateOrderBody,
 } from '@/domains/order/order.schema.js';
 import {
   CreateOrderItemInputWithPrice,
   GetOrderItemRawData,
   GetOrderItemResponseData,
+  MetaResponse,
   OrderBase,
   PaymentRawData,
   PaymentResponse,
@@ -15,6 +17,11 @@ import {
 
 // Repo input
 // order 오리지널
+// 주문 개수 조회 repo input dto
+export interface GetCountRepoInput {
+  buyerId: string;
+  status: OrderStatus;
+}
 // 주문 생성 repo input dto
 export interface CreateOrderRepoInput extends Omit<CreateOrderBody, 'orderItems'> {
   userId: string;
@@ -24,6 +31,11 @@ export interface CreateOrderRepoInput extends Omit<CreateOrderBody, 'orderItems'
 // 주문 수정 repo input dto
 export interface UpdateOrderRepoInput extends UpdateOrderBody {
   orderId: string;
+}
+// 주문 목록 조회 repo input dto
+export interface GetOrdersRepoInput extends GetCountRepoInput {
+  skip: number;
+  take: number;
 }
 
 // 외부 레포
@@ -56,6 +68,8 @@ export interface GetOrderRawData extends OrderBase<Date> {
   orderItems: GetOrderItemRawData[];
   payments: PaymentRawData | null;
 }
+// 주문 목록 조회 repo output dto
+export type GetOrdersRawData = GetOrderRawData[];
 // 주문 생성 repo output dto
 /**
  * @deprecated create 쿼리 반환 dto - 현재 미사용
@@ -74,12 +88,21 @@ export interface UpdateOrderServiceInput extends UpdateOrderBody {
   userId: string;
   orderId: string;
 }
+// 주문 목록 조회 service input dto
+export interface GetOrdersServiceInput extends OrderQuery {
+  userId: string;
+}
 
 // controller response (매퍼에서 사용)
 // 주문 조회 response
 export interface GetOrderResponseData extends OrderBase<string> {
   orderItems: GetOrderItemResponseData[];
   payments: PaymentResponse;
+}
+// 주문 목록조회 response
+export interface GetOrdersResponseData {
+  data: GetOrderResponseData[];
+  meta: MetaResponse;
 }
 // 주문 생성 response
 /**
