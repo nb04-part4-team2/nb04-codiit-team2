@@ -94,12 +94,18 @@ export class ReviewRepository {
 
   // 리뷰 수정
   async update(reviewId: string, data: Partial<Pick<CreateReviewDto, 'rating' | 'content'>>) {
+    const updateData: Prisma.ReviewUpdateInput = {};
+
+    if (data.rating !== undefined) {
+      updateData.rating = data.rating;
+    }
+    if (data.content !== undefined) {
+      updateData.content = data.content;
+    }
+
     return this.prisma.review.update({
       where: { id: reviewId },
-      data: {
-        rating: data.rating,
-        content: data.content,
-      },
+      data: updateData,
     });
   }
 }
