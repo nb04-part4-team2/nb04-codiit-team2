@@ -116,7 +116,7 @@ export class ProductMapper {
       discountStartTime: product.discountStartTime?.toISOString() ?? null,
       discountEndTime: product.discountEndTime?.toISOString() ?? null,
       reviewsCount: product.reviewsCount ?? 0,
-      reviews: [stats],
+      reviews: stats,
       // inquiries 매핑
       inquiries: (product.inquiries ?? []).map((inquiry) => ({
         id: inquiry.id,

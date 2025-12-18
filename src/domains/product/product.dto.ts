@@ -99,7 +99,7 @@ export interface DetailProductResponse {
   discountStartTime: string | null;
   discountEndTime: string | null;
   reviewsCount: number;
-  reviews: ReviewStatsDto[];
+  reviews: ReviewStatsDto;
   inquiries: DetailInquiryDto[];
   category: CategoryResponseDto[];
   stocks: StocksDto[];
