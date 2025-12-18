@@ -3,6 +3,7 @@ import {
   CreateOrderRepoInput,
   CreateOrderServiceInput,
   CreatePaymentRepoInput,
+  GetOrdersServiceInput,
   UpdateOrderServiceInput,
 } from '@/domains/order/order.dto.js';
 import { OrderRepository } from '@/domains/order/order.repository.js';
@@ -48,6 +49,24 @@ export class OrderService {
       throw new ForbiddenError('접근 권한이 없습니다.');
     }
     return order;
+  }
+  async getOrders({ userId, status, limit, page }: GetOrdersServiceInput) {
+    const countInput = {
+      buyerId: userId,
+      status,
+    };
+    const findManyInput = {
+      ...countInput,
+      skip: (page - 1) * limit,
+      take: page,
+    };
+    const [rawOrders, totalCount] = await this.prisma.$transaction(async (tx) => {
+      return await Promise.all([
+        this.orderRepository.findMany(findManyInput, tx),
+        this.orderRepository.count(countInput, tx),
+      ]);
+    });
+    return { rawOrders, totalCount };
   }
   async createOrder({
     userId,
