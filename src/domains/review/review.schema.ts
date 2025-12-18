@@ -24,3 +24,18 @@ export const reviewListQuerySchema = z.object({
   page: z.coerce.number().min(1).default(1),
   limit: z.coerce.number().min(1).default(10),
 });
+
+// 리뷰 수정 API (PATCH /api/review/:reviewId)
+export const updateReviewSchema = z
+  .object({
+    rating: z
+      .number()
+      .int()
+      .min(1, '별점은 1점 이상이어야 합니다.')
+      .max(5, '별점은 5점 이하여야 합니다.')
+      .optional(),
+    content: z.string().min(1, '리뷰 내용은 필수입니다.').optional(),
+  })
+  .refine((data) => data.rating !== undefined || data.content !== undefined, {
+    message: '수정할 정보를 입력해주세요.',
+  });
