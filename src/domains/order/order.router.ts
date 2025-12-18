@@ -6,6 +6,7 @@ import {
   orderSchema,
   orderIdParamSchema,
   createOrderSchema,
+  orderQuerySchema,
 } from '@/domains/order/order.schema.js';
 import { orderController } from '@/domains/order/order.container.js';
 
@@ -13,6 +14,12 @@ const orderRouter = Router();
 
 orderRouter
   .route('/')
+  .get(
+    authenticate,
+    onlyBuyer,
+    validate(orderQuerySchema, 'query'),
+    asyncHandler(orderController.getOrders),
+  )
   .post(
     authenticate,
     onlyBuyer,
