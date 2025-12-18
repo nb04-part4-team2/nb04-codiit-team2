@@ -4,10 +4,13 @@ import {
   CreateOrderResponseData,
   GetOrderRawData,
   GetOrderResponseData,
+  GetOrdersRawData,
+  GetOrdersResponseData,
 } from '@/domains/order/order.dto.js';
 import {
   GetOrderItemRawData,
   GetOrderItemResponseData,
+  MetaBase,
   OrderBase,
   OrderItemBase,
   OrderItemSizeResponse,
@@ -18,7 +21,14 @@ import {
   ReviewRawData,
   ReviewResponse,
 } from '@/domains/order/order.type.js';
-import { InternalServerError } from '../../common/utils/errors.js';
+import { InternalServerError } from '@/common/utils/errors.js';
+
+// 주문 목록 조회 mapper input
+// type <-> dto 순환 참조 문제 때문에 type.ts에서 이동
+export interface GetOrdersMapperInput extends MetaBase {
+  rawOrders: GetOrdersRawData;
+  totalCount: number;
+}
 
 const toOrderBaseResponse = (order: OrderBase<Date>): OrderBase<string> => ({
   id: order.id,
@@ -97,6 +107,25 @@ export const toOrderResponse = (rawOrder: GetOrderRawData): GetOrderResponseData
     ...toOrderBaseResponse(rawOrder),
     orderItems: rawOrder.orderItems.map(toOrderItemResponse),
     payments: toPaymentResponse(rawOrder.payments),
+  };
+};
+/**
+ * GET - /api/orders 주문 목록 조회 Response
+ */
+export const toGetOrdersResponse = ({
+  rawOrders,
+  totalCount,
+  page,
+  limit,
+}: GetOrdersMapperInput): GetOrdersResponseData => {
+  return {
+    data: rawOrders.map(toOrderResponse),
+    meta: {
+      total: totalCount,
+      page,
+      limit,
+      totalPages: Math.ceil(totalCount / limit),
+    },
   };
 };
 /**

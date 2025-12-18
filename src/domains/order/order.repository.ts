@@ -5,7 +5,10 @@ import {
   CreateOrderRepoInput,
   CreatePaymentRepoInput,
   CreatePointHistoryRepoInput,
+  GetCountRepoInput,
   GetOrderRawData,
+  GetOrdersRawData,
+  GetOrdersRepoInput,
   UpdateOrderRepoInput,
   UpdatePointRepoInput,
   UpdateStockRepoInput,
@@ -14,6 +17,18 @@ import {
 export class OrderRepository {
   constructor(private prisma: PrismaClient) {}
   // order 오리지널 쿼리들
+  /**
+   * 주문 개수 조회
+   */
+  async count({ buyerId, status }: GetCountRepoInput, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    return await db.order.count({
+      where: {
+        buyerId,
+        status,
+      },
+    });
+  }
   /**
    * 주문 상태 조회
    */
@@ -99,6 +114,74 @@ export class OrderRepository {
           },
         },
       },
+    });
+  }
+  /**
+   * 주문 목록 조회
+   */
+  async findMany(
+    { buyerId, status, skip, take }: GetOrdersRepoInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<GetOrdersRawData> {
+    const db = tx ?? this.prisma;
+    return await db.order.findMany({
+      where: {
+        buyerId,
+        status,
+      },
+      select: {
+        id: true,
+        buyerId: true,
+        name: true,
+        phoneNumber: true,
+        address: true,
+        subtotal: true,
+        totalQuantity: true,
+        usePoint: true,
+        createdAt: true,
+        orderItems: {
+          select: {
+            id: true,
+            price: true,
+            quantity: true,
+            productId: true,
+            review: {
+              // isReviewed, product내부 reviews 생성용
+              select: {
+                id: true,
+                rating: true,
+                content: true,
+                createdAt: true,
+              },
+            },
+            product: {
+              select: {
+                name: true,
+                image: true,
+              },
+            },
+            size: {
+              select: {
+                id: true,
+                en: true,
+                ko: true,
+              },
+            },
+          },
+        },
+        payments: {
+          select: {
+            id: true,
+            price: true,
+            status: true,
+            createdAt: true,
+            updatedAt: true,
+            orderId: true,
+          },
+        },
+      },
+      skip,
+      take,
     });
   }
   /**

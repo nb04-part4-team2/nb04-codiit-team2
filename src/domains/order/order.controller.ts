@@ -1,7 +1,8 @@
 import { UnauthorizedError } from '@/common/utils/errors.js';
 import { Request, Response } from 'express';
 import { OrderService } from '@/domains/order/order.service.js';
-import { toOrderResponse } from '@/domains/order/order.mapper.js';
+import { toGetOrdersResponse, toOrderResponse } from '@/domains/order/order.mapper.js';
+import { OrderQuery } from './order.schema.js';
 
 export class OrderController {
   constructor(private orderService: OrderService) {}
@@ -11,6 +12,18 @@ export class OrderController {
     const { orderId } = req.params;
     const order = await this.orderService.getOrder(userId, orderId);
     return res.status(200).json(toOrderResponse(order));
+  };
+  getOrders = async (req: Request, res: Response) => {
+    if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
+    const { id: userId } = req.user;
+    const { status, limit, page } = req.query as unknown as OrderQuery;
+    const { rawOrders, totalCount } = await this.orderService.getOrders({
+      userId,
+      status,
+      limit,
+      page,
+    });
+    return res.status(200).json(toGetOrdersResponse({ rawOrders, totalCount, page, limit }));
   };
   createOrder = async (req: Request, res: Response) => {
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
