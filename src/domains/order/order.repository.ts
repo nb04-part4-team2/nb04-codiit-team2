@@ -246,8 +246,7 @@ export class OrderRepository {
   /**
    * 포인트 복구 히스토리 생성
    **/
-  async createSavePointHistory(
-    // 적립 -> Save? Get? Receive?
+  async createRestorePointHistory(
     { userId, orderId, usePoint }: CreatePointHistoryRepoInput,
     tx?: Prisma.TransactionClient,
   ) {
@@ -257,8 +256,7 @@ export class OrderRepository {
         userId: userId,
         orderId: orderId,
         amount: usePoint,
-        type: 'save', // 이부분은 따로 enum타입 같은게 없어서 논의 해봐야 할 것 같습니다.
-        // 제가 사용하는 용도는 적립이라기보다 포인트 복구라서 save 대신 restore로 해야할지 고민이 됩니다.
+        type: 'restore', // 이부분은 따로 enum타입 같은게 없어서 논의 해봐야 할 것 같습니다.
       },
     });
   }

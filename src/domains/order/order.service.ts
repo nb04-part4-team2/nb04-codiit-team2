@@ -212,7 +212,7 @@ export class OrderService {
         // 2-3-1. 포인트 환불
         await this.orderRepository.increasePoint({ userId, usePoint }, tx);
         // 2-3-2. 포인트 히스토리 생성
-        await this.orderRepository.createSavePointHistory(
+        await this.orderRepository.createRestorePointHistory(
           { userId, orderId: order.id, usePoint },
           tx,
         );
