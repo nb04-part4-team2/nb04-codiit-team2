@@ -34,6 +34,12 @@ orderRouter
     validate(orderIdParamSchema, 'params'),
     validate(orderSchema, 'body'),
     asyncHandler(orderController.updateOrder),
+  )
+  .delete(
+    authenticate,
+    onlyBuyer,
+    validate(orderIdParamSchema, 'params'),
+    asyncHandler(orderController.deleteOrder),
   );
 
 export default orderRouter;

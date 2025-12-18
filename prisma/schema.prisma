@@ -222,14 +222,15 @@ model CartItem {
 // --------------------------------------
 
 model Order {
-  id            String   @id @default(cuid())
+  id            String      @id @default(cuid())
   name          String // 주문자 이름
   phoneNumber   String
   address       String
+  status        OrderStatus @default(WaitingPayment)
   subtotal      Int // 상품 총액
   totalQuantity Int // 총 주문수량
-  usePoint      Int      @default(0)
-  createdAt     DateTime @default(now())
+  usePoint      Int         @default(0)
+  createdAt     DateTime    @default(now())
 
   // 비회원 주문에 대한 내용은 추후 확장
   buyerId String

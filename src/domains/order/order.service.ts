@@ -6,7 +6,7 @@ import {
   UpdateOrderServiceInput,
 } from '@/domains/order/order.dto.js';
 import { OrderRepository } from '@/domains/order/order.repository.js';
-import { PaymentStatus, PrismaClient } from '@prisma/client';
+import { OrderStatus, PaymentStatus, PrismaClient } from '@prisma/client';
 import { CreateOrderItemInputWithPrice } from '@/domains/order/order.type.js';
 import {
   BadRequestError,
@@ -21,6 +21,24 @@ export class OrderService {
     private orderRepository: OrderRepository,
     private prisma: PrismaClient,
   ) {}
+  private async validateOwner(userId: string, orderId: string) {
+    const owner = await this.orderRepository.findOwnerById(orderId);
+    if (!owner) {
+      throw new NotFoundError('주문을 찾을 수 없습니다.');
+    }
+    if (owner.buyerId !== userId) {
+      throw new ForbiddenError('접근 권한이 없습니다.');
+    }
+  }
+  private async validateStatus(orderId: string) {
+    const orderStatus = await this.orderRepository.findStatusById(orderId);
+    if (!orderStatus) {
+      throw new InternalServerError('주문 정보를 불러오던 중 오류가 발생했습니다.');
+    }
+    if (orderStatus.status !== OrderStatus.WaitingPayment) {
+      throw new BadRequestError('현재 상태에서는 주문을 변경/취소할 수 없습니다.'); // 메시지는 주문 삭제 api 실제 리스폰스를 참고했습니다.
+    }
+  }
   async getOrder(userId: string, orderId: string) {
     const order = await this.orderRepository.findById(orderId);
     if (!order) {
@@ -104,9 +122,12 @@ export class OrderService {
       // 1-3. 포인트를 사용한 경우 포인트 차감
       if (usePoint > 0) {
         // 1-3-1. 포인트 차감
-        await this.orderRepository.updatePoint({ userId, usePoint }, tx);
+        await this.orderRepository.decreasePoint({ userId, usePoint }, tx);
         // 1-3-2. 포인트 히스토리 생성
-        await this.orderRepository.createPointHistory({ userId, orderId: order.id, usePoint }, tx);
+        await this.orderRepository.createUsePointHistory(
+          { userId, orderId: order.id, usePoint },
+          tx,
+        );
       }
 
       // 1-4. payment 생성 및 연결
@@ -130,7 +151,7 @@ export class OrderService {
           sizeId: orderItem.sizeId,
           quantity: orderItem.quantity,
         };
-        return await this.orderRepository.updateStock(stockData, tx);
+        return await this.orderRepository.decreaseStock(stockData, tx);
       });
       await Promise.all(stockUpdatePromises);
       // 장바구니 삭제는 따로 안하는 것 같음
@@ -145,18 +166,59 @@ export class OrderService {
     return createdOrder;
   }
   async updateOrder({ orderId, userId, name, phone, address }: UpdateOrderServiceInput) {
-    const owner = await this.orderRepository.findOwnerById(orderId);
-    if (!owner) {
-      throw new NotFoundError('주문을 찾을 수 없습니다.');
-    }
-    if (owner.buyerId !== userId) {
-      throw new ForbiddenError('접근 권한이 없습니다.');
-    }
+    await this.validateOwner(userId, orderId);
+    await this.validateStatus(orderId);
     await this.orderRepository.updateOrder({ orderId, name, phone, address });
     const updatedOrder = await this.orderRepository.findById(orderId);
     if (!updatedOrder) {
       throw new InternalServerError();
     }
     return updatedOrder;
+  }
+  async deleteOrder(userId: string, orderId: string) {
+    // 일단 실제로 주문 내역 삭제
+    // 추후 논리적 삭제로 리팩토링
+    // 1. 주문 데이터 조회
+    const order = await this.orderRepository.findById(orderId);
+    if (!order) {
+      throw new NotFoundError('주문을 찾을 수 없습니다.');
+    }
+    if (order.buyerId !== userId) {
+      throw new ForbiddenError('접근 권한이 없습니다.');
+    }
+    await this.validateStatus(order.id);
+    // 2. 주문 삭제 트랜잭션
+    await this.prisma.$transaction(async (tx) => {
+      // 2-1. 재고 복구
+      const restoreStockPromises = order.orderItems.map(async (item) => {
+        const stockData = {
+          productId: item.productId,
+          sizeId: item.size.id,
+          quantity: item.quantity,
+        };
+        return await this.orderRepository.increaseStock(stockData, tx);
+      });
+      await Promise.all(restoreStockPromises);
+      // 2-2. 결제 정보 삭제 (추후 논리적 삭제로 상태만 변경하면 됨)
+      if (!order.payments) {
+        // 주문 취소 대상인 주문이 결제 정보가 없는 경우는 비정상적인 상태
+        // WaitingPayment 상태로 존재해야함(현재 프로젝트에서는 그냥 CompletedPayment)
+        throw new InternalServerError('주문 취소 중 에러가 발생했습니다.');
+      }
+      await this.orderRepository.deletePayment(order.payments.id, tx);
+      // 2-3. 포인트 환불
+      if (order.usePoint > 0) {
+        const usePoint = order.usePoint;
+        // 2-3-1. 포인트 환불
+        await this.orderRepository.increasePoint({ userId, usePoint }, tx);
+        // 2-3-2. 포인트 히스토리 생성
+        await this.orderRepository.createRestorePointHistory(
+          { userId, orderId: order.id, usePoint },
+          tx,
+        );
+      }
+      // 2-4. 최종 주문 삭제 (추후 논리적 삭제로 상태만 변경하면 됨)
+      await this.orderRepository.deleteOrder(order.id, tx);
+    });
   }
 }
