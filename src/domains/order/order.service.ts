@@ -58,7 +58,7 @@ export class OrderService {
     const findManyInput = {
       ...countInput,
       skip: (page - 1) * limit,
-      take: page,
+      take: limit,
     };
     const [rawOrders, totalCount] = await this.prisma.$transaction(async (tx) => {
       return await Promise.all([
