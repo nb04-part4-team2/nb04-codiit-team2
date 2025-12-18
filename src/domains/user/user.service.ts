@@ -45,8 +45,8 @@ export class UserService {
     return toUserResponse(user);
   }
 
-  async updateMe(userId: string, dto: UpdateUserDto, imageUrl?: string): Promise<UserResponseDto> {
-    const { name, password, currentPassword } = dto;
+  async updateMe(userId: string, dto: UpdateUserDto): Promise<UserResponseDto> {
+    const { name, password, currentPassword, imageUrl } = dto;
 
     if (!name && !password && !imageUrl) {
       throw new BadRequestError('수정할 내용이 없습니다.');
