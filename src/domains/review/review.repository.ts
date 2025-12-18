@@ -62,7 +62,7 @@ export class ReviewRepository {
     });
   }
 
-  // 라뷰 상세 조회 (ID 기반)
+  // 리뷰 상세 조회 (ID 기반)
   async findById(reviewId: string) {
     return this.prisma.review.findUnique({
       where: { id: reviewId },
