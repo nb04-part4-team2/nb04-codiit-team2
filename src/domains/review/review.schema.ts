@@ -33,9 +33,10 @@ export const updateReviewSchema = z
       .int()
       .min(1, '별점은 1점 이상이어야 합니다.')
       .max(5, '별점은 5점 이하여야 합니다.')
-      .optional(),
-    content: z.string().min(1, '리뷰 내용은 필수입니다.').optional(),
+      .optional(), // 선택적으로 받음
+    content: z.string().min(1, '리뷰 내용은 최소 1자 이상이어야 합니다.').optional(), // 선택적으로 받음
   })
   .refine((data) => data.rating !== undefined || data.content !== undefined, {
-    message: '수정할 정보를 입력해주세요.',
+    message: '평점 또는 리뷰 내용 중 최소 하나는 입력해야 합니다.',
+    path: ['rating'], // 에러 메시지가 표시될 위치
   });

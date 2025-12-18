@@ -106,23 +106,13 @@ export class ReviewService {
   }
 
   // 리뷰 수정
-  async updateReview(
-    userId: string,
-    reviewId: string,
-    data: UpdateReviewDto,
-  ): Promise<ReviewResponseDto> {
-    // 리뷰 존재 여부 확인
+  async updateReview(userId: string, reviewId: string, data: UpdateReviewDto) {
+    // 존재 여부 및 권한 체크
     const review = await this.reviewRepository.findById(reviewId);
-    if (!review) {
-      throw new NotFoundError('요청한 리소스를 찾을 수 없습니다.');
-    }
+    if (!review) throw new NotFoundError('리뷰를 찾을 수 없습니다.');
+    if (review.userId !== userId) throw new ForbiddenError('수정 권한이 없습니다.');
 
-    // 권한 검증: 작성자 본인인지 확인
-    if (review.userId !== userId) {
-      throw new ForbiddenError('자신이 남긴 리뷰만 수정이 가능합니다.');
-    }
-
-    // 리뷰 업데이트
+    // DB 업데이트: data에 포함된 필드(rating 혹은 content)만 반영됨
     const updatedReview = await this.reviewRepository.update(reviewId, data);
 
     return ReviewMapper.toResponse(updatedReview);
