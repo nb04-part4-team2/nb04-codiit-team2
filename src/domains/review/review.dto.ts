@@ -1,7 +1,8 @@
 import { z } from 'zod';
-import { createReviewSchema, reviewListQuerySchema } from './review.schema.js';
+import { createReviewSchema, reviewListQuerySchema, updateReviewSchema } from './review.schema.js';
 
 export type CreateReviewDto = z.infer<typeof createReviewSchema>;
+export type UpdateReviewDto = z.infer<typeof updateReviewSchema>;
 export type ReviewListQueryDto = z.infer<typeof reviewListQuerySchema>;
 
 export interface ReviewResponseDto {
