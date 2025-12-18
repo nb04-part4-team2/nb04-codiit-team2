@@ -1,37 +1,53 @@
+import { Grade } from '@prisma/client';
+import prisma from '../../config/prisma.js';
+import { UserRepository } from '../user/user.repository.js';
+import { NotFoundError } from '../../common/utils/errors.js';
+import { MetadataRepository } from './metadata.repository.js';
+
 export class MetadataService {
-  async getGrades() {
-    const grades = [
-      {
-        id: 'grade_green',
-        name: 'Green',
-        rate: 1,
-        minAmount: 0,
+  constructor(
+    private metadataRepository: MetadataRepository,
+    private userRepository: UserRepository,
+  ) {}
+
+  async getMembershipInfo(userId: string) {
+    const [user, gradePolicy, paymentAggregation] = await Promise.all([
+      this.userRepository.findById(userId),
+
+      this.metadataRepository.findAllGrades(),
+
+      prisma.payment.aggregate({
+        _sum: {
+          price: true,
+        },
+        where: {
+          status: 'CompletedPayment',
+          order: {
+            buyerId: userId,
+          },
+        },
+      }),
+    ]);
+
+    if (!user) {
+      throw new NotFoundError('사용자를 찾을 수 없습니다.');
+    }
+
+    const totalPurchaseAmount = paymentAggregation._sum.price ?? 0;
+    const userPoint = user.point;
+
+    const currentGrade = gradePolicy
+      .slice()
+      .sort((a: Grade, b: Grade) => b.minAmount - a.minAmount)
+      .find((grade: Grade) => totalPurchaseAmount >= grade.minAmount);
+
+    return {
+      user: {
+        currentGradeName: currentGrade?.name ?? 'green',
+        totalPurchaseAmount,
+        points: userPoint,
       },
-      {
-        id: 'grade_orange',
-        name: 'Orange',
-        rate: 3,
-        minAmount: 100000,
-      },
-      {
-        id: 'grade_red',
-        name: 'Red',
-        rate: 5,
-        minAmount: 300000,
-      },
-      {
-        id: 'grade_black',
-        name: 'Black',
-        rate: 7,
-        minAmount: 500000,
-      },
-      {
-        id: 'grade_vip',
-        name: 'VIP',
-        rate: 10,
-        minAmount: 1000000,
-      },
-    ];
-    return grades;
+      gradePolicy,
+    };
   }
 }

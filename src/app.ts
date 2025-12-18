@@ -21,7 +21,7 @@ import { inquiryRouter } from '@/domains/inquiry/inquiry.router.js';
 import { reviewRouter } from '@/domains/review/review.router.js';
 import { notificationRouter } from '@/domains/notification/notification.router.js';
 // import dashboardRouter from '@/domains/dashboard/dashboard.router.js';
-// import metadataRouter from '@/domains/metadata/metadata.router.js';
+import metadataRouter from '@/domains/metadata/metadata.router.js';
 import s3Router from '@/domains/s3/s3.router.js';
 
 const app = express();
@@ -59,7 +59,7 @@ app.use('/api/inquiries', inquiryRouter);
 app.use('/api/review', reviewRouter);
 app.use('/api/notifications', notificationRouter);
 // app.use('/api/dashboard', dashboardRouter);
-// app.use('/api/metadata', metadataRouter);
+app.use('/api/metadata', metadataRouter);
 app.use('/api/s3', s3Router);
 
 // 404 핸들러

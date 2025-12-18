@@ -1,11 +1,9 @@
 import { Router } from 'express';
-import { MetadataController } from './metadata.controller.js';
-import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
+import { metadataController } from './metadata.container.js';
+import { authenticate } from '../../common/middlewares/auth.middleware.js';
 
-const router = Router();
+const metadataRouter = Router();
 
-const metadataController = new MetadataController();
+metadataRouter.get('/grade', authenticate, metadataController.getMembershipInfo);
 
-router.get('/grade', asyncHandler(metadataController.getGrades));
-
-export default router;
+export default metadataRouter;
