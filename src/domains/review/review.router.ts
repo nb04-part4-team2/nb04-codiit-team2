@@ -5,6 +5,7 @@ import { authenticate } from '@/common/middlewares/auth.middleware.js';
 import { reviewController } from './review.container.js';
 import {
   createReviewSchema,
+  updateReviewSchema,
   reviewListQuerySchema,
   productReviewParamSchema,
   reviewDetailParamSchema,
@@ -37,4 +38,13 @@ reviewRouter.get(
   '/:reviewId',
   validate(reviewDetailParamSchema, 'params'), // reviewId 검증
   asyncHandler(reviewController.getReview),
+);
+
+// 리뷰 수정 API 추가
+reviewRouter.patch(
+  '/:reviewId',
+  authenticate,
+  validate(reviewDetailParamSchema, 'params'),
+  validate(updateReviewSchema, 'body'),
+  asyncHandler(reviewController.update),
 );

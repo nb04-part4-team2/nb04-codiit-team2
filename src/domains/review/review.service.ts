@@ -2,6 +2,7 @@ import { Prisma } from '@prisma/client';
 import { ReviewRepository } from './review.repository.js';
 import {
   CreateReviewDto,
+  UpdateReviewDto,
   ReviewListQueryDto,
   ReviewListResponseDto,
   ReviewResponseDto,
@@ -102,5 +103,18 @@ export class ReviewService {
         hasNextPage,
       },
     };
+  }
+
+  // 리뷰 수정
+  async updateReview(userId: string, reviewId: string, data: UpdateReviewDto) {
+    // 존재 여부 및 권한 체크
+    const review = await this.reviewRepository.findById(reviewId);
+    if (!review) throw new NotFoundError('리뷰를 찾을 수 없습니다.');
+    if (review.userId !== userId) throw new ForbiddenError('수정 권한이 없습니다.');
+
+    // DB 업데이트: data에 포함된 필드(rating 혹은 content)만 반영됨
+    const updatedReview = await this.reviewRepository.update(reviewId, data);
+
+    return ReviewMapper.toResponse(updatedReview);
   }
 }
