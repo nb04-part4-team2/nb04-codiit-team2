@@ -117,4 +117,25 @@ export class ReviewService {
 
     return ReviewMapper.toResponse(updatedReview);
   }
+
+  // 리뷰 삭제
+  async deleteReview(userId: string, reviewId: string): Promise<{ id: string }> {
+    // 존재 여부 확인
+    const review = await this.reviewRepository.findById(reviewId);
+    if (!review) {
+      throw new NotFoundError('리뷰를 찾을 수 없습니다.');
+    }
+
+    // 권한 체크
+    if (review.userId !== userId) {
+      throw new ForbiddenError('삭제 권한이 없습니다.');
+    }
+
+    // 삭제 진행
+    await this.reviewRepository.delete(reviewId);
+
+    // 삭제된 리뷰의 ID 반환
+    // 리뷰 삭제 시 사용자가 반환 값을 받지 않지만 확장성을 위해 작성(리뷰 평점 재계산, 관리자 기능 및 신고 기능, 알림 서비스)
+    return { id: reviewId };
+  }
 }

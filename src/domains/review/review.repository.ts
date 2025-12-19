@@ -108,4 +108,11 @@ export class ReviewRepository {
       data: updateData,
     });
   }
+
+  // 리뷰 삭제
+  async delete(reviewId: string) {
+    return this.prisma.review.delete({
+      where: { id: reviewId },
+    });
+  }
 }
