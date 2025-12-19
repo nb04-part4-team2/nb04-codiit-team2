@@ -71,14 +71,15 @@ describe('CartService', () => {
       // then
       expect(result).toEqual([]);
     });
-    it('해당 유저의 장바구니에 아이템이 하나도 없는 경우 404 에러 반환', async () => {
-      // given
-      const cartResult = createCartMock({ items: [] });
-      mockCartRepo.findByUserId.mockResolvedValue(cartResult);
-      // when
-      // then
-      await expect(mockCartService.getCart(userId)).rejects.toThrow(NotFoundError);
-    });
+    // 실제 프론트 연결 테스트 결과 불필요한 기능 제거
+    // it('해당 유저의 장바구니에 아이템이 하나도 없는 경우 404 에러 반환', async () => {
+    //   // given
+    //   const cartResult = createCartMock({ items: [] });
+    //   mockCartRepo.findByUserId.mockResolvedValue(cartResult);
+    //   // when
+    //   // then
+    //   await expect(mockCartService.getCart(userId)).rejects.toThrow(NotFoundError);
+    // });
   });
   describe('장바구니 생성', () => {
     it('장바구니 생성', async () => {

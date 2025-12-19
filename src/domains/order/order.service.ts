@@ -169,7 +169,7 @@ export class OrderService {
       };
       await this.orderRepository.createPayment(paymentData, tx);
 
-      // 1-5 결제 상태에 따른 주문 상태 업데이트 처리
+      // 1-4-1 결제 상태에 따른 주문 상태 업데이트 처리
       // 현재 스키마에는 주문 생성시 WaitingPayment가 기본 상태임
       // 현재 프론트에서 결제 기능이 구현되어 있지 않으므로 주문 상태도 CompletedPayment로 하드 코딩
       // 추후에 결제가 추가되면 결제 상태에 따라 주문 상태도 다양하게 업데이트
