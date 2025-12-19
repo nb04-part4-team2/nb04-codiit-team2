@@ -308,6 +308,7 @@ export class OrderService {
         // WaitingPayment 상태로 존재해야함(현재 프로젝트에서는 그냥 CompletedPayment)
         throw new InternalServerError('주문 취소 중 에러가 발생했습니다.');
       }
+      // await this.orderRepository.updatePaymentStatus(order.payments.id, PaymentStatus.Cancelled, tx);
       await this.orderRepository.deletePayment(order.payments.id, tx);
       // 2-3. 포인트 환불
       if (order.usePoint > 0) {
@@ -321,6 +322,7 @@ export class OrderService {
         );
       }
       // 2-4. 최종 주문 삭제 (추후 논리적 삭제로 상태만 변경하면 됨)
+      // await this.orderRepository.updateStatus(order.id, OrderStatus.Cancelled, tx);
       await this.orderRepository.deleteOrder(order.id, tx);
     });
   }
