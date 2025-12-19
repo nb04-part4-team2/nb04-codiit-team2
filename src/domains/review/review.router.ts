@@ -48,3 +48,11 @@ reviewRouter.patch(
   validate(updateReviewSchema, 'body'),
   asyncHandler(reviewController.update),
 );
+
+// 리뷰 삭제 API
+reviewRouter.delete(
+  '/:reviewId',
+  authenticate,
+  validate(reviewDetailParamSchema, 'params'),
+  asyncHandler(reviewController.delete),
+);
