@@ -181,9 +181,15 @@ export class OrderService {
 
           // 1-5-2. 장바구니 유저들 알림 생성
           // 특정 사이즈를 장바구니에 담은 유저들만 필터링하여 중복 제거 후 추출
-          const cartUserIds = updatedStock.product.cartItems
-            .filter((item) => item.sizeId === updatedStock.sizeId)
-            .map((item) => item.cart.buyerId);
+          const cartUserIds = [
+            ...new Set(
+              updatedStock.product.cartItems
+                .filter(
+                  (item) => item.sizeId === updatedStock.sizeId && item.cart.buyerId !== userId,
+                )
+                .map((item) => item.cart.buyerId),
+            ),
+          ];
           const cartUserNotificationMsg = `장바구니에 담은 상품 ${productName} (${sizeName})이 품절되었습니다.`;
 
           if (cartUserIds.length > 0) {
