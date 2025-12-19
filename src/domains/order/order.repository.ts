@@ -196,6 +196,9 @@ export class OrderRepository {
       },
       skip,
       take,
+      orderBy: {
+        createdAt: 'desc',
+      },
     });
   }
   /**
