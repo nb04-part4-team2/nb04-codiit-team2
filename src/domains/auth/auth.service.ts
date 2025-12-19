@@ -46,7 +46,7 @@ export class AuthService {
         grade: {
           id: user.grade.id,
           name: user.grade.name,
-          rate: user.grade.rate,
+          rate: user.grade.rate * 100,
           minAmount: user.grade.minAmount,
         },
       },
