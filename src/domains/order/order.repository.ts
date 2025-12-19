@@ -1,4 +1,4 @@
-import { Prisma, PrismaClient } from '@prisma/client';
+import { OrderStatus, Prisma, PrismaClient } from '@prisma/client';
 import {
   CreateOrderItemRepoInput,
   CreateOrderRawData,
@@ -39,6 +39,20 @@ export class OrderRepository {
       },
       select: {
         status: true,
+      },
+    });
+  }
+  /**
+   * 주문 상태 업데이트
+   */
+  async updateStatus(orderId: string, status: OrderStatus, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    return await db.order.update({
+      where: {
+        id: orderId,
+      },
+      data: {
+        status,
       },
     });
   }
