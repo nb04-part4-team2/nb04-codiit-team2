@@ -159,7 +159,7 @@ model Product {
 
 model Category {
   id   String @id @default(cuid()) // SQL의 'Key'를 id로 변경
-  name String
+  name String @unique
 
   products Product[]
 

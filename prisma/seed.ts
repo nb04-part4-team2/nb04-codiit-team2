@@ -10,6 +10,26 @@ async function main() {
     { id: 'grade_green', name: 'green', minAmount: 0, rate: 0.01 },
   ];
 
+  const categories = [
+    { name: 'top' },
+    { name: 'bottom' },
+    { name: 'dress' },
+    { name: 'outer' },
+    { name: 'skirt' },
+    { name: 'shoes' },
+    { name: 'acc' },
+  ];
+
+  const sizes = [
+    { id: 1, en: 'XS', ko: '엑스스몰' },
+    { id: 2, en: 'S', ko: '스몰' },
+    { id: 3, en: 'M', ko: '미디엄' },
+    { id: 4, en: 'L', ko: '라지' },
+    { id: 5, en: 'XL', ko: '엑스라지' },
+    { id: 6, en: 'Free', ko: '프리' },
+  ];
+
+  // Grade 시딩
   for (const grade of grades) {
     await prisma.grade.upsert({
       where: { id: grade.id },
@@ -17,8 +37,31 @@ async function main() {
       create: grade,
     });
   }
-
   console.log('✅ Grade 시드 데이터 완료');
+
+  // Category 시딩
+  for (const category of categories) {
+    await prisma.category.upsert({
+      where: { name: category.name },
+      update: {},
+      create: { name: category.name },
+    });
+  }
+  console.log('✅ 카테고리 시딩 완료!');
+
+  // Size 시딩
+  for (const size of sizes) {
+    await prisma.size.upsert({
+      where: { id: size.id },
+      update: {},
+      create: {
+        id: size.id,
+        en: size.en,
+        ko: size.ko,
+      },
+    });
+  }
+  console.log('✅ 사이즈 시딩 완료!');
 }
 
 main()
