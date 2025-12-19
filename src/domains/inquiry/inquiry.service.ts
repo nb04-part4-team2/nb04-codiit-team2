@@ -1,4 +1,4 @@
-import type { PrismaClient, Prisma } from '@prisma/client';
+import type { PrismaClient, Prisma, UserType } from '@prisma/client';
 import type {
   OffsetQuery,
   CreateInquiryBody,
@@ -102,23 +102,20 @@ export class InquiryService {
   };
 
   // 모든 문의 조회 (사용자 본인의 문의)
-  public getAllInquiries = async (query: OffsetQuery, userId: string) => {
+  public getAllInquiries = async (query: OffsetQuery, userId: string, userType: UserType) => {
     const { page = 1, pageSize = 100, status } = query;
     const take = pageSize;
     const skip = (page - 1) * take;
 
-    const countQuery: Prisma.InquiryCountArgs = {
-      where: {
-        ...(status && { status }),
-        userId,
-      },
+    // 판매자, 구매자에 따라 where 분기 처리
+    const where: Prisma.InquiryWhereInput = {
+      ...(status && { status }),
+      ...(userType === 'SELLER' ? { product: { store: { userId } } } : { userId }),
     };
 
+    const countQuery: Prisma.InquiryCountArgs = { where };
     const getQuery: Prisma.InquiryFindManyArgs = {
-      where: {
-        ...(status && { status }),
-        userId,
-      },
+      where,
       take,
       skip,
       orderBy: {

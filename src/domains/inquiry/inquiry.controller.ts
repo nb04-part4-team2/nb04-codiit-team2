@@ -41,9 +41,9 @@ export class InquiryController {
     const query = req.query as unknown as OffsetQuery;
 
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
-    const userId = req.user.id;
+    const { id: userId, type: userType } = req.user;
 
-    const inquiries = await this.inquiryService.getAllInquiries(query, userId);
+    const inquiries = await this.inquiryService.getAllInquiries(query, userId, userType);
     return res.status(200).json(toGetAllInquiriesResponse(inquiries));
   };
 

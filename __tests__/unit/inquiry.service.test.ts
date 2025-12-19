@@ -229,11 +229,12 @@ describe('InquiryService 유닛 테스트', () => {
         pageSize: 100,
         status: InquiryStatus.WaitingAnswer,
       };
+      const userType = 'BUYER';
       inquiryRepository.getAllInquiries.mockResolvedValue(mockAllInquiries);
       inquiryRepository.countInquiries.mockResolvedValue(2);
 
       // --- 실행 (Act) ---
-      const result = await inquiryService.getAllInquiries(query, userId);
+      const result = await inquiryService.getAllInquiries(query, userId, userType);
 
       const countQuery = {
         where: { userId, status: query.status },
@@ -264,11 +265,12 @@ describe('InquiryService 유닛 테스트', () => {
       const query = {
         status: InquiryStatus.WaitingAnswer,
       };
+      const userType = 'BUYER';
       inquiryRepository.countInquiries.mockResolvedValue(0);
       inquiryRepository.getAllInquiries.mockResolvedValue([]);
 
       // --- 실행 (Act) ---
-      await inquiryService.getAllInquiries(query as OffsetQuery, userId);
+      await inquiryService.getAllInquiries(query as OffsetQuery, userId, userType);
 
       const getQuery = {
         where: { userId, status: query.status },
