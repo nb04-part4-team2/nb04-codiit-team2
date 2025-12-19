@@ -123,7 +123,7 @@ export class ReviewService {
     // 존재 여부 확인
     const review = await this.reviewRepository.findById(reviewId);
     if (!review) {
-      throw new NotFoundError('요청한 리소스를 찾을 수 없습니다.');
+      throw new NotFoundError('리뷰를 찾을 수 없습니다.');
     }
 
     // 권한 체크

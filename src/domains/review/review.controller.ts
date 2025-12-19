@@ -66,7 +66,7 @@ export class ReviewController {
     // 서비스 로직 실행
     await this.reviewService.deleteReview(userId, reviewId);
 
-    // 200 OK 응답
+    // 204 응답
     res.status(204).json();
   };
 }
