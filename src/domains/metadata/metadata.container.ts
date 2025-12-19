@@ -1,11 +1,9 @@
-import { UserRepository } from '../user/user.repository.js';
-import { MetadataController } from './metadata.controller.js';
-import { MetadataRepository } from './metadata.repository.js';
-import { MetadataService } from './metadata.service.js';
+import { MetadataController } from '@/domains/metadata/metadata.controller.js';
+import { MetadataRepository } from '@/domains/metadata/metadata.repository.js';
+import { MetadataService } from '@/domains/metadata/metadata.service.js';
 
 const metadataRepository = new MetadataRepository();
-const userRepository = new UserRepository();
 
-const metadataService = new MetadataService(metadataRepository, userRepository);
+const metadataService = new MetadataService(metadataRepository);
 
 export const metadataController = new MetadataController(metadataService);

@@ -1,15 +1,12 @@
 import { Request, Response } from 'express';
-import { asyncHandler } from '../../common/middlewares/asyncHandler.js';
-import { MetadataService } from './metadata.service.js';
+import { MetadataService } from '@/domains/metadata/metadata.service.js';
+import { toGradeListDto } from './metadata.mapper.js';
 
 export class MetadataController {
   constructor(private metadataService: MetadataService) {}
 
-  getMembershipInfo = asyncHandler(async (req: Request, res: Response) => {
-    const userId = req.user!.id;
-
-    const membershipInfo = await this.metadataService.getMembershipInfo(userId);
-
-    res.status(200).json({ success: true, data: membershipInfo });
-  });
+  getGrades = async (req: Request, res: Response) => {
+    const gradePolicy = await this.metadataService.getGradePolicy();
+    res.status(200).json(toGradeListDto(gradePolicy));
+  };
 }
