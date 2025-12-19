@@ -96,9 +96,6 @@ export class ProductService {
       categoryId = category.id;
     }
 
-    // discountRate 방어 코드: 수정 시 데이터가 없으면 기존 값을 유지하거나 0 처리
-    const discountRate = data.discountRate !== undefined ? data.discountRate : undefined;
-
     const discountStartTime =
       data.discountStartTime === null
         ? null
@@ -117,7 +114,7 @@ export class ProductService {
       price: data.price,
       content: data.content,
       image: data.image,
-      discountRate,
+      discountRate: data.discountRate,
       isSoldOut: data.isSoldOut,
       stocks: data.stocks,
       categoryId,
