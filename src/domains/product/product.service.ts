@@ -19,7 +19,7 @@ export class ProductService {
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
 
-    // 카테고리 검증: 데이터 타입 불일치 방지 로직
+    // [방어 코드] 카테고리 데이터 타입 불일치 방지
     if (!data.categoryName || typeof data.categoryName !== 'string') {
       throw new NotFoundError('유효하지 않은 카테고리 형식입니다.');
     }
@@ -29,7 +29,7 @@ export class ProductService {
       throw new NotFoundError('카테고리가 없습니다.');
     }
 
-    // discountRate 방어 코드: undefined 혹은 null일 경우 0으로 초기화
+    // [방어 코드] 스키마(default 0)가 있지만 서비스 레벨에서 한 번 더 보장 (유지)
     const validatedDiscountRate =
       data.discountRate !== undefined && data.discountRate !== null ? data.discountRate : 0;
 
@@ -89,6 +89,11 @@ export class ProductService {
 
     let categoryId: string | undefined = undefined;
     if (data.categoryName) {
+      // [방어 코드] 카테고리 타입 체크 (수정 시에도 유효)
+      if (typeof data.categoryName !== 'string') {
+        throw new NotFoundError('유효하지 않은 카테고리 형식입니다.');
+      }
+
       const category = await this.productRepository.findCategoryByName(data.categoryName);
       if (!category) {
         throw new NotFoundError('카테고리가 없습니다.');
@@ -109,12 +114,13 @@ export class ProductService {
           ? new Date(data.discountEndTime)
           : undefined;
 
+    // [수정] 불필요한 변수 선언 제거하고 data.discountRate 직접 사용
     const updatedProduct = await this.productRepository.update(productId, {
       name: data.name,
       price: data.price,
       content: data.content,
       image: data.image,
-      discountRate: data.discountRate,
+      discountRate: data.discountRate, // undefined면 Prisma가 무시(기존 값 유지)
       isSoldOut: data.isSoldOut,
       stocks: data.stocks,
       categoryId,

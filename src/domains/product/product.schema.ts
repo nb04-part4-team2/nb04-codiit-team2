@@ -7,8 +7,7 @@ export const createProductSchema = z
     content: z.string().min(1, '상세 설명은 필수입니다.'),
     image: z.string().url('유효한 이미지 URL이 아닙니다.'),
 
-    // 프론트에서 undefined로 올 수 있으므로 .default(0) 추가 및 .catch(0)로 방어
-    discountRate: z.number().min(0).max(100).default(0).catch(0),
+    discountRate: z.number().min(0).max(100).default(0),
 
     discountStartTime: z.string().datetime().nullish(),
     discountEndTime: z.string().datetime().nullish(),
@@ -69,8 +68,7 @@ export const updateProductSchema = z
     price: z.number().min(0).optional(),
     content: z.string().min(1).optional(),
     image: z.string().url().optional(),
-    // 수정 시에도 discountRate 방어적 처리
-    discountRate: z.number().min(0).max(100).optional().catch(0),
+    discountRate: z.number().min(0).max(100).optional(),
     discountStartTime: z.string().datetime().nullish(),
     discountEndTime: z.string().datetime().nullish(),
     categoryName: z.string().min(1).optional(),
