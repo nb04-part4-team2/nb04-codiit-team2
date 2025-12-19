@@ -157,15 +157,15 @@ describe('UserService 유닛 테스트', () => {
     it('이미지만 변경하는 경우 성공', async () => {
       // --- 준비 (Arrange) ---
       const user = createUserWithGradeMock({ id: userId });
-      const updateData = { currentPassword: 'current1234' };
       const imageUrl = 'https://example.com/new-image.jpg';
+      const updateData = { currentPassword: 'current1234', imageUrl };
       const updatedUser = createUserWithGradeMock({ id: userId, image: imageUrl });
 
       userRepository.findById.mockResolvedValue(user);
       userRepository.update.mockResolvedValue(updatedUser);
 
       // --- 실행 (Act) ---
-      const result = await userService.updateMe(userId, updateData, imageUrl);
+      const result = await userService.updateMe(userId, updateData);
 
       // --- 검증 (Assert) ---
       expect(userRepository.update).toHaveBeenCalledWith(userId, { image: imageUrl });
@@ -192,8 +192,8 @@ describe('UserService 유닛 테스트', () => {
     it('이름과 이미지를 동시에 변경하는 경우 성공', async () => {
       // --- 준비 (Arrange) ---
       const user = createUserWithGradeMock({ id: userId });
-      const updateData = { currentPassword: 'current1234', name: '새로운 이름' };
       const imageUrl = 'https://example.com/new-image.jpg';
+      const updateData = { currentPassword: 'current1234', name: '새로운 이름', imageUrl };
       const updatedUser = createUserWithGradeMock({
         id: userId,
         name: '새로운 이름',
@@ -204,7 +204,7 @@ describe('UserService 유닛 테스트', () => {
       userRepository.update.mockResolvedValue(updatedUser);
 
       // --- 실행 (Act) ---
-      const result = await userService.updateMe(userId, updateData, imageUrl);
+      const result = await userService.updateMe(userId, updateData);
 
       // --- 검증 (Assert) ---
       expect(userRepository.update).toHaveBeenCalledWith(userId, {
