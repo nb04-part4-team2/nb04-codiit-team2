@@ -7,10 +7,9 @@ export const createProductSchema = z
     content: z.string().min(1, '상세 설명은 필수입니다.'),
     image: z.string().url('유효한 이미지 URL이 아닙니다.'),
 
-    // 할인율은 0~100 사이
-    discountRate: z.number().min(0).max(100),
+    // 프론트에서 undefined로 올 수 있으므로 .default(0) 추가 및 .catch(0)로 방어
+    discountRate: z.number().min(0).max(100).default(0).catch(0),
 
-    // 날짜는 nullish (null 또는 undefined 허용)
     discountStartTime: z.string().datetime().nullish(),
     discountEndTime: z.string().datetime().nullish(),
 
@@ -19,10 +18,7 @@ export const createProductSchema = z
     stocks: z
       .array(
         z.object({
-          // 사이즈 ID는 정수이면서 양수여야 함 (1, 2, 3...)
           sizeId: z.number().int().positive('유효하지 않은 사이즈 ID입니다.'),
-
-          // 상품 등록 시 재고는 최소 1개 이상이어야 함
           quantity: z.number().int().positive('재고 수량은 1개 이상이어야 합니다.'),
         }),
       )
@@ -30,7 +26,6 @@ export const createProductSchema = z
   })
   .refine(
     (data) => {
-      // 할인 기간 유효성 검증
       if (data.discountStartTime && data.discountEndTime) {
         return new Date(data.discountStartTime) < new Date(data.discountEndTime);
       }
@@ -74,17 +69,17 @@ export const updateProductSchema = z
     price: z.number().min(0).optional(),
     content: z.string().min(1).optional(),
     image: z.string().url().optional(),
-    discountRate: z.number().min(0).max(100).optional(),
+    // 수정 시에도 discountRate 방어적 처리
+    discountRate: z.number().min(0).max(100).optional().catch(0),
     discountStartTime: z.string().datetime().nullish(),
     discountEndTime: z.string().datetime().nullish(),
     categoryName: z.string().min(1).optional(),
     isSoldOut: z.boolean().optional(),
-    // 재고는 필수(required)라고 명시되어 있으므로 optional 처리를 하지 않음 (기존 stocks 교체)
     stocks: z
       .array(
         z.object({
           sizeId: z.number().int().positive(),
-          quantity: z.number().int().nonnegative(), // 수정 시엔 0개도 가능할 수 있으나, 보통 품절 처리는 isSoldOut으로 함. 여기선 0 이상 허용.
+          quantity: z.number().int().nonnegative(),
         }),
       )
       .min(1, '최소 1개 이상의 재고 옵션이 필요합니다.'),

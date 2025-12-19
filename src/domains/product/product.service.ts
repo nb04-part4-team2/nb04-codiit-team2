@@ -14,42 +14,44 @@ export class ProductService {
 
   // 상품 등록
   async createProduct(userId: string, data: CreateProductDto): Promise<DetailProductResponse> {
-    // 스토어 검증
     const store = await this.productRepository.findStoreByUserId(userId);
     if (!store) {
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
 
-    // 카테고리 검증
+    // 카테고리 검증: 데이터 타입 불일치 방지 로직
+    if (!data.categoryName || typeof data.categoryName !== 'string') {
+      throw new NotFoundError('유효하지 않은 카테고리 형식입니다.');
+    }
+
     const category = await this.productRepository.findCategoryByName(data.categoryName);
     if (!category) {
       throw new NotFoundError('카테고리가 없습니다.');
     }
 
-    // DB 저장용 데이터 준비
+    // discountRate 방어 코드: undefined 혹은 null일 경우 0으로 초기화
+    const validatedDiscountRate =
+      data.discountRate !== undefined && data.discountRate !== null ? data.discountRate : 0;
+
     const productDataForDb = {
       name: data.name,
       price: data.price,
       content: data.content,
       image: data.image,
-      discountRate: data.discountRate,
+      discountRate: validatedDiscountRate,
       discountStartTime: data.discountStartTime ? new Date(data.discountStartTime) : null,
       discountEndTime: data.discountEndTime ? new Date(data.discountEndTime) : null,
       categoryId: category.id,
       stocks: data.stocks,
     };
 
-    // DB 저장
     const createdProduct = await this.productRepository.create(store.id, productDataForDb);
-
-    // 매퍼의 타입 요구사항(ProductDetailWithRelations)을 충족하기 위해 생성된 ID로 상세 정보를 다시 조회하여 반환합니다.
     const productDetail = await this.productRepository.findById(createdProduct.id);
 
     if (!productDetail) {
       throw new Error('상품 생성 후 조회에 실패했습니다.');
     }
 
-    // 응답 반환 (Mapper 사용)
     return ProductMapper.toDetailResponse(productDetail);
   }
 
@@ -81,16 +83,10 @@ export class ProductService {
     if (!productData) {
       throw new NotFoundError('상품을 찾을 수 없습니다.');
     }
-
-    if (!productData.store) {
-      throw new NotFoundError('상품에 연결된 스토어 정보가 없습니다.');
-    }
-
-    if (productData.store.userId !== userId) {
+    if (!productData.store || productData.store.userId !== userId) {
       throw new ForbiddenError('상품 수정 권한이 없습니다.');
     }
 
-    // 카테고리 변경 시 검증 및 ID 조회
     let categoryId: string | undefined = undefined;
     if (data.categoryName) {
       const category = await this.productRepository.findCategoryByName(data.categoryName);
@@ -100,13 +96,15 @@ export class ProductService {
       categoryId = category.id;
     }
 
+    // discountRate 방어 코드: 수정 시 데이터가 없으면 기존 값을 유지하거나 0 처리
+    const discountRate = data.discountRate !== undefined ? data.discountRate : undefined;
+
     const discountStartTime =
       data.discountStartTime === null
         ? null
         : data.discountStartTime
           ? new Date(data.discountStartTime)
           : undefined;
-
     const discountEndTime =
       data.discountEndTime === null
         ? null
@@ -119,9 +117,9 @@ export class ProductService {
       price: data.price,
       content: data.content,
       image: data.image,
-      discountRate: data.discountRate,
+      discountRate,
       isSoldOut: data.isSoldOut,
-      stocks: data.stocks, // 재고는 필수값이므로 그대로 전달
+      stocks: data.stocks,
       categoryId,
       discountStartTime,
       discountEndTime,
