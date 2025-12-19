@@ -53,4 +53,20 @@ export class ReviewController {
 
     res.status(200).json(review);
   };
+
+  // 리뷰 삭제
+  delete = async (req: Request, res: Response) => {
+    if (!req.user) {
+      throw new UnauthorizedError('로그인이 필요합니다.');
+    }
+
+    const userId = req.user.id;
+    const { reviewId } = req.params;
+
+    // 서비스 로직 실행
+    await this.reviewService.deleteReview(userId, reviewId);
+
+    // 200 OK 응답
+    res.status(204).json();
+  };
 }
