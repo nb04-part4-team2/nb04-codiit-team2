@@ -24,8 +24,8 @@ export type ProductIdParam = z.infer<typeof productIdSchema>;
 // query
 export const offsetSchema = z
   .object({
-    page: z.string().min(1).max(100).default('1'),
-    pageSize: z.string().min(100).max(100).default('100'),
+    page: z.coerce.number().min(1).max(100).default(1),
+    pageSize: z.coerce.number().min(100).max(100).default(100),
     status: z.enum(['WaitingAnswer', 'CompletedAnswer']),
   })
   .partial()

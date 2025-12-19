@@ -103,16 +103,9 @@ export class InquiryService {
 
   // 모든 문의 조회 (사용자 본인의 문의)
   public getAllInquiries = async (query: OffsetQuery, userId: string) => {
-    const { page = '1', pageSize = '100', status } = query;
-
-    // page와 pageSize 타입이 원래 number 여야 하는데 validate 미들웨어에서 query를 number로 넘기면 에러가 나서
-    // 어쩔수 없이 page와 pageSize를 string으로 보내고, 서비스에서 string에서 number로 바꿔야 했습니다.
-    // 이거 해결하는 방법 아시는 분 알려주시면 감사하겠습니다.
-    const pageInt = parseInt(page, 10) || 1;
-    const pageSizeInt = parseInt(pageSize, 10) || 100;
-
-    const take = pageSizeInt;
-    const skip = (pageInt - 1) * take;
+    const { page = 1, pageSize = 100, status } = query;
+    const take = pageSize;
+    const skip = (page - 1) * take;
 
     const countQuery: Prisma.InquiryCountArgs = {
       where: {

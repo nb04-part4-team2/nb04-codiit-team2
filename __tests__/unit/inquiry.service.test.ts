@@ -224,8 +224,8 @@ describe('InquiryService 유닛 테스트', () => {
     it('모든 문의 조회 성공', async () => {
       // --- 준비 (Arrange) ---
       const query = {
-        page: '1',
-        pageSize: '100',
+        page: 1,
+        pageSize: 100,
         status: InquiryStatus.WaitingAnswer,
       };
       inquiryRepository.getAllInquiries.mockResolvedValue(mockAllInquiries);
@@ -271,32 +271,6 @@ describe('InquiryService 유닛 테스트', () => {
 
       const getQuery = {
         where: { userId, status: query.status },
-        take: 100,
-        skip: 0,
-        orderBy: {
-          createdAt: 'desc',
-        },
-      };
-
-      // --- 검증 (Assert) ---
-      expect(inquiryRepository.getAllInquiries).toHaveBeenCalledTimes(1);
-      expect(inquiryRepository.getAllInquiries).toHaveBeenCalledWith(getQuery);
-    });
-
-    it('page와 pageSize가 숫자가 아닌 문자열일 경우 기본값이 적용된다', async () => {
-      // --- 준비 (Arrange) ---
-      const query = {
-        page: 'invalid',
-        pageSize: 'invalid',
-      };
-      inquiryRepository.countInquiries.mockResolvedValue(0);
-      inquiryRepository.getAllInquiries.mockResolvedValue([]);
-
-      // --- 실행 (Act) ---
-      await inquiryService.getAllInquiries(query, userId);
-
-      const getQuery = {
-        where: { userId },
         take: 100,
         skip: 0,
         orderBy: {
