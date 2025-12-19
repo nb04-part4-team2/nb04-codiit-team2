@@ -67,8 +67,6 @@ export class ProductController {
 
     await this.productService.deleteProduct(userId, productId);
 
-    res.status(200).json({
-      message: '상품이 정상적으로 삭제되었습니다.',
-    });
+    res.status(204).send();
   };
 }
