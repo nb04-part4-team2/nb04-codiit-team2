@@ -21,7 +21,7 @@ notificationRouter.get('/sse', authenticate, asyncHandler(notificationController
 
 // 알림 수정 (읽음 처리)
 notificationRouter.patch(
-  '/:id',
+  '/:id/check',
   authenticate,
   validate(idSchema, 'params'),
   asyncHandler(notificationController.updateNotification),
