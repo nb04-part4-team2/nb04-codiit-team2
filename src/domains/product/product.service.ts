@@ -7,7 +7,7 @@ import {
   UpdateProductDto,
 } from './product.dto.js';
 import { ProductMapper } from './product.mapper.js';
-import { NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
+import { NotFoundError, ForbiddenError, BadRequestError } from '@/common/utils/errors.js';
 
 export class ProductService {
   constructor(private productRepository: ProductRepository) {}
@@ -21,7 +21,7 @@ export class ProductService {
 
     // [방어 코드] 카테고리 데이터 타입 불일치 방지
     if (!data.categoryName || typeof data.categoryName !== 'string') {
-      throw new NotFoundError('유효하지 않은 카테고리 형식입니다.');
+      throw new BadRequestError('유효하지 않은 카테고리 형식입니다.');
     }
 
     const category = await this.productRepository.findCategoryByName(data.categoryName);
@@ -91,7 +91,7 @@ export class ProductService {
     if (data.categoryName) {
       // [방어 코드] 카테고리 타입 체크 (수정 시에도 유효)
       if (typeof data.categoryName !== 'string') {
-        throw new NotFoundError('유효하지 않은 카테고리 형식입니다.');
+        throw new BadRequestError('유효하지 않은 카테고리 형식입니다.');
       }
 
       const category = await this.productRepository.findCategoryByName(data.categoryName);
