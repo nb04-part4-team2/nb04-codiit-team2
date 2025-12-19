@@ -25,10 +25,9 @@ export type ProductIdParam = z.infer<typeof productIdSchema>;
 export const offsetSchema = z
   .object({
     page: z.coerce.number().min(1).max(100).default(1),
-    pageSize: z.coerce.number().min(100).max(100).default(100),
-    status: z.enum(['WaitingAnswer', 'CompletedAnswer']),
+    pageSize: z.coerce.number().min(1).max(100).default(100),
+    status: z.enum(['WaitingAnswer', 'CompletedAnswer']).optional(),
   })
-  .partial()
   .strict();
 
 export type OffsetQuery = z.infer<typeof offsetSchema>;

@@ -1,8 +1,8 @@
 import { jest } from '@jest/globals';
 import type { PrismaClient, Prisma, Notification } from '@prisma/client';
-import { InquiryRepository } from '../../src/domains/inquiry/inquiry.repository.js';
-import { InquiryService } from '../../src/domains/inquiry/inquiry.service.js';
-import { NotificationService } from '../../src/domains/notification/notification.service.js';
+import { InquiryRepository } from '@/domains/inquiry/inquiry.repository.js';
+import { InquiryService } from '@/domains/inquiry/inquiry.service.js';
+import { NotificationService } from '@/domains/notification/notification.service.js';
 import { InquiryStatus } from '@prisma/client';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import { inquiryId, replyId, productId, userId } from '../mocks/inquiry.mock.js';
@@ -18,8 +18,9 @@ import {
   mockFindReply,
 } from '../mocks/inquiry.mock.js';
 import { createNotificationMock } from '../mocks/notification.mock.js';
+import type { OffsetQuery } from '@/domains/inquiry/inquiry.dto.js';
 import type { TxMock } from '../helpers/test.type.js';
-import { sseManager } from '../../src/common/utils/sse.manager.js';
+import { sseManager } from '@/common/utils/sse.manager.js';
 
 // sse 타입 정의
 type SendMessageFn = (userId: string, message: Notification) => void;
@@ -267,7 +268,7 @@ describe('InquiryService 유닛 테스트', () => {
       inquiryRepository.getAllInquiries.mockResolvedValue([]);
 
       // --- 실행 (Act) ---
-      await inquiryService.getAllInquiries(query, userId);
+      await inquiryService.getAllInquiries(query as OffsetQuery, userId);
 
       const getQuery = {
         where: { userId, status: query.status },
