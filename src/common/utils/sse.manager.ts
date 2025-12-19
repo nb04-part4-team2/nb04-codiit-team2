@@ -21,7 +21,7 @@ export class SseManager {
   }
 
   // 메시지 전송
-  sendMessage(userId: string, message: Notification) {
+  sendMessage(userId: string, message: Partial<Notification>) {
     const client = this.clients.get(userId);
     if (client) {
       client.res.write(`data: ${JSON.stringify(message)}\n\n`);

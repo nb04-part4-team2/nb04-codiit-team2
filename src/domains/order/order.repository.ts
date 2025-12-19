@@ -401,6 +401,34 @@ export class OrderRepository {
       data: {
         quantity: { decrement: quantity },
       },
+      include: {
+        product: {
+          select: {
+            name: true,
+            store: {
+              select: {
+                userId: true,
+              },
+            },
+            cartItems: {
+              select: {
+                cart: {
+                  select: {
+                    buyerId: true,
+                  },
+                },
+                sizeId: true,
+              },
+            },
+          },
+        },
+        size: {
+          select: {
+            id: true,
+            ko: true,
+          },
+        },
+      },
     });
   }
   /**

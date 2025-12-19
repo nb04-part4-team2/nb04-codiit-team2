@@ -20,6 +20,19 @@ export class NotificationRepository {
     return notifications;
   };
 
+  // 알림 대량 생성
+  createBulkNotifications = async (
+    createData: Prisma.NotificationCreateManyInput[],
+    tx?: Prisma.TransactionClient,
+  ) => {
+    const prismaClient = tx ?? this.prisma;
+    const notifications = await prismaClient.notification.createMany({
+      data: createData,
+    });
+
+    return notifications;
+  };
+
   // 알림 생성
   createNotification = async (
     createData: Prisma.NotificationCreateInput,
