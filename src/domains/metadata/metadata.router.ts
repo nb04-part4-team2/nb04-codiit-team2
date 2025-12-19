@@ -1,9 +1,9 @@
 import { Router } from 'express';
-import { metadataController } from './metadata.container.js';
-import { authenticate } from '../../common/middlewares/auth.middleware.js';
+import { metadataController } from '@/domains/metadata/metadata.container.js';
+import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 
 const metadataRouter = Router();
 
-metadataRouter.get('/grade', authenticate, metadataController.getMembershipInfo);
+metadataRouter.get('/grade', asyncHandler(metadataController.getGrades));
 
 export default metadataRouter;
