@@ -13,9 +13,6 @@ export class CartService {
     if (!cart) {
       // 장바구니가 없으면 빈 배열 반환
       return [];
-    } else if (cart.items.length === 0) {
-      // 장바구니에 아이템이 없을 경우 404
-      throw new NotFoundError('장바구니에 아이템이 없습니다.');
     }
     return cart;
   }
