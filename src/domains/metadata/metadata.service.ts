@@ -1,4 +1,4 @@
-import { MetadataRepository } from '@/domains/metadata/metadata.repository.js';
+import { MetadataRepository } from './metadata.repository.js';
 
 export class MetadataService {
   constructor(private metadataRepository: MetadataRepository) {}

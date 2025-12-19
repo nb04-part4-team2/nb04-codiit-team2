@@ -1,5 +1,5 @@
 import { Request, Response } from 'express';
-import { MetadataService } from '@/domains/metadata/metadata.service.js';
+import { MetadataService } from './metadata.service.js';
 import { toGradeListDto } from './metadata.mapper.js';
 
 export class MetadataController {

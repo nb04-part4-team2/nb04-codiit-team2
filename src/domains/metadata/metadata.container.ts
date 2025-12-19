@@ -1,6 +1,6 @@
-import { MetadataController } from '@/domains/metadata/metadata.controller.js';
-import { MetadataRepository } from '@/domains/metadata/metadata.repository.js';
-import { MetadataService } from '@/domains/metadata/metadata.service.js';
+import { MetadataController } from './metadata.controller.js';
+import { MetadataRepository } from './metadata.repository.js';
+import { MetadataService } from './metadata.service.js';
 
 const metadataRepository = new MetadataRepository();
 
