@@ -7,6 +7,7 @@ import {
   UpdateOrderServiceInput,
 } from '@/domains/order/order.dto.js';
 import { OrderRepository } from '@/domains/order/order.repository.js';
+import type { NotificationService } from '@/domains/notification/notification.service.js';
 import { OrderStatus, PaymentStatus, PrismaClient } from '@prisma/client';
 import { CreateOrderItemInputWithPrice } from '@/domains/order/order.type.js';
 import {
@@ -16,10 +17,12 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from '@/common/utils/errors.js';
+import { sseManager } from '@/common/utils/sse.manager.js';
 
 export class OrderService {
   constructor(
     private orderRepository: OrderRepository,
+    private notificationService: NotificationService,
     private prisma: PrismaClient,
   ) {}
   private async validateOwner(userId: string, orderId: string) {
@@ -117,8 +120,11 @@ export class OrderService {
       { subtotal: 0, totalQuantity: 0, matchedOrderItems: [] as CreateOrderItemInputWithPrice[] },
     );
 
+    // 트랜잭션 외부로 전달할 알림용 전송 데이터 배열
+    const ssePayloads: { userId: string; content: string }[] = [];
+
     // 1. 주문 생성
-    const createdOrderId = await this.prisma.$transaction(async (tx) => {
+    const result = await this.prisma.$transaction(async (tx) => {
       // 1-1 . 주문 생성
       orderData = {
         userId,
@@ -170,18 +176,82 @@ export class OrderService {
           sizeId: orderItem.sizeId,
           quantity: orderItem.quantity,
         };
-        return await this.orderRepository.decreaseStock(stockData, tx);
+
+        const updatedStock = await this.orderRepository.decreaseStock(stockData, tx);
+
+        if (updatedStock.quantity === 0) {
+          // 1-5-1. 판매자 알림 생성
+          const productName = updatedStock.product.name;
+          const sellerId = updatedStock.product.store.userId;
+          const sizeName = updatedStock.size.ko;
+
+          const sellerNotificationMsg = `${productName}의 ${sizeName} 사이즈가 품절되었습니다.`;
+
+          await this.notificationService.createNotification(
+            {
+              userId: sellerId,
+              content: sellerNotificationMsg,
+            },
+            tx,
+          );
+
+          // ssePayloads 데이터 추가
+          ssePayloads.push({ userId: sellerId, content: sellerNotificationMsg });
+
+          // 1-5-2. 장바구니 유저들 알림 생성
+          // 특정 사이즈를 장바구니에 담은 유저들만 필터링하여 중복 제거 후 추출
+          const cartUserIds = [
+            ...new Set(
+              updatedStock.product.cartItems
+                .filter(
+                  (item) => item.sizeId === updatedStock.sizeId && item.cart.buyerId !== userId,
+                )
+                .map((item) => item.cart.buyerId),
+            ),
+          ];
+          const cartUserNotificationMsg = `장바구니에 담은 상품 ${productName} (${sizeName})이 품절되었습니다.`;
+
+          if (cartUserIds.length > 0) {
+            // DB 성능을 위해 createMany로 한 번에 저장
+            await this.notificationService.createBulkNotifications(
+              cartUserIds.map((uid) => ({
+                userId: uid,
+                content: cartUserNotificationMsg,
+              })),
+              tx,
+            );
+
+            cartUserIds.forEach((uid) => {
+              // ssePayloads 데이터 추가
+              ssePayloads.push({ userId: uid, content: cartUserNotificationMsg });
+            });
+          }
+        }
+
+        return updatedStock;
       });
       await Promise.all(stockUpdatePromises);
       // 장바구니 삭제는 따로 안하는 것 같음
       // 주문 성공 후 프론트쪽에서 /api/cart/{cartId} delete로 주문이 들어간 아이템들만 삭제 요청 보내는 것 확인
       // 유저의 장바구니가 생성되면 삭제하지 않고 주문할 때마다 주문한 아이템들만 삭제하는 방식인 것 같음
-      return order.id;
+
+      return { orderId: order.id, ssePayloads };
     });
-    const createdOrder = await this.orderRepository.findById(createdOrderId);
+
+    // 2. 최종 결과 조회
+    const createdOrder = await this.orderRepository.findById(result.orderId);
     if (!createdOrder) {
       throw new InternalServerError();
     }
+
+    // 3. SSE 알림 전송 (트랜잭션 성공 확인 후)
+    // 판매자 알림(객체)과 구매자 알림(배열)이 모두 포함된 배열을 순회
+    if (result.ssePayloads.length > 0) {
+      result.ssePayloads.forEach((payload) => {
+        sseManager.sendMessage(payload.userId, payload);
+      });
+    }
+
     return createdOrder;
   }
   async updateOrder({ orderId, userId, name, phone, address }: UpdateOrderServiceInput) {

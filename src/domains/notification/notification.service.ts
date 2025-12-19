@@ -21,6 +21,19 @@ export class NotificationService {
     return notifications;
   };
 
+  // 알림 대량 생성
+  createBulkNotifications = async (
+    notificationData: CreateNotificationBody[],
+    tx?: Prisma.TransactionClient,
+  ) => {
+    const notifications = await this.notificationRepository.createBulkNotifications(
+      notificationData,
+      tx,
+    );
+
+    return notifications;
+  };
+
   // 알림 생성
   createNotification = async (
     notificationData: CreateNotificationBody,
