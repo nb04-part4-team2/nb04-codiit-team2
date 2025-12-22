@@ -104,4 +104,26 @@ export class UserService {
 
     await this.userRepository.delete(userId);
   }
+
+  /**
+   * 주문 완료 후 누적 구매 금액에 따른 등급 업데이트
+   */
+  async updateGradeByPurchase(userId: string): Promise<void> {
+    // 1. 유저의 총 구매 금액 조회
+    const totalAmount = await this.userRepository.getTotalPurchaseAmount(userId);
+
+    // 2. 해당 금액에 맞는 등급 조회
+    const grade = await this.userRepository.findGradeByAmount(totalAmount);
+
+    if (!grade) {
+      return;
+    }
+
+    // 3. 유저의 현재 등급과 다르면 업데이트
+    const user = await this.userRepository.findById(userId);
+
+    if (user && user.gradeId !== grade.id) {
+      await this.userRepository.updateGrade(userId, grade.id);
+    }
+  }
 }

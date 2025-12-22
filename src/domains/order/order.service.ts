@@ -18,12 +18,14 @@ import {
   UnauthorizedError,
 } from '@/common/utils/errors.js';
 import { sseManager } from '@/common/utils/sse.manager.js';
+import { UserService } from '@/domains/user/user.service.js';
 
 export class OrderService {
   constructor(
     private orderRepository: OrderRepository,
     private notificationService: NotificationService,
     private prisma: PrismaClient,
+    private userService: UserService,
   ) {}
   private async validateOwner(userId: string, orderId: string) {
     const owner = await this.orderRepository.findOwnerById(orderId);
@@ -265,6 +267,8 @@ export class OrderService {
         sseManager.sendMessage(payload.userId, payload);
       });
     }
+
+    await this.userService.updateGradeByPurchase(userId);
 
     return createdOrder;
   }
