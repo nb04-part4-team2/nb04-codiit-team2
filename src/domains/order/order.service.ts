@@ -259,7 +259,8 @@ export class OrderService {
         console.error('포인트 적립 중 유저 등급 조회 실패');
         throw new InternalServerError();
       }
-      const earnedPoint = Math.floor(finalPaymentPrice * userGrade.rate);
+      const rawEarnedPoint = Math.floor(finalPaymentPrice * userGrade.rate);
+      const earnedPoint = rawEarnedPoint < 0 ? 0 : rawEarnedPoint;
       if (earnedPoint > 0) {
         await this.orderRepository.increasePoint({ userId, amount: earnedPoint }, tx);
         await this.orderRepository.createPointHistory(
@@ -290,6 +291,11 @@ export class OrderService {
     }
 
     // 4. 유저 등급 업데이트
+    // 포인트 적립은 사용한 포인트를 제외한 실제 결제 가격 기준으로 적립
+    // 등급은 총 결제 가격(실제 결제 가격 + 사용한 포인트)을 기준으로 업데이트
+    // 기준 통일 논의 필요
+
+    // + 트랜잭션 내부로 추가?
     await this.userService.updateGradeByPurchase(userId);
 
     return createdOrder;
@@ -354,6 +360,15 @@ export class OrderService {
       );
       if (earnedHistory) {
         const earnedAmount = earnedHistory.amount;
+        const userInfo = await this.orderRepository.findUserInfo(userId);
+        if (!userInfo) {
+          throw new InternalServerError('유저 정보를 찾을 수 없습니다.');
+        }
+        if (userInfo.point < earnedAmount) {
+          throw new BadRequestError(
+            '보유 포인트가 적립됐던 포인트보다 적어 주문 취소를 진행할 수 없습니다.',
+          );
+        }
         // 2-4-1. 포인트 차감 (회수)
         await this.orderRepository.decreasePoint({ userId, amount: earnedAmount }, tx);
         // 2-4-2. 적립 취소 히스토리 생성
