@@ -44,7 +44,7 @@ export interface CreateProductData {
   discountRate: number;
   discountStartTime: Date | null;
   discountEndTime: Date | null;
-  categoryId: string;
+  categoryName: string;
   stocks: {
     sizeId: number;
     quantity: number;
@@ -60,7 +60,7 @@ export interface UpdateProductData {
   discountRate?: number;
   discountStartTime?: Date | null;
   discountEndTime?: Date | null;
-  categoryId?: string;
+  categoryName?: string;
   isSoldOut?: boolean;
   stocks: {
     sizeId: number;
@@ -118,13 +118,13 @@ export class ProductRepository {
 
   // 상품 생성
   async create(storeId: string, data: CreateProductData): Promise<ProductWithRelations> {
-    const { stocks, categoryId, ...productData } = data;
+    const { stocks, categoryName, ...productData } = data;
 
     return this.prisma.product.create({
       data: {
         ...productData,
         store: { connect: { id: storeId } },
-        category: { connect: { id: categoryId } },
+        category: { connect: { name: categoryName } },
         stocks: {
           create: stocks.map((stock) => ({
             size: { connect: { id: stock.sizeId } },
@@ -257,16 +257,14 @@ export class ProductRepository {
   }
 
   async update(id: string, data: UpdateProductData): Promise<ProductDetailWithRelations> {
-    const { stocks, categoryId, ...productData } = data;
+    const { stocks, categoryName, ...productData } = data;
 
     return this.prisma.product.update({
       where: { id },
       data: {
         ...productData,
-        // 카테고리 업데이트 (값이 있는 경우에만 연결)
-        ...(categoryId && { category: { connect: { id: categoryId } } }),
+        ...(categoryName && { category: { connect: { name: categoryName } } }),
 
-        // 재고 업데이트 로직: 기존 재고를 모두 삭제하고 요청받은 재고로 새로 생성
         stocks: {
           deleteMany: {},
           create: stocks.map((stock) => ({
@@ -275,7 +273,6 @@ export class ProductRepository {
           })),
         },
       },
-      // 응답 포맷 맞추기 위해 include 옵션 사용 (findById와 동일)
       include: {
         stocks: { include: { size: true } },
         store: { select: { id: true, name: true } },
@@ -290,9 +287,7 @@ export class ProductRepository {
             },
           },
         },
-        reviews: {
-          orderBy: { createdAt: 'desc' },
-        },
+        reviews: { orderBy: { createdAt: 'desc' } },
       },
     });
   }
