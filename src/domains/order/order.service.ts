@@ -259,14 +259,14 @@ export class OrderService {
         console.error('포인트 적립 중 유저 등급 조회 실패');
         throw new InternalServerError();
       }
-      const earndPoint = Math.floor(finalPaymentPrice * userGrade.rate);
-      if (earndPoint > 0) {
-        await this.orderRepository.increasePoint({ userId, amount: earndPoint }, tx);
+      const earnedPoint = Math.floor(finalPaymentPrice * userGrade.rate);
+      if (earnedPoint > 0) {
+        await this.orderRepository.increasePoint({ userId, amount: earnedPoint }, tx);
         await this.orderRepository.createPointHistory(
           {
             userId,
             orderId: order.id,
-            amount: earndPoint,
+            amount: earnedPoint,
             type: PointHistoryType.EARN,
           },
           tx,
