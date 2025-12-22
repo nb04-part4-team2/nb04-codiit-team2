@@ -253,8 +253,9 @@ export class OrderRepository {
    * 유저 포인트, 등급 조회
    **/
   // 등급 부분에 유니크 키가 없어 유저 쪽에서 연관 조회
-  async findUserInfo(userId: string) {
-    return await this.prisma.user.findUnique({
+  async findUserInfo(userId: string, tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    return await db.user.findUnique({
       where: {
         id: userId,
       },
@@ -400,6 +401,9 @@ export class OrderRepository {
         userId,
         orderId,
         type,
+      },
+      orderBy: {
+        createdAt: 'desc',
       },
     });
   }

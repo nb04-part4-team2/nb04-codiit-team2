@@ -360,7 +360,7 @@ export class OrderService {
       );
       if (earnedHistory) {
         const earnedAmount = earnedHistory.amount;
-        const userInfo = await this.orderRepository.findUserInfo(userId);
+        const userInfo = await this.orderRepository.findUserInfo(userId, tx);
         if (!userInfo) {
           throw new InternalServerError('유저 정보를 찾을 수 없습니다.');
         }
