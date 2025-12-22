@@ -62,14 +62,12 @@ export class UserRepository {
 
   // 등급 관련 메서드
 
-  // 유저의 총 주문 금액 계산
+  // 유저의 총 주문 금액 계산 (결제 완료된 주문만)
   async getTotalPurchaseAmount(userId: string): Promise<number> {
     const result = await prisma.order.aggregate({
       where: {
         buyerId: userId,
-        status: {
-          not: 'Cancelled',
-        },
+        status: 'CompletedPayment',
       },
       _sum: {
         subtotal: true,
