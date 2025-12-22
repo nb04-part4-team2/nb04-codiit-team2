@@ -35,6 +35,13 @@ enum OrderStatus {
   Delivered
 }
 
+enum PointHistoryType {
+  USE     // 사용
+  RESTORE // 복구
+  EARN    // 적립
+  REFUND  // 환불
+}
+
 // --------------------------------------
 // Lookup table (시딩용 객체)
 // --------------------------------------
