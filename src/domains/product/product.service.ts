@@ -28,10 +28,13 @@ export class ProductService {
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
 
-    // [방어 코드] 카테고리 데이터 타입 확인
-    if (!data.categoryName || typeof data.categoryName !== 'string') {
-      throw new BadRequestError('유효하지 않은 카테고리 형식입니다.');
+    // 카테고리 존재 여부 명시적 확인
+    // 이유: Prisma의 모호한 에러 대신 "카테고리가 없습니다"라는 명확한 404 에러를 반환하기 위함
+    const category = await this.productRepository.findCategoryByName(data.categoryName);
+    if (!category) {
+      throw new NotFoundError('카테고리가 없습니다.');
     }
+
     // 재고 사이즈 중복 검증
     this.validateDuplicateStocks(data.stocks);
 
@@ -51,14 +54,18 @@ export class ProductService {
       stocks: data.stocks,
     };
 
+    // 상품 생성
     const createdProduct = await this.productRepository.create(store.id, productDataForDb);
 
-    const productWithDetails = {
-      ...createdProduct,
-      inquiries: [],
-      reviews: [],
-    };
-    return ProductMapper.toDetailResponse(productWithDetails);
+    // 생성 후 전체 정보 재조회
+    // 이유: createdProduct는 inquiries, reviews가 없는 상태이므로, 타입 불일치 방지 및 완전한 응답을 위해 재조회
+    const productWithFullDetails = await this.productRepository.findById(createdProduct.id);
+
+    if (!productWithFullDetails) {
+      throw new NotFoundError('상품 생성 후 조회에 실패했습니다.');
+    }
+
+    return ProductMapper.toDetailResponse(productWithFullDetails);
   }
   // 상품 목록 조회
   async getProducts(query: ProductListQueryDto): Promise<ProductListResponse> {
@@ -92,12 +99,18 @@ export class ProductService {
       throw new ForbiddenError('상품 수정 권한이 없습니다.');
     }
 
-    // 카테고리 조회 로직 제거 및 바로 할당
-    if (data.categoryName && typeof data.categoryName !== 'string') {
-      throw new BadRequestError('유효하지 않은 카테고리 형식입니다.');
+    // 카테고리 변경 시 존재 여부 확인 로직 추가
+    if (data.categoryName) {
+      if (typeof data.categoryName !== 'string') {
+        throw new BadRequestError('유효하지 않은 카테고리 형식입니다.');
+      }
+      const category = await this.productRepository.findCategoryByName(data.categoryName);
+      if (!category) {
+        throw new NotFoundError('카테고리가 없습니다.');
+      }
     }
 
-    // 재고가 포함된 요청이라면 중복 검증
+    // 재고 중복 검증
     if (data.stocks) {
       this.validateDuplicateStocks(data.stocks);
     }
