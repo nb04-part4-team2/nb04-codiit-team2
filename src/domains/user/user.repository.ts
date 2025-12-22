@@ -59,4 +59,43 @@ export class UserRepository {
       where: { id },
     });
   }
+
+  // 등급 관련 메서드
+
+  // 유저의 총 주문 금액 계산 (결제 완료된 주문만)
+  async getTotalPurchaseAmount(userId: string): Promise<number> {
+    const result = await prisma.order.aggregate({
+      where: {
+        buyerId: userId,
+        status: 'CompletedPayment',
+      },
+      _sum: {
+        subtotal: true,
+      },
+    });
+    return result._sum.subtotal ?? 0;
+  }
+
+  // 누적 금액에 맞는 등급 조회
+  async findGradeByAmount(amount: number) {
+    return prisma.grade.findFirst({
+      where: {
+        minAmount: {
+          lte: amount,
+        },
+      },
+      orderBy: {
+        minAmount: 'desc',
+      },
+    });
+  }
+
+  // 유저 등급 업데이트
+  async updateGrade(userId: string, gradeId: string) {
+    return prisma.user.update({
+      where: { id: userId },
+      data: { gradeId },
+      include: { grade: true },
+    });
+  }
 }
