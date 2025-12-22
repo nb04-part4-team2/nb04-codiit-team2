@@ -249,15 +249,21 @@ export class OrderRepository {
   }
   // 다른 도메인 쿼리들
   /**
-   * 유저 포인트 조회
+   * 유저 포인트, 등급 조회
    **/
-  async findUserPoint(userId: string) {
+  // 등급 부분에 유니크 키가 없어 유저 쪽에서 연관 조회
+  async findUserInfo(userId: string) {
     return await this.prisma.user.findUnique({
       where: {
         id: userId,
       },
       select: {
         point: true,
+        grade: {
+          select: {
+            rate: true,
+          },
+        },
       },
     });
   }
@@ -336,63 +342,46 @@ export class OrderRepository {
   /**
    * 포인트 증가
    **/
-  async increasePoint({ userId, usePoint }: UpdatePointRepoInput, tx?: Prisma.TransactionClient) {
+  async increasePoint({ userId, amount }: UpdatePointRepoInput, tx?: Prisma.TransactionClient) {
     const db = tx ?? this.prisma;
     return await db.user.update({
       where: {
         id: userId,
       },
       data: {
-        point: { increment: usePoint },
+        point: { increment: amount },
       },
     });
   }
   /**
    * 포인트 차감
    **/
-  async decreasePoint({ userId, usePoint }: UpdatePointRepoInput, tx?: Prisma.TransactionClient) {
+  async decreasePoint({ userId, amount }: UpdatePointRepoInput, tx?: Prisma.TransactionClient) {
     const db = tx ?? this.prisma;
     return await db.user.update({
       where: {
         id: userId,
-        point: { gte: usePoint }, // 방어적 코드 - 현재 포인트가 사용할 포인트보다 많을 때만
+        point: { gte: amount }, // 방어적 코드 - 현재 포인트가 사용할 포인트보다 많을 때만
       },
       data: {
-        point: { decrement: usePoint },
+        point: { decrement: amount },
       },
     });
   }
   /**
-   * 포인트 복구 히스토리 생성
+   * 포인트 히스토리 생성
    **/
-  async createRestorePointHistory(
-    { userId, orderId, usePoint }: CreatePointHistoryRepoInput,
+  async createPointHistory(
+    { userId, orderId, amount, type }: CreatePointHistoryRepoInput,
     tx?: Prisma.TransactionClient,
   ) {
     const db = tx ?? this.prisma;
     return await db.pointHistory.create({
       data: {
-        userId: userId,
-        orderId: orderId,
-        amount: usePoint,
-        type: 'restore', // 이부분은 따로 enum타입 같은게 없어서 논의 해봐야 할 것 같습니다.
-      },
-    });
-  }
-  /**
-   * 포인트 사용 히스토리 생성
-   **/
-  async createUsePointHistory(
-    { userId, orderId, usePoint }: CreatePointHistoryRepoInput,
-    tx?: Prisma.TransactionClient,
-  ) {
-    const db = tx ?? this.prisma;
-    return await db.pointHistory.create({
-      data: {
-        userId: userId,
-        orderId: orderId,
-        amount: usePoint,
-        type: 'use', // 이부분은 따로 enum타입 같은게 없어서 논의 해봐야 할 것 같습니다.
+        userId,
+        orderId,
+        amount,
+        type, // 이부분은 따로 enum타입 같은게 없어서 논의 해봐야 할 것 같습니다.
       },
     });
   }

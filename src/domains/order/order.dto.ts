@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentStatus } from '@prisma/client';
+import { OrderStatus, PaymentStatus, PointHistoryType } from '@prisma/client';
 import {
   CreateOrderBody,
   CreateOrderItemBody,
@@ -15,7 +15,9 @@ import {
   PaymentResponse,
 } from '@/domains/order/order.type.js';
 
+// ============================================
 // Repo input
+// ============================================
 // order 오리지널
 // 주문 개수 조회 repo input dto
 export interface GetCountRepoInput {
@@ -52,16 +54,19 @@ export interface CreatePaymentRepoInput {
 // 유저(포인트용) repo input dto
 export interface UpdatePointRepoInput {
   userId: string;
-  usePoint: number;
+  amount: number;
 }
 // 포인트 히스토리 repo input dto
 export interface CreatePointHistoryRepoInput extends UpdatePointRepoInput {
   orderId: string;
+  type: PointHistoryType; // 추후 enum 논의
 }
 // 재고 repo input dto
 export type UpdateStockRepoInput = CreateOrderItemBody;
 
+// ============================================
 // repo output
+// ============================================
 // 주문 조회 repo output dto
 export interface GetOrderRawData extends OrderBase<Date> {
   buyerId: string;
@@ -78,7 +83,9 @@ export interface CreateOrderRawData extends OrderBase<Date> {
   buyerId: string;
 }
 
+// ============================================
 // service input
+// ============================================
 // 주문 생성 service input dto
 export interface CreateOrderServiceInput extends CreateOrderBody {
   userId: string;
@@ -93,7 +100,9 @@ export interface GetOrdersServiceInput extends OrderQuery {
   userId: string;
 }
 
+// ============================================
 // controller response (매퍼에서 사용)
+// ============================================
 // 주문 조회 response
 export interface GetOrderResponseData extends OrderBase<string> {
   orderItems: GetOrderItemResponseData[];
