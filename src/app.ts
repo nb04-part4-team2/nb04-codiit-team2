@@ -1,8 +1,9 @@
-import express from 'express';
+import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
-import morgan from 'morgan';
+import { pinoHttp } from 'pino-http';
 import cookieParser from 'cookie-parser';
+import { logger } from '@/config/logger.js';
 import { prismaErrorHandler } from '@/common/middlewares/errorHandlers/prismaErrorHandler.js';
 import { zodErrorHandler } from '@/common/middlewares/errorHandlers/zodErrorHandler.js';
 import { catchAllErrorHandler } from '@/common/middlewares/errorHandlers/catchAllErrorHandler.js';
@@ -29,9 +30,22 @@ const app = express();
 // 보안 미들웨어
 app.use(helmet());
 
-// HTTP 요청 로깅
-// 개발: 상세 로그 (dev), 운영: 간결 로그 (combined)
-app.use(morgan(env.NODE_ENV === 'production' ? 'combined' : 'dev'));
+// HTTP 요청 로깅 (Pino)
+app.use(
+  pinoHttp({
+    logger,
+    // 로그 레벨 커스터마이징
+    customLogLevel: (req: Request, res: Response, err?: Error) => {
+      if (res.statusCode >= 500 || err) return 'error';
+      if (res.statusCode >= 400) return 'warn';
+      return 'info';
+    },
+    // Health check 요청은 로그 생략 (불필요한 로그 방지)
+    autoLogging: {
+      ignore: (req: Request) => req.url === '/api/health',
+    },
+  }),
+);
 
 // 기본 미들웨어
 app.use(
@@ -44,8 +58,13 @@ app.use(express.json());
 app.use(cookieParser());
 
 // Health check
-app.get('/health', (req, res) => {
-  res.status(200).json({ status: 'ok', timestamp: new Date().toISOString() });
+app.get('/api/health', (req: Request, res: Response) => {
+  res.status(200).json({
+    status: 'ok',
+    timestamp: new Date().toISOString(),
+    uptime: process.uptime(),
+    environment: env.NODE_ENV,
+  });
 });
 
 // 라우터 등록
@@ -63,7 +82,7 @@ app.use('/api/metadata', metadataRouter);
 app.use('/api/s3', s3Router);
 
 // 404 핸들러
-app.use((req, res) => {
+app.use((req: Request, res: Response) => {
   res.status(404).json({ message: 'Not Found' });
 });
 
