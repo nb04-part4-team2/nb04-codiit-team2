@@ -1,6 +1,6 @@
 import { SizeRawData, SizeResponse } from '@/domains/cart/cart.type.js';
 import { CreateOrderItemBody } from '@/domains/order/order.schema.js';
-import { PaymentStatus } from '@prisma/client';
+import { PaymentStatus, PointHistoryType } from '@prisma/client';
 
 // 타입 베이스들
 // 주문 베이스
@@ -51,6 +51,11 @@ interface GetOrderItemBase<TProduct, TSize> extends OrderItemBase {
 export interface MetaBase {
   page: number;
   limit: number;
+}
+// 포인트 히스토리 베이스
+export interface PointHistoryBase {
+  orderId: string;
+  type: PointHistoryType;
 }
 
 // db 조회 결과 RawData들

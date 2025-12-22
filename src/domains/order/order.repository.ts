@@ -9,6 +9,7 @@ import {
   GetOrderRawData,
   GetOrdersRawData,
   GetOrdersRepoInput,
+  GetPointHistoryRepoInput,
   UpdateOrderRepoInput,
   UpdatePointRepoInput,
   UpdateStockRepoInput,
@@ -382,6 +383,23 @@ export class OrderRepository {
         orderId,
         amount,
         type, // 이부분은 따로 enum타입 같은게 없어서 논의 해봐야 할 것 같습니다.
+      },
+    });
+  }
+  /**
+   * 포인트 히스토리 조회
+   **/
+  // 어차피 한 주문에 적립은 한 개 뿐일 거라 unique 없이 first로 조회
+  async findPointHistory(
+    { orderId, userId, type }: GetPointHistoryRepoInput,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return await db.pointHistory.findFirst({
+      where: {
+        userId,
+        orderId,
+        type,
       },
     });
   }

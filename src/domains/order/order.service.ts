@@ -336,7 +336,7 @@ export class OrderService {
       }
       // await this.orderRepository.updatePaymentStatus(order.payments.id, PaymentStatus.Cancelled, tx);
       await this.orderRepository.deletePayment(order.payments.id, tx);
-      // 2-3. 포인트 환불
+      // 2-3. 사용한 포인트가 있다면 포인트 환불
       if (order.usePoint > 0) {
         const usePoint = order.usePoint;
         // 2-3-1. 포인트 환불
@@ -347,7 +347,27 @@ export class OrderService {
           tx,
         );
       }
-      // 2-4. 최종 주문 삭제 (추후 논리적 삭제로 상태만 변경하면 됨)
+      // 2-4 적립된 포인트 회수
+      const earnedHistory = await this.orderRepository.findPointHistory(
+        { orderId: order.id, userId, type: PointHistoryType.EARN },
+        tx,
+      );
+      if (earnedHistory) {
+        const earnedAmount = earnedHistory.amount;
+        // 2-4-1. 포인트 차감 (회수)
+        await this.orderRepository.decreasePoint({ userId, amount: earnedAmount }, tx);
+        // 2-4-2. 적립 취소 히스토리 생성
+        await this.orderRepository.createPointHistory(
+          {
+            userId,
+            orderId: order.id,
+            amount: earnedAmount,
+            type: PointHistoryType.EARN_CANCEL,
+          },
+          tx,
+        );
+      }
+      // 2-5. 최종 주문 삭제 (추후 논리적 삭제로 상태만 변경하면 됨)
       // await this.orderRepository.updateStatus(order.id, OrderStatus.Cancelled, tx);
       await this.orderRepository.deleteOrder(order.id, tx);
     });

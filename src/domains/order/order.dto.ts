@@ -1,4 +1,4 @@
-import { OrderStatus, PaymentStatus, PointHistoryType } from '@prisma/client';
+import { OrderStatus, PaymentStatus } from '@prisma/client';
 import {
   CreateOrderBody,
   CreateOrderItemBody,
@@ -13,6 +13,7 @@ import {
   OrderBase,
   PaymentRawData,
   PaymentResponse,
+  PointHistoryBase,
 } from '@/domains/order/order.type.js';
 
 // ============================================
@@ -56,10 +57,11 @@ export interface UpdatePointRepoInput {
   userId: string;
   amount: number;
 }
-// 포인트 히스토리 repo input dto
-export interface CreatePointHistoryRepoInput extends UpdatePointRepoInput {
-  orderId: string;
-  type: PointHistoryType; // 추후 enum 논의
+// 포인트 히스토리 생성 repo input dto
+export interface CreatePointHistoryRepoInput extends UpdatePointRepoInput, PointHistoryBase {}
+// 포인트 히스토리 조회 repo input dto
+export interface GetPointHistoryRepoInput extends PointHistoryBase {
+  userId: string;
 }
 // 재고 repo input dto
 export type UpdateStockRepoInput = CreateOrderItemBody;
