@@ -1,5 +1,6 @@
 import { Response } from 'express';
 import { Notification } from '@prisma/client';
+import { logger } from '@/config/logger.js';
 
 // 타입 정의
 interface SseClient {
@@ -26,6 +27,23 @@ export class SseManager {
     if (client) {
       client.res.write(`data: ${JSON.stringify(message)}\n\n`);
     }
+  }
+
+  // 모든 SSE 연결 종료 (Graceful Shutdown 지원)
+  closeAll() {
+    logger.info(`📡 Closing ${this.clients.size} SSE connections...`);
+
+    this.clients.forEach((client, userId) => {
+      try {
+        client.res.end();
+        logger.info(`  ✅ Closed SSE for user: ${userId}`);
+      } catch (error) {
+        logger.error({ error, userId }, '  ❌ Error closing SSE');
+      }
+    });
+
+    this.clients.clear();
+    logger.info('✅ All SSE connections closed');
   }
 
   // 디버깅용
