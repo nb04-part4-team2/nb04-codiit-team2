@@ -69,13 +69,12 @@ export class ProductMapper {
       rate3Length: 0,
       rate4Length: 0,
       rate5Length: 0,
-      sumScore: 0,
+      sumScore: product.reviewsRating ?? 0, // DB의 동기화된 값을 그대로 할당
     };
 
+    // 별점별 개수(분포도)는 DB에 없으므로 여전히 계산이 필요함
     if (product.reviews && product.reviews.length > 0) {
-      // product가 정확히 타이핑되면 review의 타입도 자동으로 추론됩니다.
       product.reviews.forEach((review) => {
-        stats.sumScore += review.rating;
         switch (review.rating) {
           case 1:
             stats.rate1Length++;
