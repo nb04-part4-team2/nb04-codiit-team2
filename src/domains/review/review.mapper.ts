@@ -1,29 +1,9 @@
-import { Review } from '@prisma/client';
 import { ReviewResponseDto, ReviewDetailResponseDto, ReviewListItemDto } from './review.dto.js';
-import { ReviewWithDetail } from './review.repository.js';
-
-// Prisma의 Include 결과 타입 정의
-type ReviewWithUser = Review & {
-  user: {
-    name: string;
-  };
-};
+import { ReviewWithDetail, ReviewWithUser } from './review.repository.js';
 
 export class ReviewMapper {
   // 단일 객체 변환 (리뷰 생성 시 사용)
-  static toResponse(review: Review): ReviewResponseDto {
-    return {
-      id: review.id,
-      userId: review.userId,
-      productId: review.productId,
-      rating: review.rating,
-      content: review.content,
-      createdAt: review.createdAt.toISOString(),
-    };
-  }
-
-  // 목록 아이템 변환 (리뷰 목록 조회 시 사용)
-  static toListItemResponse(review: ReviewWithUser): ReviewListItemDto {
+  static toResponse(review: ReviewWithUser): ReviewResponseDto {
     return {
       id: review.id,
       userId: review.userId,
@@ -34,9 +14,15 @@ export class ReviewMapper {
       updatedAt: review.updatedAt.toISOString(),
       orderItemId: review.orderItemId,
       user: {
+        // 이미 Repository의 타입에서 user.name이 필수이므로 직접 접근
         name: review.user.name,
       },
     };
+  }
+
+  // toListItemResponse에서도 동일하게 적용하거나 toResponse 재사용
+  static toListItemResponse(review: ReviewWithUser): ReviewListItemDto {
+    return this.toResponse(review);
   }
 
   // 상세 조회용 매퍼
@@ -50,7 +36,6 @@ export class ReviewMapper {
       },
       price: review.orderItem?.price ?? 0,
       quantity: review.orderItem?.quantity ?? 0,
-
       rating: review.rating,
       content: review.content,
       reviewer: review.user?.name ?? '알 수 없음',
