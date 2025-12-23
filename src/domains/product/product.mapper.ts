@@ -23,10 +23,8 @@ export class ProductMapper {
     const now = new Date();
     const isDiscountActive =
       product.discountRate > 0 &&
-      product.discountStartTime &&
-      product.discountEndTime &&
-      now >= product.discountStartTime &&
-      now <= product.discountEndTime;
+      (!product.discountStartTime || now >= product.discountStartTime) &&
+      (!product.discountEndTime || now <= product.discountEndTime);
 
     const discountPrice = isDiscountActive
       ? Math.floor(product.price * (1 - product.discountRate / 100))
@@ -57,10 +55,8 @@ export class ProductMapper {
     const now = new Date();
     const isDiscountActive =
       product.discountRate > 0 &&
-      product.discountStartTime &&
-      product.discountEndTime &&
-      now >= product.discountStartTime &&
-      now <= product.discountEndTime;
+      (!product.discountStartTime || now >= product.discountStartTime) &&
+      (!product.discountEndTime || now <= product.discountEndTime);
 
     const discountPrice = isDiscountActive
       ? Math.floor(product.price * (1 - product.discountRate / 100))
