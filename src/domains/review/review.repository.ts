@@ -1,11 +1,16 @@
 import { PrismaClient, Prisma } from '@prisma/client';
 import { CreateReviewDto } from './review.dto.js';
 
-// 상세 조회 시 사용할 include 옵션 정의
-const reviewDetailInclude = {
+// 생성 및 수정 후 반환할 기본 데이터 구조 정의 (프론트엔드 ReviewData 대응)
+const reviewBasicInclude = {
   user: {
     select: { name: true },
   },
+} satisfies Prisma.ReviewInclude;
+
+// 상세 조회 시 사용할 include 옵션 정의
+const reviewDetailInclude = {
+  ...reviewBasicInclude,
   product: {
     select: { name: true },
   },
@@ -49,16 +54,50 @@ export class ReviewRepository {
     });
   }
 
+  // 상품의 리뷰 평점과 개수를 재계산하여 Product 테이블에 반영
+  async syncProductStats(
+    productId: string,
+    tx: Prisma.TransactionClient = this.prisma,
+  ): Promise<void> {
+    // tx.review.aggregate로 호출 (트랜잭션 유지)
+    const stats = await tx.review.aggregate({
+      where: { productId },
+      _count: { id: true },
+      _avg: { rating: true },
+    });
+
+    const reviewsCount = stats._count.id;
+    const reviewsRating = stats._avg.rating ?? 0;
+
+    // tx.product.update로 호출 (트랜잭션 유지)
+    await tx.product.update({
+      where: { id: productId },
+      data: {
+        reviewsCount,
+        reviewsRating,
+      },
+    });
+  }
+
   // 리뷰 생성
   async create(userId: string, productId: string, data: CreateReviewDto) {
-    return this.prisma.review.create({
-      data: {
-        userId,
-        productId,
-        orderItemId: data.orderItemId,
-        rating: data.rating,
-        content: data.content,
-      },
+    return this.prisma.$transaction(async (tx) => {
+      // 리뷰 생성 (tx 사용)
+      const review = await tx.review.create({
+        data: {
+          userId,
+          productId,
+          orderItemId: data.orderItemId,
+          rating: data.rating,
+          content: data.content,
+        },
+        include: reviewBasicInclude,
+      });
+
+      // 통계 업데이트 (tx 전달) -> 실패 시 위 review.create도 롤백됨
+      await this.syncProductStats(productId, tx);
+
+      return review;
     });
   }
 
@@ -77,11 +116,7 @@ export class ReviewRepository {
       orderBy: { createdAt: 'desc' },
       skip,
       take,
-      include: {
-        user: {
-          select: { name: true }, // 유저 이름만 선택적으로 가져옴
-        },
-      },
+      include: reviewBasicInclude,
     });
   }
 
@@ -94,25 +129,34 @@ export class ReviewRepository {
 
   // 리뷰 수정
   async update(reviewId: string, data: Partial<Pick<CreateReviewDto, 'rating' | 'content'>>) {
-    const updateData: Prisma.ReviewUpdateInput = {};
+    return this.prisma.$transaction(async (tx) => {
+      // 리뷰 업데이트
+      const updatedReview = await tx.review.update({
+        where: { id: reviewId },
+        data,
+        include: reviewBasicInclude,
+      });
 
-    if (data.rating !== undefined) {
-      updateData.rating = data.rating;
-    }
-    if (data.content !== undefined) {
-      updateData.content = data.content;
-    }
+      // 통계 업데이트
+      await this.syncProductStats(updatedReview.productId, tx);
 
-    return this.prisma.review.update({
-      where: { id: reviewId },
-      data: updateData,
+      return updatedReview;
     });
   }
 
   // 리뷰 삭제
   async delete(reviewId: string) {
-    return this.prisma.review.delete({
-      where: { id: reviewId },
+    return this.prisma.$transaction(async (tx) => {
+      // 삭제할 리뷰의 productId를 알기 위해 먼저 조회하거나 delete의 리턴값을 활용
+      // delete는 삭제된 레코드를 반환하므로 바로 productId를 알 수 있음!
+      const deletedReview = await tx.review.delete({
+        where: { id: reviewId },
+      });
+
+      // 통계 업데이트
+      await this.syncProductStats(deletedReview.productId, tx);
+
+      return deletedReview;
     });
   }
 }

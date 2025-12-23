@@ -12,6 +12,11 @@ export interface ReviewResponseDto {
   rating: number;
   content: string;
   createdAt: string;
+  updatedAt: string;
+  orderItemId: string;
+  user: {
+    name: string;
+  };
 }
 
 // 리뷰 목록 조회 아이템용

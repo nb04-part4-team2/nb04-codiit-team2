@@ -11,7 +11,7 @@ type ReviewWithUser = Review & {
 
 export class ReviewMapper {
   // 단일 객체 변환 (리뷰 생성 시 사용)
-  static toResponse(review: Review): ReviewResponseDto {
+  static toResponse(review: ReviewWithUser): ReviewResponseDto {
     return {
       id: review.id,
       userId: review.userId,
@@ -19,6 +19,11 @@ export class ReviewMapper {
       rating: review.rating,
       content: review.content,
       createdAt: review.createdAt.toISOString(),
+      updatedAt: review.updatedAt.toISOString(),
+      orderItemId: review.orderItemId,
+      user: {
+        name: review.user.name,
+      },
     };
   }
 

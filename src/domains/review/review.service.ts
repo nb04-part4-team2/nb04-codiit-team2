@@ -43,8 +43,7 @@ export class ReviewService {
     }
 
     try {
-      // 리뷰 생성 (동시성 문제 해결 구간)
-      // DB의 Unique Constraint(orderItemId)가 중복을 막아줍니다.
+      // 레포지토리 안에서 트랜잭션으로 (생성 + 동기화)가 한 번에 처리됨
       const review = await this.reviewRepository.create(userId, productId, data);
       return ReviewMapper.toResponse(review);
     } catch (error) {
@@ -114,7 +113,6 @@ export class ReviewService {
 
     // DB 업데이트: data에 포함된 필드(rating 혹은 content)만 반영됨
     const updatedReview = await this.reviewRepository.update(reviewId, data);
-
     return ReviewMapper.toResponse(updatedReview);
   }
 
@@ -133,7 +131,6 @@ export class ReviewService {
 
     // 삭제 진행
     await this.reviewRepository.delete(reviewId);
-
     // 삭제된 리뷰의 ID 반환
     // 리뷰 삭제 시 사용자가 반환 값을 받지 않지만 확장성을 위해 작성(리뷰 평점 재계산, 관리자 기능 및 신고 기능, 알림 서비스)
     return { id: reviewId };
