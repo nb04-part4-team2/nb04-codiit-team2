@@ -34,9 +34,10 @@ export class DashboardService {
     private readonly dashboardMapper: DashboardMapper,
   ) {}
 
-  private calculateChangeRate(current: number, previous: number): number {
+  private calculateChangeRate(current: number, previous: number): number | null {
     if (previous === 0) {
-      return current > 0 ? 100 : 0; // Or handle as a special case, e.g., return null
+      if (current > 0) return null; // 이전 값이 0이고 현재 값이 0보다 크면, 성장률을 계산할 수 없으므로 null을 반환합니다.
+      return 0; // 이전 값과 현재 값이 모두 0이면, 변화가 없으므로 0을 반환합니다.
     }
     const rate = ((current - previous) / previous) * 100;
     return Math.round(rate);

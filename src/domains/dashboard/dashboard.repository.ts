@@ -82,24 +82,50 @@ export class DashboardRepository {
   }
 
   async getSalesByPriceRange() {
-    const result: { priceRange: string; totalSales: number }[] = await prisma.$queryRaw`
-        SELECT
-          CASE
-            WHEN T1.price <= 10000 THEN '1만원 이하'
-            WHEN T1.price > 10000 AND T1.price <= 30000 THEN '1만원 ~ 3만원'
-            WHEN T1.price > 30000 AND T1.price <= 50000 THEN '3만원 ~ 5만원'
-            WHEN T1.price > 50000 AND T1.price <= 100000 THEN '5만원 ~ 10만원'
-            ELSE '10만원 이상'
-          END as "priceRange",
-          SUM(CAST(T1.price AS BIGINT) * T1.quantity) as "totalSales"
-        FROM "order_items" AS T1
-        LEFT JOIN "orders" AS T2 ON T1."orderId" = T2.id
-        WHERE T2.status IN ('CompletedPayment', 'Delivered')
-        GROUP BY "priceRange"
-        ORDER BY MIN(T1.price)
-    `;
+    const orderItems = await prisma.orderItem.findMany({
+      where: {
+        order: {
+          status: {
+            in: COMPLETED_ORDER_STATUSES,
+          },
+        },
+      },
+      select: {
+        price: true,
+        quantity: true,
+      },
+    });
 
-    // Prisma's $queryRaw with BigInt returns BigInt, we need to convert it to Number.
-    return result.map((item) => ({ ...item, totalSales: Number(item.totalSales) }));
+    const priceRanges = {
+      '1만원 이하': { totalSales: 0, minPrice: 0 },
+      '1만원 ~ 3만원': { totalSales: 0, minPrice: 10001 },
+      '3만원 ~ 5만원': { totalSales: 0, minPrice: 30001 },
+      '5만원 ~ 10만원': { totalSales: 0, minPrice: 50001 },
+      '10만원 이상': { totalSales: 0, minPrice: 100001 },
+    };
+
+    for (const item of orderItems) {
+      const sale = item.price * item.quantity;
+      if (item.price <= 10000) {
+        priceRanges['1만원 이하'].totalSales += sale;
+      } else if (item.price <= 30000) {
+        priceRanges['1만원 ~ 3만원'].totalSales += sale;
+      } else if (item.price <= 50000) {
+        priceRanges['3만원 ~ 5만원'].totalSales += sale;
+      } else if (item.price <= 100000) {
+        priceRanges['5만원 ~ 10만원'].totalSales += sale;
+      } else {
+        priceRanges['10만원 이상'].totalSales += sale;
+      }
+    }
+
+    return Object.entries(priceRanges)
+      .map(([priceRange, data]) => ({
+        priceRange,
+        totalSales: data.totalSales,
+        minPrice: data.minPrice,
+      }))
+      .sort((a, b) => a.minPrice - b.minPrice)
+      .map(({ priceRange, totalSales }) => ({ priceRange, totalSales }));
   }
 }

@@ -4,8 +4,8 @@ export interface SalesSummary {
 }
 
 export interface SalesChangeRate {
-  totalOrders: number;
-  totalSales: number;
+  totalOrders: number | null;
+  totalSales: number | null;
 }
 
 export interface SalesPeriod {
