@@ -1,0 +1,82 @@
+# =====================
+# Dependencies
+# =====================
+node_modules
+npm-debug.log*
+
+# =====================
+# Git / CI
+# =====================
+.git
+.gitignore
+.github
+
+# =====================
+# Environment files
+# =====================
+.env
+.env.*
+
+# =====================
+# IDE / Editor
+# =====================
+.vscode
+.idea
+*.swp
+*.swo
+*~
+
+# =====================
+# OS
+# =====================
+.DS_Store
+Thumbs.db
+
+# =====================
+# Build outputs
+# (컨테이너 내부에서 빌드)
+# =====================
+dist
+
+# =====================
+# Logs
+# =====================
+logs
+*.log
+
+# =====================
+# Test
+# =====================
+coverage
+*.test.*
+*.spec.*
+__tests__
+**/__tests__
+
+# =====================
+# Documentation
+# =====================
+*.md
+docs
+
+# =====================
+# Docker (런타임 불필요)
+# =====================
+Dockerfile
+.dockerignore
+docker-compose*.yml
+
+# =====================
+# Lint / Format / Hooks
+# =====================
+.prettierrc
+.eslintrc.*
+eslint.config.*
+.commitlintrc.*
+.husky
+
+# =====================
+# Test / Tool configs
+# =====================
+jest.*
+babel.*
