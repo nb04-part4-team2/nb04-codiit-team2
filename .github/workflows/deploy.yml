@@ -1,0 +1,216 @@
+name: Deploy to AWS (Blue-Green)
+
+on:
+  workflow_dispatch:  # 수동 트리거 (테스트용)
+  workflow_run:
+    workflows: ["CI"]
+    types:
+      - completed
+    branches:
+      - main
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+
+jobs:
+  deploy:
+    if: |
+      github.event_name == 'workflow_dispatch' ||
+      github.event.workflow_run.conclusion == 'success'
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        run: |
+          echo "🔨 Building Docker image..."
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+                     $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "📤 Pushing to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "✅ Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      # ============================================
+      # 블루-그린 배포: 현재 활성 환경 자동 감지
+      # ============================================
+      - name: Detect current active environment
+        id: detect
+        run: |
+          echo "🔍 현재 운영 중인 환경 감지 중..."
+
+          # ALB Listener가 현재 어느 Target Group을 가리키는지 확인
+          CURRENT_TG_ARN=$(aws elbv2 describe-listeners \
+            --listener-arns ${{ secrets.ALB_LISTENER_ARN }} \
+            --query 'Listeners[0].DefaultActions[0].TargetGroupArn' \
+            --output text)
+
+          echo "Current Target Group: $CURRENT_TG_ARN"
+
+          # Blue/Green 판단 및 배포 타겟 결정
+          if [[ "$CURRENT_TG_ARN" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
+            # Blue 운영 중 → Green에 배포
+            echo "current_env=blue" >> $GITHUB_OUTPUT
+            echo "target_env=green" >> $GITHUB_OUTPUT
+            echo "target_host=${{ secrets.GREEN_EC2_HOST }}" >> $GITHUB_OUTPUT
+            echo "target_tg_arn=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+
+            echo "📘 현재: Blue 운영 중"
+            echo "📗 배포 타겟: Green"
+
+          elif [[ "$CURRENT_TG_ARN" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
+            # Green 운영 중 → Blue에 배포
+            echo "current_env=green" >> $GITHUB_OUTPUT
+            echo "target_env=blue" >> $GITHUB_OUTPUT
+            echo "target_host=${{ secrets.BLUE_EC2_HOST }}" >> $GITHUB_OUTPUT
+            echo "target_tg_arn=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+
+            echo "📗 현재: Green 운영 중"
+            echo "📘 배포 타겟: Blue"
+
+          else
+            echo "❌ Error: Unknown Target Group"
+            echo "Expected: ${{ secrets.BLUE_TARGET_GROUP_ARN }} or ${{ secrets.GREEN_TARGET_GROUP_ARN }}"
+            echo "Actual: $CURRENT_TG_ARN"
+            exit 1
+          fi
+
+          echo "✅ 배포 타겟 결정 완료"
+
+      # ============================================
+      # 배포: 감지된 타겟 환경에 배포 (동적)
+      # ============================================
+      - name: Deploy to ${{ steps.detect.outputs.target_env }} EC2
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ steps.detect.outputs.target_host }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "🚀 Starting deployment on ${{ steps.detect.outputs.target_env }} EC2..."
+
+            # ECR 로그인
+            aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+              docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
+
+            # 새 이미지 pull
+            echo "📥 Pulling new image..."
+            docker pull ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+            # 기존 컨테이너 Graceful Shutdown (30초 대기)
+            echo "🛑 Stopping old container (graceful shutdown)..."
+            docker stop --time 30 app || true
+            docker rm app || true
+
+            # 새 컨테이너 실행
+            echo "▶️  Starting new container..."
+            docker run -d \
+              --name app \
+              -p 3000:3000 \
+              --restart=always \
+              --env-file /home/ec2-user/.env \
+              ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+            # 마이그레이션 실행 (헬스체크 전)
+            echo "🔄 Running Prisma migrations..."
+            docker exec app npx prisma migrate deploy
+
+            if [ $? -ne 0 ]; then
+              echo "❌ Migration failed!"
+              echo "📋 Container logs:"
+              docker logs app --tail 50
+              echo "🧹 Cleaning up failed container..."
+              docker stop app
+              docker rm app
+              exit 1
+            fi
+            echo "✅ Migrations completed"
+
+            # 헬스체크 (재시도 로직)
+            echo "🏥 Health checking..."
+            for i in {1..12}; do
+              if curl -f http://localhost:3000/api/health; then
+                echo "✅ Health check passed! (attempt $i/12)"
+                echo "✅ ${{ steps.detect.outputs.target_env }} EC2 deployment successful!"
+                break
+              fi
+
+              if [ $i -eq 12 ]; then
+                echo "❌ Health check failed after 60 seconds"
+                echo "📋 Container logs:"
+                docker logs app --tail 50
+                exit 1
+              fi
+
+              echo "   ⏳ Retrying... ($i/12)"
+              sleep 5
+            done
+
+      # ============================================
+      # 트래픽 전환: ALB를 새 환경으로 전환
+      # ============================================
+      - name: Switch ALB to ${{ steps.detect.outputs.target_env }} Target Group
+        if: success()
+        run: |
+          echo "🔀 ALB 트래픽 전환 중..."
+          echo "   ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}"
+
+          aws elbv2 modify-listener \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --default-actions \
+              Type=forward,TargetGroupArn=${{ steps.detect.outputs.target_tg_arn }}
+
+          echo "✅ 트래픽 전환 완료!"
+          echo ""
+          echo "📊 배포 결과:"
+          echo "   • 이전 환경: ${{ steps.detect.outputs.current_env }} (롤백 대기 중)"
+          echo "   • 현재 환경: ${{ steps.detect.outputs.target_env }} (운영 중)"
+          echo "   • 이미지: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          echo ""
+          echo "🎉 블루-그린 배포 완료!"
+
+      # ============================================
+      # 정리: 사용하지 않는 Docker 이미지 삭제
+      # (트래픽 전환 후 실행 → 현재 운영 이미지 보호)
+      # ============================================
+      - name: Cleanup old Docker images on ${{ steps.detect.outputs.target_env }} EC2
+        if: success()
+        uses: appleboy/ssh-action@master
+        with:
+          host: ${{ steps.detect.outputs.target_host }}
+          username: ec2-user
+          key: ${{ secrets.EC2_SSH_KEY }}
+          script: |
+            echo "🧹 Cleaning up unused Docker images..."
+            docker image prune -af --filter "until=24h"
+            echo "✅ Cleanup completed"
+
+      # ============================================
+      # 롤백: 배포 실패 시 기존 환경 유지
+      # ============================================
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "❌ ${{ steps.detect.outputs.target_env }} 배포 실패!"
+          echo "💡 ${{ steps.detect.outputs.current_env }} 환경이 계속 운영 중입니다."
+          echo ""
+          echo "🔄 롤백 불필요 (ALB 전환 전 실패)"
+          echo "   → 사용자 트래픽은 ${{ steps.detect.outputs.current_env }}로 계속 유입됩니다."
