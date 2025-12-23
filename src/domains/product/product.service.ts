@@ -12,6 +12,15 @@ import { NotFoundError, ForbiddenError, BadRequestError } from '@/common/utils/e
 export class ProductService {
   constructor(private productRepository: ProductRepository) {}
 
+  // 재고 중복 검증 헬퍼 함수
+  private validateDuplicateStocks(stocks: { sizeId: number; quantity: number }[]) {
+    const sizeIds = stocks.map((s) => s.sizeId);
+    const uniqueSizeIds = new Set(sizeIds);
+    if (sizeIds.length !== uniqueSizeIds.size) {
+      throw new BadRequestError('중복된 사이즈 옵션이 존재합니다.');
+    }
+  }
+
   // 상품 등록
   async createProduct(userId: string, data: CreateProductDto): Promise<DetailProductResponse> {
     const store = await this.productRepository.findStoreByUserId(userId);
@@ -19,17 +28,17 @@ export class ProductService {
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
 
-    // [방어 코드] 카테고리 데이터 타입 불일치 방지
-    if (!data.categoryName || typeof data.categoryName !== 'string') {
-      throw new BadRequestError('유효하지 않은 카테고리 형식입니다.');
-    }
-
+    // 카테고리 존재 여부 명시적 확인
+    // 이유: Prisma의 모호한 에러 대신 "카테고리가 없습니다"라는 명확한 404 에러를 반환하기 위함
     const category = await this.productRepository.findCategoryByName(data.categoryName);
     if (!category) {
       throw new NotFoundError('카테고리가 없습니다.');
     }
 
-    // [방어 코드] 스키마(default 0)가 있지만 서비스 레벨에서 한 번 더 보장 (유지)
+    // 재고 사이즈 중복 검증
+    this.validateDuplicateStocks(data.stocks);
+
+    // 할인율 기본값 처리
     const validatedDiscountRate =
       data.discountRate !== undefined && data.discountRate !== null ? data.discountRate : 0;
 
@@ -41,20 +50,23 @@ export class ProductService {
       discountRate: validatedDiscountRate,
       discountStartTime: data.discountStartTime ? new Date(data.discountStartTime) : null,
       discountEndTime: data.discountEndTime ? new Date(data.discountEndTime) : null,
-      categoryId: category.id,
+      categoryName: data.categoryName,
       stocks: data.stocks,
     };
 
+    // 상품 생성
     const createdProduct = await this.productRepository.create(store.id, productDataForDb);
-    const productDetail = await this.productRepository.findById(createdProduct.id);
 
-    if (!productDetail) {
-      throw new Error('상품 생성 후 조회에 실패했습니다.');
+    // 생성 후 전체 정보 재조회
+    // 이유: createdProduct는 inquiries, reviews가 없는 상태이므로, 타입 불일치 방지 및 완전한 응답을 위해 재조회
+    const productWithFullDetails = await this.productRepository.findById(createdProduct.id);
+
+    if (!productWithFullDetails) {
+      throw new NotFoundError('상품 생성 후 조회에 실패했습니다.');
     }
 
-    return ProductMapper.toDetailResponse(productDetail);
+    return ProductMapper.toDetailResponse(productWithFullDetails);
   }
-
   // 상품 목록 조회
   async getProducts(query: ProductListQueryDto): Promise<ProductListResponse> {
     const { products, totalCount } = await this.productRepository.findAll(query);
@@ -87,18 +99,20 @@ export class ProductService {
       throw new ForbiddenError('상품 수정 권한이 없습니다.');
     }
 
-    let categoryId: string | undefined = undefined;
+    // 카테고리 변경 시 존재 여부 확인 로직 추가
     if (data.categoryName) {
-      // [방어 코드] 카테고리 타입 체크 (수정 시에도 유효)
       if (typeof data.categoryName !== 'string') {
         throw new BadRequestError('유효하지 않은 카테고리 형식입니다.');
       }
-
       const category = await this.productRepository.findCategoryByName(data.categoryName);
       if (!category) {
         throw new NotFoundError('카테고리가 없습니다.');
       }
-      categoryId = category.id;
+    }
+
+    // 재고 중복 검증
+    if (data.stocks) {
+      this.validateDuplicateStocks(data.stocks);
     }
 
     const discountStartTime =
@@ -114,16 +128,15 @@ export class ProductService {
           ? new Date(data.discountEndTime)
           : undefined;
 
-    // [수정] 불필요한 변수 선언 제거하고 data.discountRate 직접 사용
     const updatedProduct = await this.productRepository.update(productId, {
       name: data.name,
       price: data.price,
       content: data.content,
       image: data.image,
-      discountRate: data.discountRate, // undefined면 Prisma가 무시(기존 값 유지)
+      discountRate: data.discountRate,
       isSoldOut: data.isSoldOut,
       stocks: data.stocks,
-      categoryId,
+      categoryName: data.categoryName,
       discountStartTime,
       discountEndTime,
     });
