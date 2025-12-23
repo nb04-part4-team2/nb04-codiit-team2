@@ -22,26 +22,15 @@ export class ReviewMapper {
       updatedAt: review.updatedAt.toISOString(),
       orderItemId: review.orderItemId,
       user: {
-        name: review.user.name,
+        // user 객체나 name이 없을 경우를 대비한 방어적 처리
+        name: review.user?.name ?? '알 수 없는 사용자',
       },
     };
   }
 
-  // 목록 아이템 변환 (리뷰 목록 조회 시 사용)
+  // toListItemResponse에서도 동일하게 적용하거나 toResponse 재사용
   static toListItemResponse(review: ReviewWithUser): ReviewListItemDto {
-    return {
-      id: review.id,
-      userId: review.userId,
-      productId: review.productId,
-      rating: review.rating,
-      content: review.content,
-      createdAt: review.createdAt.toISOString(),
-      updatedAt: review.updatedAt.toISOString(),
-      orderItemId: review.orderItemId,
-      user: {
-        name: review.user.name,
-      },
-    };
+    return this.toResponse(review);
   }
 
   // 상세 조회용 매퍼
