@@ -8,6 +8,11 @@ const reviewBasicInclude = {
   },
 } satisfies Prisma.ReviewInclude;
 
+// 공통 타입 export
+export type ReviewWithUser = Prisma.ReviewGetPayload<{
+  include: typeof reviewBasicInclude;
+}>;
+
 // 상세 조회 시 사용할 include 옵션 정의
 const reviewDetailInclude = {
   ...reviewBasicInclude,
@@ -59,7 +64,6 @@ export class ReviewRepository {
     productId: string,
     tx: Prisma.TransactionClient = this.prisma,
   ): Promise<void> {
-    // tx.review.aggregate로 호출 (트랜잭션 유지)
     const stats = await tx.review.aggregate({
       where: { productId },
       _count: { id: true },
@@ -67,9 +71,10 @@ export class ReviewRepository {
     });
 
     const reviewsCount = stats._count.id;
-    const reviewsRating = stats._avg.rating ?? 0;
 
-    // tx.product.update로 호출 (트랜잭션 유지)
+    // 별점 소수점 처리 (데이터 정밀도 제어)
+    const reviewsRating = stats._avg.rating ? Number(stats._avg.rating.toFixed(1)) : 0;
+
     await tx.product.update({
       where: { id: productId },
       data: {

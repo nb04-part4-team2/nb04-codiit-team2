@@ -1,13 +1,5 @@
-import { Review } from '@prisma/client';
 import { ReviewResponseDto, ReviewDetailResponseDto, ReviewListItemDto } from './review.dto.js';
-import { ReviewWithDetail } from './review.repository.js';
-
-// Prisma의 Include 결과 타입 정의
-type ReviewWithUser = Review & {
-  user: {
-    name: string;
-  };
-};
+import { ReviewWithDetail, ReviewWithUser } from './review.repository.js';
 
 export class ReviewMapper {
   // 단일 객체 변환 (리뷰 생성 시 사용)
@@ -22,8 +14,8 @@ export class ReviewMapper {
       updatedAt: review.updatedAt.toISOString(),
       orderItemId: review.orderItemId,
       user: {
-        // user 객체나 name이 없을 경우를 대비한 방어적 처리
-        name: review.user?.name ?? '알 수 없는 사용자',
+        // 이미 Repository의 타입에서 user.name이 필수이므로 직접 접근
+        name: review.user.name,
       },
     };
   }
@@ -44,7 +36,6 @@ export class ReviewMapper {
       },
       price: review.orderItem?.price ?? 0,
       quantity: review.orderItem?.quantity ?? 0,
-
       rating: review.rating,
       content: review.content,
       reviewer: review.user?.name ?? '알 수 없음',
