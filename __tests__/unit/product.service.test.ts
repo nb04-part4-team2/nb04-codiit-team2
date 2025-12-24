@@ -156,6 +156,8 @@ describe('ProductService 유닛 테스트', () => {
         name: '수정된 이름',
       });
 
+      productRepository.findCategoryByName.mockResolvedValue({ id: 'category-id-1' });
+
       productRepository.findProductOwnership.mockResolvedValue(ownershipMock);
       productRepository.update.mockResolvedValue(updatedProduct);
 
@@ -164,6 +166,8 @@ describe('ProductService 유닛 테스트', () => {
 
       // Assert
       expect(productRepository.findProductOwnership).toHaveBeenCalledWith(productId);
+      // 카테고리 조회가 호출되었는지도 검증하면 좋습니다.
+      expect(productRepository.findCategoryByName).toHaveBeenCalledWith(input.categoryName);
       expect(productRepository.update).toHaveBeenCalled();
       expect(result.name).toBe('수정된 이름');
     });
