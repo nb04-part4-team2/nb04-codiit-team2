@@ -14,43 +14,40 @@ describe('ProductService 유닛 테스트', () => {
   let productService: ProductService;
   let productRepository: DeepMockProxy<ProductRepository>;
 
-  // 테스트에 사용할 공통 변수
   const userId = 'user-id-1';
   const otherUserId = 'user-id-2';
   const storeId = 'store-id-1';
   const productId = 'product-id-1';
 
   beforeEach(() => {
-    // Repository Mock 생성 및 의존성 주입
     productRepository = mockDeep<ProductRepository>();
     productService = new ProductService(productRepository);
   });
 
   afterEach(() => {
     jest.clearAllMocks();
+    jest.resetAllMocks();
   });
 
   // 상품 생성 테스트
   describe('createProduct', () => {
     it('상품 생성 성공', async () => {
-      // Arrange (준비)
+      // --- 준비 (Arrange) ---
       const input = createProductInputMock();
       const mockStore = { id: storeId };
-      // Category ID를 number에서 string으로 변경
-      const mockCategory = { id: 'category-id-1' };
+      const mockCategory = { id: 'category-cuid-1' };
       const createdProductSimple = createProductSimpleMock({ id: productId });
       const createdProductDetail = createProductDetailMock({ id: productId });
 
       productRepository.findStoreByUserId.mockResolvedValue(mockStore);
       productRepository.findCategoryByName.mockResolvedValue(mockCategory);
       productRepository.create.mockResolvedValue(createdProductSimple);
-      // 생성 후 상세 조회까지 성공해야 함
       productRepository.findById.mockResolvedValue(createdProductDetail);
 
-      // Act (실행)
+      // --- 실행 (Act) ---
       const result = await productService.createProduct(userId, input);
 
-      // Assert (검증)
+      // --- 검증 (Assert) ---
       expect(productRepository.findStoreByUserId).toHaveBeenCalledWith(userId);
       expect(productRepository.findCategoryByName).toHaveBeenCalledWith(input.categoryName);
       expect(productRepository.create).toHaveBeenCalledTimes(1);
@@ -77,13 +74,12 @@ describe('ProductService 유닛 테스트', () => {
 
     it('중복된 사이즈 재고가 있으면 BadRequestError 발생', async () => {
       productRepository.findStoreByUserId.mockResolvedValue({ id: storeId });
-      // Category ID 타입 일치 (string)
-      productRepository.findCategoryByName.mockResolvedValue({ id: 'category-id-1' });
+      productRepository.findCategoryByName.mockResolvedValue({ id: 'category-cuid-1' });
 
       const invalidInput = createProductInputMock({
         stocks: [
           { sizeId: 1, quantity: 10 },
-          { sizeId: 1, quantity: 5 }, // sizeId 1 중복
+          { sizeId: 1, quantity: 5 },
         ],
       });
 
@@ -120,14 +116,11 @@ describe('ProductService 유닛 테스트', () => {
         createProductDetailMock({ id: 'p2' }),
       ];
 
-      // Repository는 { products, totalCount } 형태를 반환
       productRepository.findAll.mockResolvedValue({
         products: mockList,
         totalCount: 2,
       });
 
-      // sort 필드 추가 (ProductListQueryDto 필수값 대응)
-      // Service의 getProducts가 호출될 때 Repository의 findAll이 호출되는지 확인
       const queryDto = { page: 1, pageSize: 10, sort: 'recent' as const };
 
       const result = await productService.getProducts(queryDto);
@@ -141,14 +134,14 @@ describe('ProductService 유닛 테스트', () => {
   // 상품 수정 테스트
   describe('updateProduct', () => {
     it('상품 수정 성공', async () => {
-      // Arrange
+      // --- 준비 (Arrange) ---
       const input = updateProductInputMock({ name: '수정된 이름' });
 
-      // 소유권 확인 Mock (내 스토어의 상품)
+      // 권한 확인을 위한 Mock 객체 (여기에는 userId가 포함되어야 함)
       const ownershipMock = {
         id: productId,
         storeId,
-        store: { id: storeId, userId: userId }, // 요청자와 소유자 일치
+        store: { id: storeId, userId: userId },
       };
 
       const updatedProduct = createProductDetailMock({
@@ -156,28 +149,25 @@ describe('ProductService 유닛 테스트', () => {
         name: '수정된 이름',
       });
 
-      productRepository.findCategoryByName.mockResolvedValue({ id: 'category-id-1' });
-
+      productRepository.findCategoryByName.mockResolvedValue({ id: 'category-cuid-1' });
       productRepository.findProductOwnership.mockResolvedValue(ownershipMock);
       productRepository.update.mockResolvedValue(updatedProduct);
 
-      // Act
+      // --- 실행 (Act) ---
       const result = await productService.updateProduct(userId, productId, input);
 
-      // Assert
+      // --- 검증 (Assert) ---
       expect(productRepository.findProductOwnership).toHaveBeenCalledWith(productId);
-      // 카테고리 조회가 호출되었는지도 검증하면 좋습니다.
       expect(productRepository.findCategoryByName).toHaveBeenCalledWith(input.categoryName);
       expect(productRepository.update).toHaveBeenCalled();
       expect(result.name).toBe('수정된 이름');
     });
 
     it('본인 스토어 상품이 아니면 ForbiddenError 발생', async () => {
-      // 소유권 확인 Mock (다른 사람의 스토어)
       const ownershipMock = {
         id: productId,
         storeId,
-        store: { id: storeId, userId: otherUserId }, // 요청자와 소유자 불일치
+        store: { id: storeId, userId: otherUserId },
       };
       productRepository.findProductOwnership.mockResolvedValue(ownershipMock);
 
@@ -201,8 +191,6 @@ describe('ProductService 유닛 테스트', () => {
         store: { id: storeId, userId: userId },
       };
       productRepository.findProductOwnership.mockResolvedValue(ownershipMock);
-
-      // 카테고리 조회 시 null 반환
       productRepository.findCategoryByName.mockResolvedValue(null);
 
       const inputWithInvalidCategory = updateProductInputMock({
@@ -218,7 +206,7 @@ describe('ProductService 유닛 테스트', () => {
   // 상품 삭제 테스트
   describe('deleteProduct', () => {
     it('상품 삭제 성공', async () => {
-      // Arrange
+      // --- 준비 (Arrange) ---
       const ownershipMock = {
         id: productId,
         storeId,
@@ -226,10 +214,10 @@ describe('ProductService 유닛 테스트', () => {
       };
       productRepository.findProductOwnership.mockResolvedValue(ownershipMock);
 
-      // Act
+      // --- 실행 (Act) ---
       await productService.deleteProduct(userId, productId);
 
-      // Assert
+      // --- 검증 (Assert) ---
       expect(productRepository.delete).toHaveBeenCalledWith(productId);
     });
 

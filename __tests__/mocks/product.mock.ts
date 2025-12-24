@@ -6,16 +6,16 @@ import { CreateProductDto, UpdateProductDto } from '@/domains/product/product.dt
 
 /**
  * Product Repository 조회 결과 (Detail) Mock
- * - Prisma 조회 결과인 ProductDetailWithRelations 타입을 흉내냅니다.
- * - as unknown as 구문을 사용하여 타입 에러를 방지합니다.
+ * - Prisma 조회 결과인 ProductDetailWithRelations 타입에 맞춰 필수 필드를 정의합니다.
+ * - deletedAt, store.userId 등 타입 정의에 없는 필드는 제외했습니다.
  */
 export const createProductDetailMock = (
   overrides: Partial<ProductDetailWithRelations> = {},
 ): ProductDetailWithRelations => {
-  const defaultProduct = {
+  const defaultProduct: ProductDetailWithRelations = {
     id: 'product-id-1',
     storeId: 'store-id-1',
-    categoryId: 1, // 프로젝트 설정에 따라 number 또는 string
+    categoryId: 'category-cuid-1',
     name: '테스트 상품',
     price: 10000,
     content: '테스트 상품 설명',
@@ -29,9 +29,11 @@ export const createProductDetailMock = (
     isSoldOut: false,
     createdAt: new Date(),
     updatedAt: new Date(),
-    deletedAt: null,
-    store: { id: 'store-id-1', name: '테스트 스토어', userId: 'user-id-1' }, // userId 추가 (권한 검증용)
-    category: { id: 1, name: 'TOP' },
+    // [수정] deletedAt 제거 (타입 에러 해결)
+
+    // [수정] userId 제거 (ProductDetailWithRelations의 store 타입은 { id, name } 형태)
+    store: { id: 'store-id-1', name: '테스트 스토어' },
+    category: { id: 'category-cuid-1', name: 'TOP' },
     stocks: [
       {
         id: 'stock-id-1',
@@ -45,18 +47,22 @@ export const createProductDetailMock = (
     reviews: [],
   };
 
-  // 강제 형변환을 통해 Partial 타입과 필수 타입 간의 충돌 해결
-  return { ...defaultProduct, ...overrides } as unknown as ProductDetailWithRelations;
+  return { ...defaultProduct, ...overrides };
 };
 
 /**
  * Product Repository 생성 결과 (Simple) Mock
- * - 목록 조회 등 관계 데이터가 적은 경우 사용됩니다.
+ * - Detail 타입에서 관계형 필드(inquiries, reviews)를 제외하여 반환합니다.
  */
 export const createProductSimpleMock = (
   overrides: Partial<ProductWithRelations> = {},
 ): ProductWithRelations => {
-  return createProductDetailMock(overrides) as unknown as ProductWithRelations;
+  const detail = createProductDetailMock(overrides as Partial<ProductDetailWithRelations>);
+
+  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+  const { inquiries, reviews, ...simpleProduct } = detail;
+
+  return simpleProduct as ProductWithRelations;
 };
 
 /**
@@ -65,30 +71,30 @@ export const createProductSimpleMock = (
 export const createProductInputMock = (
   overrides: Partial<CreateProductDto> = {},
 ): CreateProductDto => {
-  const defaultData = {
+  const defaultData: CreateProductDto = {
     name: '새 상품',
     price: 20000,
     content: '새 상품 상세',
     image: 'https://test.com/new.jpg',
     discountRate: 0,
-    discountStartTime: null, // DTO가 string을 받는지 Date를 받는지에 따라 '2025-01-01' 등의 문자열 사용 가능
+    discountStartTime: null,
     discountEndTime: null,
     categoryName: 'TOP',
     stocks: [{ sizeId: 1, quantity: 100 }],
   };
 
-  return { ...defaultData, ...overrides } as unknown as CreateProductDto;
+  return { ...defaultData, ...overrides };
 };
 
 /**
  * 상품 수정 요청 DTO Mock
- * - UpdateProductDto에 id 필드가 필수인 경우를 대비해 기본값에 id를 포함합니다.
+ * - UpdateProductDto 타입 정의에 id가 필수이므로 포함합니다.
  */
 export const updateProductInputMock = (
   overrides: Partial<UpdateProductDto> = {},
 ): UpdateProductDto => {
-  const defaultData = {
-    id: 'product-id-1', // DTO 정의에 id가 있다면 필수값일 수 있음
+  const defaultData: UpdateProductDto = {
+    id: 'product-id-1',
     name: '수정된 상품',
     price: 30000,
     content: '수정된 상세 내용',
@@ -101,5 +107,5 @@ export const updateProductInputMock = (
     stocks: [{ sizeId: 1, quantity: 50 }],
   };
 
-  return { ...defaultData, ...overrides } as unknown as UpdateProductDto;
+  return { ...defaultData, ...overrides };
 };
