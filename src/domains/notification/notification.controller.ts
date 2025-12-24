@@ -3,16 +3,19 @@ import type { NotificationService } from './notification.service.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 import { sseManager } from '@/common/utils/sse.manager.js';
 import { toGetNotifications, toUpdateNotification } from './notification.mapper.js';
+import type { GetNotificationsQuery } from './notification.dto.js';
 
 export class NotificationController {
   constructor(private notificationService: NotificationService) {}
 
   // 사용자의 모든 알림 조회
   getNotifications = async (req: Request, res: Response) => {
+    const query = req.query as unknown as GetNotificationsQuery;
+
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
     const userId = req.user.id;
 
-    const notifications = await this.notificationService.getNotifications(userId);
+    const notifications = await this.notificationService.getNotifications(query, userId);
     return res.status(200).json(toGetNotifications(notifications));
   };
 

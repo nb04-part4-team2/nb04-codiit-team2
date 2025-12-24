@@ -80,4 +80,9 @@ export class NotificationRepository {
 
     return notification;
   };
+
+  // 알림 카운트
+  countNotifications = async (countQuery: Prisma.NotificationCountArgs) => {
+    return await this.prisma.notification.count(countQuery);
+  };
 }

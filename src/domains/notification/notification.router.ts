@@ -3,7 +3,7 @@ import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
 import { validate } from '@/common/middlewares/validate.middleware.js';
 import { notificationController } from './notification.container.js';
 import { authenticate } from '@/common/middlewares/auth.middleware.js';
-import { idSchema } from './notification.dto.js';
+import { idSchema, getNotificationsQuerySchema } from './notification.dto.js';
 
 const notificationRouter = Router();
 
@@ -11,8 +11,7 @@ const notificationRouter = Router();
 notificationRouter.get(
   '/',
   authenticate,
-  // 커서 방식 페이지 네이션 필요해 보임
-  // validate(offsetSchema, 'query'), 배포 사이트에는 페이지 네이션이 없는데 나중에 추가 해야 할듯함,
+  validate(getNotificationsQuerySchema, 'query'),
   asyncHandler(notificationController.getNotifications),
 );
 

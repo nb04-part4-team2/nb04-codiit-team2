@@ -1,4 +1,5 @@
 import type { Prisma } from '@prisma/client';
+import type { GetNotificationsQuery } from './notification.dto.js';
 import type { NotificationRepository } from './notification.repository.js';
 import type { CreateNotificationBody } from './notification.type.js';
 import { NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
@@ -8,17 +9,33 @@ export class NotificationService {
   constructor(private notificationRepository: NotificationRepository) {}
 
   // 사용자의 모든 알림 조회
-  getNotifications = async (userId: string) => {
+  getNotifications = async (query: GetNotificationsQuery, userId: string) => {
+    const { page = 1, pageSize = 10 } = query;
+    const take = pageSize;
+    const skip = (page - 1) * take;
+
+    const countQuery: Prisma.NotificationCountArgs = {
+      where: { userId },
+    };
+
     const getQuery: Prisma.NotificationFindManyArgs = {
       where: { userId },
+      take,
+      skip,
       orderBy: {
         createdAt: 'desc',
       },
     };
 
-    const notifications = await this.notificationRepository.getNotifications(getQuery);
+    const [totalCount, notifications] = await Promise.all([
+      this.notificationRepository.countNotifications(countQuery),
+      this.notificationRepository.getNotifications(getQuery),
+    ]);
 
-    return notifications;
+    return {
+      list: notifications,
+      totalCount,
+    };
   };
 
   // 알림 대량 생성

@@ -13,6 +13,18 @@ export const idSchema = z
 
 export type IdParam = z.infer<typeof idSchema>;
 
+// query
+const basePaginationSchema = z
+  .object({
+    page: z.coerce.number().min(1).max(100).default(1),
+    pageSize: z.coerce.number().min(1).max(100).default(10),
+  })
+  .strict();
+
+export const getNotificationsQuerySchema = basePaginationSchema;
+
+export type GetNotificationsQuery = z.infer<typeof getNotificationsQuerySchema>;
+
 // ============================================
 // Repository base
 // ============================================
@@ -49,9 +61,14 @@ export type UpdateNotificationRepository = z.infer<typeof updateNotificationRepo
 const dateToISOString = z.date().transform((date) => date.toISOString());
 
 // 사용자의 모든 알림 조회
-export const getNotificationsResponse = notificationBaseSchema.extend({
+export const getNotificationsSchema = notificationBaseSchema.extend({
   createdAt: dateToISOString,
   updatedAt: dateToISOString,
+});
+
+export const getNotificationsResponse = z.object({
+  list: z.array(getNotificationsSchema),
+  totalCount: z.number().int().min(0),
 });
 
 export type GetNotificationsResponse = z.infer<typeof getNotificationsResponse>;
