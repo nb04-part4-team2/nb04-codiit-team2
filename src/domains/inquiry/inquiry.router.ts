@@ -6,7 +6,8 @@ import { authenticate, onlySeller } from '@/common/middlewares/auth.middleware.j
 import {
   idSchema,
   productIdSchema,
-  offsetSchema,
+  getInquiriesQuerySchema,
+  getAllInquiriesQuerySchema,
   createInquiry,
   updateInquiry,
   createReply,
@@ -21,7 +22,7 @@ nestedInquiryRouter
   .route('/')
   .get(
     validate(productIdSchema, 'params'),
-    // validate(offsetSchema, 'query'), 배포 사이트에는 페이지 네이션이 없는데 나중에 추가 해야 할듯함
+    validate(getInquiriesQuerySchema, 'query'),
     asyncHandler(inquiryController.getInquiries),
   )
   .post(
@@ -35,7 +36,7 @@ nestedInquiryRouter
 inquiryRouter.get(
   '/',
   authenticate,
-  validate(offsetSchema, 'query'),
+  validate(getAllInquiriesQuerySchema, 'query'),
   asyncHandler(inquiryController.getAllInquiries),
 );
 

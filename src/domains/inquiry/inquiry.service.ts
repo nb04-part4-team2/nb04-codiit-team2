@@ -1,6 +1,7 @@
 import type { PrismaClient, Prisma, UserType } from '@prisma/client';
 import type {
-  OffsetQuery,
+  GetInquiriesQuery,
+  GetAllInquiriesQuery,
   CreateInquiryBody,
   UpdateInquiryBody,
   CreateReplyBody,
@@ -19,10 +20,14 @@ export class InquiryService {
   ) {}
 
   // 특정 상품의 모든 문의 조회
-  public getInquiries = async (productId: string) => {
+  public getInquiries = async (query: GetInquiriesQuery, productId: string) => {
     // 상품 존재 확인
     const findProduct = await this.inquiryRepository.findProductByProductId(productId);
     if (!findProduct) throw new NotFoundError('상품이 존재하지 않습니다.');
+
+    const { page = 1, pageSize = 5 } = query;
+    const take = pageSize;
+    const skip = (page - 1) * take;
 
     const countQuery: Prisma.InquiryCountArgs = {
       where: { productId },
@@ -30,6 +35,8 @@ export class InquiryService {
 
     const getQuery: Prisma.InquiryFindManyArgs = {
       where: { productId },
+      take,
+      skip,
       orderBy: {
         createdAt: 'desc',
       },
@@ -102,7 +109,11 @@ export class InquiryService {
   };
 
   // 모든 문의 조회 (사용자 본인의 문의)
-  public getAllInquiries = async (query: OffsetQuery, userId: string, userType: UserType) => {
+  public getAllInquiries = async (
+    query: GetAllInquiriesQuery,
+    userId: string,
+    userType: UserType,
+  ) => {
     const { page = 1, pageSize = 100, status } = query;
     const take = pageSize;
     const skip = (page - 1) * take;

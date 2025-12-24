@@ -11,16 +11,18 @@ import {
   toCreateReplyResponse,
   toUpdateReplyResponse,
 } from './inquiry.mapper.js';
-import type { OffsetQuery } from './inquiry.dto.js';
+import type { GetInquiriesQuery, GetAllInquiriesQuery } from './inquiry.dto.js';
 
 export class InquiryController {
   constructor(private inquiryService: InquiryService) {}
 
   // 특정 상품의 모든 문의 조회
   public getInquiries = async (req: Request, res: Response) => {
+    const query = req.query as unknown as GetInquiriesQuery;
+
     const { productId } = req.params;
 
-    const inquiries = await this.inquiryService.getInquiries(productId);
+    const inquiries = await this.inquiryService.getInquiries(query, productId);
     return res.status(200).json(toGetInquiriesResponse(inquiries));
   };
 
@@ -38,7 +40,7 @@ export class InquiryController {
 
   // 모든 문의 조회 (사용자 본인의 문의)
   public getAllInquiries = async (req: Request, res: Response) => {
-    const query = req.query as unknown as OffsetQuery;
+    const query = req.query as unknown as GetAllInquiriesQuery;
 
     if (!req.user) throw new UnauthorizedError('인증이 필요합니다.');
     const { id: userId, type: userType } = req.user;

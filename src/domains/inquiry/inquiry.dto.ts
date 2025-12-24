@@ -22,15 +22,27 @@ export const productIdSchema = z
 export type ProductIdParam = z.infer<typeof productIdSchema>;
 
 // query
-export const offsetSchema = z
+const basePaginationSchema = z
   .object({
     page: z.coerce.number().min(1).max(100).default(1),
+    pageSize: z.coerce.number().min(1).max(100).default(5),
+  })
+  .strict();
+
+// 특정 상품의 모든 문의 조회
+export const getInquiriesQuerySchema = basePaginationSchema;
+
+export type GetInquiriesQuery = z.infer<typeof getInquiriesQuerySchema>;
+
+// 모든 문의 조회 (사용자 본인의 문의)
+export const getAllInquiriesQuerySchema = basePaginationSchema
+  .extend({
     pageSize: z.coerce.number().min(1).max(100).default(100),
     status: z.enum(['WaitingAnswer', 'CompletedAnswer']).optional(),
   })
   .strict();
 
-export type OffsetQuery = z.infer<typeof offsetSchema>;
+export type GetAllInquiriesQuery = z.infer<typeof getAllInquiriesQuerySchema>;
 
 // body
 export const titleSchema = z
