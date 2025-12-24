@@ -18,7 +18,7 @@ import {
   mockFindReply,
 } from '../mocks/inquiry.mock.js';
 import { createNotificationMock } from '../mocks/notification.mock.js';
-import type { OffsetQuery } from '@/domains/inquiry/inquiry.dto.js';
+import type { GetInquiriesQuery, GetAllInquiriesQuery } from '@/domains/inquiry/inquiry.dto.js';
 import type { TxMock } from '../helpers/test.type.js';
 import { sseManager } from '@/common/utils/sse.manager.js';
 
@@ -54,6 +54,11 @@ describe('InquiryService 유닛 테스트', () => {
 
   // 특정 상품의 모든 문의 조회
   describe('getInquiries', () => {
+    const query = {
+      page: 1,
+      pageSize: 5,
+    };
+
     it('특정 상품의 모든 문의 조회 성공', async () => {
       // --- 준비 (Arrange) ---
       inquiryRepository.findProductByProductId.mockResolvedValue(mockFindProduct);
@@ -61,7 +66,7 @@ describe('InquiryService 유닛 테스트', () => {
       inquiryRepository.getInquiries.mockResolvedValue(mockInquiries);
 
       // --- 실행 (Act) ---
-      const result = await inquiryService.getInquiries(productId);
+      const result = await inquiryService.getInquiries(query, productId);
 
       const countQuery = {
         where: { productId },
@@ -69,6 +74,8 @@ describe('InquiryService 유닛 테스트', () => {
 
       const getQuery = {
         where: { productId },
+        take: 5,
+        skip: 0,
         orderBy: {
           createdAt: 'desc',
         },
@@ -87,12 +94,36 @@ describe('InquiryService 유닛 테스트', () => {
       });
     });
 
+    it('query가 없을 경우, 기본값(page=1, pageSize=5)이 적용된다', async () => {
+      // --- 준비 (Arrange) ---
+      const query = {};
+      inquiryRepository.findProductByProductId.mockResolvedValue(mockFindProduct);
+      inquiryRepository.countInquiries.mockResolvedValue(0);
+      inquiryRepository.getInquiries.mockResolvedValue([]);
+
+      // --- 실행 (Act) ---
+      await inquiryService.getInquiries(query as GetInquiriesQuery, productId);
+
+      const getQuery = {
+        where: { productId },
+        take: 5,
+        skip: 0,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      };
+
+      // --- 검증 (Assert) ---
+      expect(inquiryRepository.getInquiries).toHaveBeenCalledTimes(1);
+      expect(inquiryRepository.getInquiries).toHaveBeenCalledWith(getQuery);
+    });
+
     it('상품이 존재하지 않을때 NotFoundError 발생', async () => {
       // --- 준비 (Arrange) ---
       inquiryRepository.findProductByProductId.mockResolvedValue(null);
 
       // --- 실행 및 검증 (Act & Assert) ---
-      await expect(inquiryService.getInquiries(productId)).rejects.toThrow(
+      await expect(inquiryService.getInquiries(query, productId)).rejects.toThrow(
         '상품이 존재하지 않습니다.',
       );
     });
@@ -222,13 +253,14 @@ describe('InquiryService 유닛 테스트', () => {
 
   // 모든 문의 조회 (사용자 본인의 문의)
   describe('getAllInquiries', () => {
-    it('모든 문의 조회 성공', async () => {
+    const query = {
+      page: 1,
+      pageSize: 100,
+      status: InquiryStatus.WaitingAnswer,
+    };
+
+    it('모든 문의 조회 성공(구매자)', async () => {
       // --- 준비 (Arrange) ---
-      const query = {
-        page: 1,
-        pageSize: 100,
-        status: InquiryStatus.WaitingAnswer,
-      };
       const userType = 'BUYER';
       inquiryRepository.getAllInquiries.mockResolvedValue(mockAllInquiries);
       inquiryRepository.countInquiries.mockResolvedValue(2);
@@ -260,6 +292,39 @@ describe('InquiryService 유닛 테스트', () => {
       });
     });
 
+    it('모든 문의 조회 성공(판매자)', async () => {
+      // --- 준비 (Arrange) ---
+      const userType = 'SELLER';
+      inquiryRepository.getAllInquiries.mockResolvedValue(mockAllInquiries);
+      inquiryRepository.countInquiries.mockResolvedValue(2);
+
+      // --- 실행 (Act) ---
+      const result = await inquiryService.getAllInquiries(query, userId, userType);
+
+      const countQuery = {
+        where: { product: { store: { userId } }, status: query.status },
+      };
+
+      const getQuery = {
+        where: { product: { store: { userId } }, status: query.status },
+        take: 100,
+        skip: 0,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      };
+
+      // --- 검증 (Assert) ---
+      expect(inquiryRepository.countInquiries).toHaveBeenCalledTimes(1);
+      expect(inquiryRepository.countInquiries).toHaveBeenCalledWith(countQuery);
+      expect(inquiryRepository.getAllInquiries).toHaveBeenCalledTimes(1);
+      expect(inquiryRepository.getAllInquiries).toHaveBeenCalledWith(getQuery);
+      expect(result).toEqual({
+        list: mockAllInquiries,
+        totalCount: 2,
+      });
+    });
+
     it('query가 없을 경우, 기본값(page=1, pageSize=100)이 적용된다', async () => {
       // --- 준비 (Arrange) ---
       const query = {
@@ -270,7 +335,7 @@ describe('InquiryService 유닛 테스트', () => {
       inquiryRepository.getAllInquiries.mockResolvedValue([]);
 
       // --- 실행 (Act) ---
-      await inquiryService.getAllInquiries(query as OffsetQuery, userId, userType);
+      await inquiryService.getAllInquiries(query as GetAllInquiriesQuery, userId, userType);
 
       const getQuery = {
         where: { userId, status: query.status },
