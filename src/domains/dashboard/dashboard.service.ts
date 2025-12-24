@@ -1,32 +1,18 @@
 import { DashboardRepository } from './dashboard.repository.js';
 import { DashboardMapper } from './dashboard.mapper.js';
 import { DashboardDto, SalesPeriod } from './dashboard.dto.js';
+import {
+  getStartOfDay,
+  getEndOfDay,
+  getStartOfWeek,
+  getEndOfWeek,
+  getStartOfMonth,
+  getEndOfMonth,
+  getStartOfYear,
+  getEndOfYear,
+} from '../../common/utils/date.util.js';
 
-// --- Date Helper Functions ---
-const getStartOfDay = (date: Date) => new Date(date.setHours(0, 0, 0, 0));
-const getEndOfDay = (date: Date) => new Date(date.setHours(23, 59, 59, 999));
-
-const getStartOfWeek = (date: Date) => {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day; // adjust when day is sunday
-  return getStartOfDay(new Date(d.setDate(diff)));
-};
-
-const getEndOfWeek = (date: Date) => {
-  const d = new Date(date);
-  const day = d.getDay();
-  const diff = d.getDate() - day + 6;
-  return getEndOfDay(new Date(d.setDate(diff)));
-};
-
-const getStartOfMonth = (date: Date) =>
-  getStartOfDay(new Date(date.getFullYear(), date.getMonth(), 1));
-const getEndOfMonth = (date: Date) =>
-  getEndOfDay(new Date(date.getFullYear(), date.getMonth() + 1, 0));
-
-const getStartOfYear = (date: Date) => getStartOfDay(new Date(date.getFullYear(), 0, 1));
-const getEndOfYear = (date: Date) => getEndOfDay(new Date(date.getFullYear(), 11, 31));
+const TOP_SELLING_PRODUCTS_LIMIT = 5;
 
 export class DashboardService {
   constructor(
@@ -105,7 +91,7 @@ export class DashboardService {
       this.getSalesPeriod(thisWeekRange, lastWeekRange),
       this.getSalesPeriod(thisMonthRange, lastMonthRange),
       this.getSalesPeriod(thisYearRange, lastYearRange),
-      this.dashboardRepository.getTopSellingProducts(5),
+      this.dashboardRepository.getTopSellingProducts(TOP_SELLING_PRODUCTS_LIMIT),
       this.dashboardRepository.getSalesByPriceRange(),
     ]);
 

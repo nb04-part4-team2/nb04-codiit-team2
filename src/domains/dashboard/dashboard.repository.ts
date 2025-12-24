@@ -2,6 +2,13 @@ import prisma from '@/config/prisma.js';
 import { OrderStatus } from '@prisma/client';
 
 const COMPLETED_ORDER_STATUSES: OrderStatus[] = ['CompletedPayment', 'Delivered'];
+const PRICE_RANGES = [
+  { name: '1만원 이하', min: 0, max: 10000 },
+  { name: '1만원 ~ 3만원', min: 10001, max: 30000 },
+  { name: '3만원 ~ 5만원', min: 30001, max: 50000 },
+  { name: '5만원 ~ 10만원', min: 50001, max: 100000 },
+  { name: '10만원 이상', min: 100001, max: Infinity },
+];
 
 export class DashboardRepository {
   async getSalesSummary(startDate: Date, endDate: Date) {
@@ -96,36 +103,22 @@ export class DashboardRepository {
       },
     });
 
-    const priceRanges = {
-      '1만원 이하': { totalSales: 0, minPrice: 0 },
-      '1만원 ~ 3만원': { totalSales: 0, minPrice: 10001 },
-      '3만원 ~ 5만원': { totalSales: 0, minPrice: 30001 },
-      '5만원 ~ 10만원': { totalSales: 0, minPrice: 50001 },
-      '10만원 이상': { totalSales: 0, minPrice: 100001 },
-    };
+    const priceRangeSales = PRICE_RANGES.map((range) => ({
+      priceRange: range.name,
+      totalSales: 0,
+    }));
 
     for (const item of orderItems) {
       const sale = item.price * item.quantity;
-      if (item.price <= 10000) {
-        priceRanges['1만원 이하'].totalSales += sale;
-      } else if (item.price <= 30000) {
-        priceRanges['1만원 ~ 3만원'].totalSales += sale;
-      } else if (item.price <= 50000) {
-        priceRanges['3만원 ~ 5만원'].totalSales += sale;
-      } else if (item.price <= 100000) {
-        priceRanges['5만원 ~ 10만원'].totalSales += sale;
-      } else {
-        priceRanges['10만원 이상'].totalSales += sale;
+      const rangeIndex = PRICE_RANGES.findIndex(
+        (range) => item.price >= range.min && item.price <= range.max,
+      );
+
+      if (rangeIndex !== -1) {
+        priceRangeSales[rangeIndex].totalSales += sale;
       }
     }
 
-    return Object.entries(priceRanges)
-      .map(([priceRange, data]) => ({
-        priceRange,
-        totalSales: data.totalSales,
-        minPrice: data.minPrice,
-      }))
-      .sort((a, b) => a.minPrice - b.minPrice)
-      .map(({ priceRange, totalSales }) => ({ priceRange, totalSales }));
+    return priceRangeSales;
   }
 }
