@@ -10,6 +10,7 @@ import {
   mockNotifications,
   mockFindNotification,
 } from '../mocks/notification.mock.js';
+import type { GetNotificationsQuery } from '@/domains/notification/notification.dto.js';
 import { sseManager } from '@/common/utils/sse.manager.js';
 import { NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
 
@@ -42,15 +43,56 @@ describe('NotificationService 유닛 테스트', () => {
 
   // 사용자의 모든 알림 조회
   describe('getNotifications', () => {
+    const query = {
+      page: 1,
+      pageSize: 10,
+    };
+
     it('사용자의 모든 알림 조회 성공', async () => {
       // --- 준비 (Arrange) ---
+      notificationRepository.countNotifications.mockResolvedValue(2);
       notificationRepository.getNotifications.mockResolvedValue(mockNotifications);
 
       // --- 실행 (Act) ---
-      const result = await notificationService.getNotifications(userId);
+      const result = await notificationService.getNotifications(query, userId);
+
+      const countQuery = {
+        where: { userId },
+      };
 
       const getQuery = {
         where: { userId },
+        take: 10,
+        skip: 0,
+        orderBy: {
+          createdAt: 'desc',
+        },
+      };
+
+      // --- 검증 (Assert) ---
+      expect(notificationRepository.countNotifications).toHaveBeenCalledTimes(1);
+      expect(notificationRepository.countNotifications).toHaveBeenCalledWith(countQuery);
+      expect(notificationRepository.getNotifications).toHaveBeenCalledTimes(1);
+      expect(notificationRepository.getNotifications).toHaveBeenCalledWith(getQuery);
+      expect(result).toEqual({
+        list: mockNotifications,
+        totalCount: 2,
+      });
+    });
+
+    it('query가 없을 경우, 기본값(page=1, pageSize=10)이 적용된다', async () => {
+      // --- 준비 (Arrange) ---
+      const query = {};
+      notificationRepository.countNotifications.mockResolvedValue(0);
+      notificationRepository.getNotifications.mockResolvedValue([]);
+
+      // --- 실행 (Act) ---
+      await notificationService.getNotifications(query as GetNotificationsQuery, userId);
+
+      const getQuery = {
+        where: { userId },
+        take: 10,
+        skip: 0,
         orderBy: {
           createdAt: 'desc',
         },
@@ -59,7 +101,6 @@ describe('NotificationService 유닛 테스트', () => {
       // --- 검증 (Assert) ---
       expect(notificationRepository.getNotifications).toHaveBeenCalledTimes(1);
       expect(notificationRepository.getNotifications).toHaveBeenCalledWith(getQuery);
-      expect(result).toEqual(mockNotifications);
     });
   });
 
