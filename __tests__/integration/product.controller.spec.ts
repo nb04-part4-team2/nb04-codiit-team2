@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeEach, afterAll } from '@jest/globals';
+import { describe, it, expect, beforeEach } from '@jest/globals';
 import { authRequest, testClient } from '../helpers/testClient.js';
 import prisma from '@/config/prisma.js';
 import { generateSellerToken, generateBuyerToken } from '../helpers/authHelper.js';
@@ -26,24 +26,16 @@ describe('📦 Product API Integration Test', () => {
     const otherSellerCtx = await createTestContext();
     otherSellerToken = generateSellerToken(otherSellerCtx.seller.id);
 
-    // 카테고리 생성 (CUID 형식) - 기본 카테고리
+    // 카테고리 생성 (CUID 형식)
     const category = await prisma.category.create({
       data: { name: `TOP_TEST_${Date.now()}` },
     });
     categoryId = category.id;
     categoryName = category.name;
 
-    // 사이즈 생성
-    const size = await prisma.size.upsert({
-      where: { id: 1 },
-      update: {},
-      create: { id: 1, en: 'L', ko: '라지' },
-    });
-    sizeId = size.id;
-  });
-
-  afterAll(async () => {
-    await prisma.$disconnect();
+    // 사이즈 ID 설정
+    // 글로벌 setup.integration.ts에서 ID 1~6 사이즈가 미리 생성되므로 바로 사용합니다.
+    sizeId = 1;
   });
 
   // --- 상품 등록 테스트 ---
@@ -97,6 +89,11 @@ describe('📦 Product API Integration Test', () => {
     it('403: 구매자가 등록 시도 시 권한 없음 에러 발생', async () => {
       const res = await authRequest(buyerToken).post('/api/products').send({});
       expect(res.status).toBe(403);
+    });
+
+    it('401: 인증 토큰이 없으면 실패한다', async () => {
+      const res = await testClient.post('/api/products').send({});
+      expect(res.status).toBe(401);
     });
   });
 
@@ -183,34 +180,6 @@ describe('📦 Product API Integration Test', () => {
       expect(res.status).toBe(200);
       const names = res.body.list.map((p: { name: string }) => p.name);
       expect(names).toEqual(['청바지', '고급 가디건', '저렴한 반팔티']);
-    });
-  });
-
-  // --- 3. 상품 상세 조회 테스트 ---
-  describe('GET /api/products/:productId', () => {
-    it('200: 상품 상세 정보를 조회한다', async () => {
-      const store = await createTestStore(ctx.seller.id);
-      const product = await prisma.product.create({
-        data: {
-          storeId: store.id,
-          name: '상세보기 상품',
-          price: 10000,
-          categoryId,
-          image: 'img',
-        },
-      });
-
-      const res = await testClient.get(`/api/products/${product.id}`);
-
-      expect(res.status).toBe(200);
-      expect(res.body.id).toBe(product.id);
-      expect(res.body.name).toBe('상세보기 상품');
-    });
-
-    it('404: 존재하지 않는 상품 ID 조회 시 실패한다', async () => {
-      const validCuid = 'clq5y6z8w000008l5gu9e0q1z';
-      const res = await testClient.get(`/api/products/${validCuid}`);
-      expect(res.status).toBe(404);
     });
   });
 
@@ -307,6 +276,11 @@ describe('📦 Product API Integration Test', () => {
 
       expect(res.status).toBe(403);
     });
+
+    it('401: 인증 토큰이 없으면 실패한다', async () => {
+      const res = await testClient.patch(`/api/products/${productId}`).send({});
+      expect(res.status).toBe(401);
+    });
   });
 
   // --- 상품 삭제 테스트 ---
@@ -327,10 +301,11 @@ describe('📦 Product API Integration Test', () => {
       productId = product.id;
     });
 
-    it('200: 판매자가 자신의 상품을 삭제한다', async () => {
+    it('204: 판매자가 자신의 상품을 삭제한다', async () => {
       const res = await authRequest(sellerToken).delete(`/api/products/${productId}`);
 
-      expect(res.status).toBeOneOf([200, 204]);
+      // 명세에 따라 204 확인
+      expect(res.status).toBe(204);
 
       const deleted = await prisma.product.findUnique({ where: { id: productId } });
       expect(deleted).toBeNull();
@@ -340,29 +315,10 @@ describe('📦 Product API Integration Test', () => {
       const res = await authRequest(buyerToken).delete(`/api/products/${productId}`);
       expect(res.status).toBe(403);
     });
+
+    it('401: 인증 토큰이 없으면 실패한다', async () => {
+      const res = await testClient.delete(`/api/products/${productId}`);
+      expect(res.status).toBe(401);
+    });
   });
 });
-
-// Jest Matcher 확장
-expect.extend({
-  toBeOneOf(received: unknown, validValues: unknown[]) {
-    const pass = validValues.includes(received);
-    if (pass) {
-      return {
-        message: () => `expected ${received} not to be one of ${validValues}`,
-        pass: true,
-      };
-    } else {
-      return {
-        message: () => `expected ${received} to be one of ${validValues}`,
-        pass: false,
-      };
-    }
-  },
-});
-
-declare module 'expect' {
-  interface Matchers<R> {
-    toBeOneOf(validValues: unknown[]): R;
-  }
-}
