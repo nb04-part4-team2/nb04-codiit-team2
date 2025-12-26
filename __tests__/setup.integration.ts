@@ -33,6 +33,15 @@ const SIZE_SEED_DATA = [
   { id: 6, en: 'FREE', ko: '프리' },
 ];
 
+// Grade 시딩 데이터 (Lookup 테이블 - 회원 등급)
+const GRADE_SEED_DATA = [
+  { id: 'grade_vip', name: 'vip', minAmount: 1000000, rate: 0.1 },
+  { id: 'grade_black', name: 'black', minAmount: 500000, rate: 0.07 },
+  { id: 'grade_red', name: 'red', minAmount: 300000, rate: 0.05 },
+  { id: 'grade_orange', name: 'orange', minAmount: 100000, rate: 0.03 },
+  { id: 'grade_green', name: 'green', minAmount: 0, rate: 0.01 },
+];
+
 // 테스트 중 console 출력 억제 (디버깅 시 주석 처리)
 const originalConsoleError = console.error;
 const originalConsoleLog = console.log;
@@ -51,6 +60,11 @@ beforeEach(async () => {
   // Size Lookup 테이블 시딩 (Cart, Order, Stock 테스트에 필요)
   await prisma.size.createMany({
     data: SIZE_SEED_DATA,
+  });
+
+  // Grade Lookup 테이블 시딩 (User 회원가입, 등급 관련 테스트에 필요)
+  await prisma.grade.createMany({
+    data: GRADE_SEED_DATA,
   });
 });
 

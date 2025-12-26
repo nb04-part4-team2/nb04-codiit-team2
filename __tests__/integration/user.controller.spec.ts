@@ -18,14 +18,6 @@ describe('User API Integration Test', () => {
     ctx = await createTestContext();
     buyerToken = generateBuyerToken(ctx.buyer.id);
     sellerToken = generateSellerToken(ctx.seller.id);
-
-    // user.service.ts에서 gradeId: 'grade_green'으로 하드코딩되어 있어서
-    // 회원가입 테스트를 위해 해당 grade를 미리 생성
-    await prisma.grade.upsert({
-      where: { id: 'grade_green' },
-      update: {},
-      create: { id: 'grade_green', name: 'green', minAmount: 0, rate: 5 },
-    });
   });
 
   // ===== POST /api/users - 회원가입 =====
