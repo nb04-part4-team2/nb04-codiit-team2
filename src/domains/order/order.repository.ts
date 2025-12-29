@@ -473,6 +473,7 @@ export class OrderRepository {
           select: {
             id: true,
             ko: true,
+            en: true,
           },
         },
       },

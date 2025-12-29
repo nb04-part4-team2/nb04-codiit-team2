@@ -199,7 +199,7 @@ export class OrderService {
           // 1-5-1. 판매자 알림 생성
           const productName = updatedStock.product.name;
           const sellerId = updatedStock.product.store.userId;
-          const sizeName = updatedStock.size.ko;
+          const sizeName = updatedStock.size.en;
 
           const sellerNotificationMsg = `${productName}의 ${sizeName} 사이즈가 품절되었습니다.`;
 
@@ -225,7 +225,7 @@ export class OrderService {
                 .map((item) => item.cart.buyerId),
             ),
           ];
-          const cartUserNotificationMsg = `장바구니에 담은 상품 ${productName} (${sizeName})이 품절되었습니다.`;
+          const cartUserNotificationMsg = `장바구니에 담은 상품 ${productName}의 ${sizeName} 사이즈가 품절되었습니다.`;
 
           if (cartUserIds.length > 0) {
             // DB 성능을 위해 createMany로 한 번에 저장
