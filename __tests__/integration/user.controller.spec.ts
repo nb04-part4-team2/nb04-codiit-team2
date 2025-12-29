@@ -267,7 +267,7 @@ describe('User API Integration Test', () => {
       expect(response.status).toBe(401);
     });
 
-    it('401: 현재 비밀번호 불일치', async () => {
+    it('403: 현재 비밀번호 불일치', async () => {
       const updateData = {
         name: '변경된 이름',
         currentPassword: 'wrongpassword',
@@ -275,7 +275,7 @@ describe('User API Integration Test', () => {
 
       const response = await authRequest(buyerToken).patch('/api/users/me').send(updateData);
 
-      expect(response.status).toBe(401);
+      expect(response.status).toBe(403);
     });
 
     it('200: 프로필 이미지 수정 성공', async () => {
