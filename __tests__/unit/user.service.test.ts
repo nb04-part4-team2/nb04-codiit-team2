@@ -11,7 +11,7 @@ import {
 import {
   NotFoundError,
   ConflictError,
-  UnauthorizedError,
+  ForbiddenError,
   BadRequestError,
 } from '@/common/utils/errors.js';
 import bcrypt from 'bcrypt';
@@ -132,7 +132,7 @@ describe('UserService 유닛 테스트', () => {
       expect(userRepository.update).not.toHaveBeenCalled();
     });
 
-    it('현재 비밀번호가 틀리면 UnauthorizedError 발생', async () => {
+    it('현재 비밀번호가 틀리면 ForbiddenError 발생', async () => {
       // --- 준비 (Arrange) ---
       const user = createUserWithGradeMock({ id: userId });
       const updateData = updateUserInputMock();
@@ -141,7 +141,7 @@ describe('UserService 유닛 테스트', () => {
       compareSpy.mockResolvedValue(false as never);
 
       // --- 실행 및 검증 (Act & Assert) ---
-      await expect(userService.updateMe(userId, updateData)).rejects.toThrow(UnauthorizedError);
+      await expect(userService.updateMe(userId, updateData)).rejects.toThrow(ForbiddenError);
       expect(userRepository.update).not.toHaveBeenCalled();
     });
 

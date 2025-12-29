@@ -7,8 +7,8 @@ import { toUserResponse, toStoreLikeResponse } from './user.mapper.js';
 import {
   BadRequestError,
   ConflictError,
+  ForbiddenError,
   NotFoundError,
-  UnauthorizedError,
 } from '@/common/utils/errors.js';
 
 export class UserService {
@@ -61,7 +61,7 @@ export class UserService {
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
 
     if (!isPasswordValid) {
-      throw new UnauthorizedError('현재 비밀번호가 일치하지 않습니다.');
+      throw new ForbiddenError('현재 비밀번호가 일치하지 않습니다.');
     }
 
     const updateData: { name?: string; password?: string; image?: string } = {};
