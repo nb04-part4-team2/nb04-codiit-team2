@@ -1,7 +1,15 @@
 name: Deploy to AWS (Blue-Green)
 
 on:
-  workflow_dispatch:  # 수동 트리거 (테스트용)
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - production
+        default: production
   workflow_run:
     workflows: ["CI"]
     types:
@@ -14,6 +22,10 @@ env:
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
   IMAGE_TAG: ${{ github.sha }}
+  SECURITY_GROUP_ID: sg-0c8189a7705b897b1
+  SUBNET_ID: subnet-033040817684d732a
+  IAM_INSTANCE_PROFILE: CodiitEC2Role
+  KEY_NAME: codiit-key
 
 jobs:
   deploy:
@@ -33,6 +45,102 @@ jobs:
           aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
           aws-region: ${{ env.AWS_REGION }}
 
+      # ============================================
+      # Step 1: 현재 활성 환경 감지 (Blue/Green)
+      # ============================================
+      - name: Detect current active environment
+        id: detect
+        run: |
+          echo "🔍 현재 운영 중인 환경 감지 중..."
+
+          CURRENT_TG_ARN=$(aws elbv2 describe-listeners \
+            --listener-arns ${{ secrets.ALB_LISTENER_ARN }} \
+            --query 'Listeners[0].DefaultActions[0].TargetGroupArn' \
+            --output text)
+
+          echo "Current Target Group: $CURRENT_TG_ARN"
+
+          if [[ "$CURRENT_TG_ARN" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
+            echo "current_env=blue" >> $GITHUB_OUTPUT
+            echo "target_env=green" >> $GITHUB_OUTPUT
+            echo "target_tag=codiit-green" >> $GITHUB_OUTPUT
+            echo "target_tg_arn=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+            echo "📘 현재: Blue 운영 중 → 📗 배포 타겟: Green"
+          elif [[ "$CURRENT_TG_ARN" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
+            echo "current_env=green" >> $GITHUB_OUTPUT
+            echo "target_env=blue" >> $GITHUB_OUTPUT
+            echo "target_tag=codiit-blue" >> $GITHUB_OUTPUT
+            echo "target_tg_arn=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+            echo "📗 현재: Green 운영 중 → 📘 배포 타겟: Blue"
+          else
+            echo "⚠️ No active target group detected. Starting initial deployment."
+            echo "current_env=none" >> $GITHUB_OUTPUT
+            echo "target_env=blue" >> $GITHUB_OUTPUT
+            echo "target_tag=codiit-blue" >> $GITHUB_OUTPUT
+            echo "target_tg_arn=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+            echo "🚀 첫 배포: Blue 환경으로 시작"
+          fi
+
+      # ============================================
+      # Step 2: EC2 존재 확인 및 생성
+      # ============================================
+      - name: Check or create EC2 instance
+        id: ec2-setup
+        run: |
+          echo "🔍 Checking for existing ${{ steps.detect.outputs.target_tag }} EC2..."
+
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=${{ steps.detect.outputs.target_tag }}" \
+                      "Name=instance-state-name,Values=running" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)
+
+          if [[ "$INSTANCE_ID" == "None" || -z "$INSTANCE_ID" ]]; then
+            echo "🔨 Creating new EC2 from Golden AMI..."
+
+            INSTANCE_ID=$(aws ec2 run-instances \
+              --image-id ${{ secrets.GOLDEN_AMI_ID }} \
+              --instance-type t2.micro \
+              --key-name ${{ env.KEY_NAME }} \
+              --security-group-ids ${{ env.SECURITY_GROUP_ID }} \
+              --subnet-id ${{ env.SUBNET_ID }} \
+              --iam-instance-profile Name=${{ env.IAM_INSTANCE_PROFILE }} \
+              --associate-public-ip-address \
+              --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${{ steps.detect.outputs.target_tag }}}]" \
+              --query 'Instances[0].InstanceId' \
+              --output text)
+
+            echo "✅ EC2 created: $INSTANCE_ID"
+            echo "⏳ Waiting for instance to be running..."
+            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+
+            echo "⏳ Waiting for initialization (90s)..."
+            sleep 90
+          else
+            echo "✅ Using existing EC2: $INSTANCE_ID"
+          fi
+
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+
+      # ============================================
+      # Step 3: EC2 Public IP 동적 조회
+      # ============================================
+      - name: Get EC2 Public IP
+        id: get-ip
+        run: |
+          echo "🔍 Getting Public IP for ${{ steps.ec2-setup.outputs.instance_id }}..."
+
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --instance-ids ${{ steps.ec2-setup.outputs.instance_id }} \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)
+
+          echo "✅ Public IP: $PUBLIC_IP"
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+
+      # ============================================
+      # Step 4: Docker 이미지 빌드 및 ECR 푸시
+      # ============================================
       - name: Login to Amazon ECR
         uses: aws-actions/amazon-ecr-login@v2
 
@@ -50,124 +158,149 @@ jobs:
           echo "✅ Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
 
       # ============================================
-      # 블루-그린 배포: 현재 활성 환경 자동 감지
+      # Step 5: EC2에 배포 (SSH)
       # ============================================
-      - name: Detect current active environment
-        id: detect
+      - name: Setup SSH key
         run: |
-          echo "🔍 현재 운영 중인 환경 감지 중..."
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/codiit-key.pem
+          chmod 400 ~/.ssh/codiit-key.pem
+          ssh-keyscan -H ${{ steps.get-ip.outputs.public_ip }} >> ~/.ssh/known_hosts
 
-          # ALB Listener가 현재 어느 Target Group을 가리키는지 확인
-          CURRENT_TG_ARN=$(aws elbv2 describe-listeners \
-            --listener-arns ${{ secrets.ALB_LISTENER_ARN }} \
-            --query 'Listeners[0].DefaultActions[0].TargetGroupArn' \
-            --output text)
+      - name: Create .env file on EC2
+        run: |
+          echo "📝 Creating .env file on ${{ steps.detect.outputs.target_env }} EC2..."
 
-          echo "Current Target Group: $CURRENT_TG_ARN"
+          ssh -i ~/.ssh/codiit-key.pem ec2-user@${{ steps.get-ip.outputs.public_ip }} << 'ENVSSH'
+          cat > /home/ec2-user/.env << 'ENVFILE'
+          NODE_ENV=production
+          PORT=3000
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}
+          ACCESS_TOKEN_EXPIRES_IN=15m
+          REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}
+          REFRESH_TOKEN_EXPIRES_IN=7d
+          CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
+          BCRYPT_ROUNDS=10
+          AWS_REGION=ap-northeast-2
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
+          ENVFILE
+          ENVSSH
 
-          # Blue/Green 판단 및 배포 타겟 결정
-          if [[ "$CURRENT_TG_ARN" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
-            # Blue 운영 중 → Green에 배포
-            echo "current_env=blue" >> $GITHUB_OUTPUT
-            echo "target_env=green" >> $GITHUB_OUTPUT
-            echo "target_host=${{ secrets.GREEN_EC2_HOST }}" >> $GITHUB_OUTPUT
-            echo "target_tg_arn=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+          echo "✅ .env file created"
 
-            echo "📘 현재: Blue 운영 중"
-            echo "📗 배포 타겟: Green"
+      - name: Deploy Docker container on ${{ steps.detect.outputs.target_env }} EC2
+        run: |
+          echo "🚀 Deploying to ${{ steps.detect.outputs.target_env }} EC2..."
 
-          elif [[ "$CURRENT_TG_ARN" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
-            # Green 운영 중 → Blue에 배포
-            echo "current_env=green" >> $GITHUB_OUTPUT
-            echo "target_env=blue" >> $GITHUB_OUTPUT
-            echo "target_host=${{ secrets.BLUE_EC2_HOST }}" >> $GITHUB_OUTPUT
-            echo "target_tg_arn=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+          ssh -i ~/.ssh/codiit-key.pem ec2-user@${{ steps.get-ip.outputs.public_ip }} << 'DEPLOYSSH'
+          # ECR 로그인
+          aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
+            docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
 
-            echo "📗 현재: Green 운영 중"
-            echo "📘 배포 타겟: Blue"
+          # 이미지 Pull
+          echo "📥 Pulling new image..."
+          docker pull ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
 
-          else
-            echo "❌ Error: Unknown Target Group"
-            echo "Expected: ${{ secrets.BLUE_TARGET_GROUP_ARN }} or ${{ secrets.GREEN_TARGET_GROUP_ARN }}"
-            echo "Actual: $CURRENT_TG_ARN"
+          # 기존 컨테이너 Graceful Shutdown
+          echo "🛑 Stopping old container (30s graceful)..."
+          docker stop --time 30 app || true
+          docker rm app || true
+
+          # 새 컨테이너 실행
+          echo "▶️  Starting new container..."
+          docker run -d \
+            --name app \
+            -p 3000:3000 \
+            --restart=always \
+            --env-file /home/ec2-user/.env \
+            ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
+
+          # Prisma 마이그레이션 실행
+          echo "🔄 Running Prisma migrations..."
+          docker exec app npx prisma migrate deploy
+
+          if [ $? -ne 0 ]; then
+            echo "❌ Migration failed!"
+            docker logs app --tail 50
+            docker stop app
+            docker rm app
             exit 1
           fi
+          echo "✅ Migrations completed"
 
-          echo "✅ 배포 타겟 결정 완료"
+          # 헬스체크
+          echo "🏥 Health checking..."
+          for i in {1..12}; do
+            if curl -f http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo "✅ Health check passed! (attempt $i/12)"
+              exit 0
+            fi
 
-      # ============================================
-      # 배포: 감지된 타겟 환경에 배포 (동적)
-      # ============================================
-      - name: Deploy to ${{ steps.detect.outputs.target_env }} EC2
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ steps.detect.outputs.target_host }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            echo "🚀 Starting deployment on ${{ steps.detect.outputs.target_env }} EC2..."
-
-            # ECR 로그인
-            aws ecr get-login-password --region ${{ env.AWS_REGION }} | \
-              docker login --username AWS --password-stdin ${{ env.ECR_REGISTRY }}
-
-            # 새 이미지 pull
-            echo "📥 Pulling new image..."
-            docker pull ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-
-            # 기존 컨테이너 Graceful Shutdown (30초 대기)
-            echo "🛑 Stopping old container (graceful shutdown)..."
-            docker stop --time 30 app || true
-            docker rm app || true
-
-            # 새 컨테이너 실행
-            echo "▶️  Starting new container..."
-            docker run -d \
-              --name app \
-              -p 3000:3000 \
-              --restart=always \
-              --env-file /home/ec2-user/.env \
-              ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}
-
-            # 마이그레이션 실행 (헬스체크 전)
-            echo "🔄 Running Prisma migrations..."
-            docker exec app npx prisma migrate deploy
-
-            if [ $? -ne 0 ]; then
-              echo "❌ Migration failed!"
-              echo "📋 Container logs:"
+            if [ $i -eq 12 ]; then
+              echo "❌ Health check failed after 60s"
               docker logs app --tail 50
-              echo "🧹 Cleaning up failed container..."
-              docker stop app
-              docker rm app
               exit 1
             fi
-            echo "✅ Migrations completed"
 
-            # 헬스체크 (재시도 로직)
-            echo "🏥 Health checking..."
-            for i in {1..12}; do
-              if curl -f http://localhost:3000/api/health; then
-                echo "✅ Health check passed! (attempt $i/12)"
-                echo "✅ ${{ steps.detect.outputs.target_env }} EC2 deployment successful!"
-                break
-              fi
+            echo "   ⏳ Retrying... ($i/12)"
+            sleep 5
+          done
+          DEPLOYSSH
 
-              if [ $i -eq 12 ]; then
-                echo "❌ Health check failed after 60 seconds"
-                echo "📋 Container logs:"
-                docker logs app --tail 50
-                exit 1
-              fi
-
-              echo "   ⏳ Retrying... ($i/12)"
-              sleep 5
-            done
+          echo "✅ Deployment on ${{ steps.detect.outputs.target_env }} EC2 successful!"
 
       # ============================================
-      # 트래픽 전환: ALB를 새 환경으로 전환
+      # Step 6: Target Group에 EC2 등록
       # ============================================
-      - name: Switch ALB to ${{ steps.detect.outputs.target_env }} Target Group
+      - name: Register to Target Group
+        run: |
+          echo "📋 Registering to Target Group..."
+
+          EXISTING=$(aws elbv2 describe-target-health \
+            --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+            --query "TargetHealthDescriptions[?Target.Id=='${{ steps.ec2-setup.outputs.instance_id }}'].Target.Id" \
+            --output text)
+
+          if [[ -z "$EXISTING" ]]; then
+            aws elbv2 register-targets \
+              --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+              --targets Id=${{ steps.ec2-setup.outputs.instance_id }}
+            echo "✅ Target registered"
+          else
+            echo "ℹ️  Target already registered"
+          fi
+
+      - name: Wait for target to be healthy
+        run: |
+          echo "⏳ Waiting for target to be healthy..."
+
+          for i in {1..20}; do
+            HEALTH=$(aws elbv2 describe-target-health \
+              --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+              --targets Id=${{ steps.ec2-setup.outputs.instance_id }} \
+              --query 'TargetHealthDescriptions[0].TargetHealth.State' \
+              --output text)
+
+            echo "Target health: $HEALTH ($i/20)"
+
+            if [[ "$HEALTH" == "healthy" ]]; then
+              echo "✅ Target is healthy!"
+              exit 0
+            fi
+
+            sleep 15
+          done
+
+          echo "❌ Target did not become healthy"
+          exit 1
+
+      # ============================================
+      # Step 7: ALB 트래픽 전환
+      # ============================================
+      - name: Switch ALB to ${{ steps.detect.outputs.target_env }}
         if: success()
         run: |
           echo "🔀 ALB 트래픽 전환 중..."
@@ -175,42 +308,75 @@ jobs:
 
           aws elbv2 modify-listener \
             --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
-            --default-actions \
-              Type=forward,TargetGroupArn=${{ steps.detect.outputs.target_tg_arn }}
+            --default-actions Type=forward,TargetGroupArn=${{ steps.detect.outputs.target_tg_arn }}
 
           echo "✅ 트래픽 전환 완료!"
           echo ""
           echo "📊 배포 결과:"
-          echo "   • 이전 환경: ${{ steps.detect.outputs.current_env }} (롤백 대기 중)"
-          echo "   • 현재 환경: ${{ steps.detect.outputs.target_env }} (운영 중)"
-          echo "   • 이미지: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          echo "   • 이전: ${{ steps.detect.outputs.current_env }} (롤백 대기)"
+          echo "   • 현재: ${{ steps.detect.outputs.target_env }} (운영 중)"
+          echo "   • Instance: ${{ steps.ec2-setup.outputs.instance_id }}"
+          echo "   • IP: ${{ steps.get-ip.outputs.public_ip }}"
+          echo "   • Image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
           echo ""
           echo "🎉 블루-그린 배포 완료!"
 
       # ============================================
-      # 정리: 사용하지 않는 Docker 이미지 삭제
-      # (트래픽 전환 후 실행 → 현재 운영 이미지 보호)
+      # Step 8: 이전 타겟 Deregister (선택)
       # ============================================
-      - name: Cleanup old Docker images on ${{ steps.detect.outputs.target_env }} EC2
+      - name: Deregister old targets (optional)
         if: success()
-        uses: appleboy/ssh-action@master
-        with:
-          host: ${{ steps.detect.outputs.target_host }}
-          username: ec2-user
-          key: ${{ secrets.EC2_SSH_KEY }}
-          script: |
-            echo "🧹 Cleaning up unused Docker images..."
-            docker image prune -af --filter "until=24h"
-            echo "✅ Cleanup completed"
+        continue-on-error: true
+        run: |
+          echo "🔄 Deregistering old targets..."
+
+          OLD_TG_ARN=$([[ "${{ steps.detect.outputs.target_env }}" == "blue" ]] && \
+            echo "${{ secrets.GREEN_TARGET_GROUP_ARN }}" || \
+            echo "${{ secrets.BLUE_TARGET_GROUP_ARN }}")
+
+          OLD_TARGETS=$(aws elbv2 describe-target-health \
+            --target-group-arn $OLD_TG_ARN \
+            --query 'TargetHealthDescriptions[].Target.Id' \
+            --output text)
+
+          if [[ -n "$OLD_TARGETS" ]]; then
+            for TARGET in $OLD_TARGETS; do
+              aws elbv2 deregister-targets \
+                --target-group-arn $OLD_TG_ARN \
+                --targets Id=$TARGET || true
+              echo "✅ Deregistered $TARGET"
+            done
+          fi
 
       # ============================================
-      # 롤백: 배포 실패 시 기존 환경 유지
+      # 정리: 사용하지 않는 Docker 이미지 삭제
+      # ============================================
+      - name: Cleanup old Docker images
+        if: success()
+        run: |
+          echo "🧹 Cleaning up unused Docker images..."
+
+          ssh -i ~/.ssh/codiit-key.pem ec2-user@${{ steps.get-ip.outputs.public_ip }} \
+            "docker image prune -af --filter 'until=24h'"
+
+          echo "✅ Cleanup completed"
+
+      # ============================================
+      # 롤백: 배포 실패 시 타겟 Deregister
       # ============================================
       - name: Rollback on failure
         if: failure()
         run: |
-          echo "❌ ${{ steps.detect.outputs.target_env }} 배포 실패!"
+          echo "❌ 배포 실패!"
+
+          # 실패한 타겟 Deregister
+          aws elbv2 deregister-targets \
+            --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+            --targets Id=${{ steps.ec2-setup.outputs.instance_id }} || true
+
           echo "💡 ${{ steps.detect.outputs.current_env }} 환경이 계속 운영 중입니다."
-          echo ""
           echo "🔄 롤백 불필요 (ALB 전환 전 실패)"
-          echo "   → 사용자 트래픽은 ${{ steps.detect.outputs.current_env }}로 계속 유입됩니다."
+          echo ""
+          echo "디버깅 정보:"
+          echo "  Instance ID: ${{ steps.ec2-setup.outputs.instance_id }}"
+          echo "  Public IP: ${{ steps.get-ip.outputs.public_ip }}"
