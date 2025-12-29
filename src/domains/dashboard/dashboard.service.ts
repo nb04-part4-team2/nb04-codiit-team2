@@ -32,10 +32,11 @@ export class DashboardService {
   private async getSalesPeriod(
     currentRange: { start: Date; end: Date },
     previousRange: { start: Date; end: Date },
+    userId: string,
   ): Promise<SalesPeriod> {
     const [current, previous] = await Promise.all([
-      this.dashboardRepository.getSalesSummary(currentRange.start, currentRange.end),
-      this.dashboardRepository.getSalesSummary(previousRange.start, previousRange.end),
+      this.dashboardRepository.getSalesSummary(currentRange.start, currentRange.end, userId),
+      this.dashboardRepository.getSalesSummary(previousRange.start, previousRange.end, userId),
     ]);
 
     const changeRate = {
@@ -46,7 +47,7 @@ export class DashboardService {
     return { current, previous, changeRate };
   }
 
-  async getDashboardData(): Promise<DashboardDto> {
+  async getDashboardData(userId: string): Promise<DashboardDto> {
     // 1. Define date ranges safely without mutation
     const today = new Date();
     const yesterday = new Date();
@@ -87,12 +88,12 @@ export class DashboardService {
 
     // 2. Fetch data from repository
     const [todayData, weekData, monthData, yearData, topSales, priceRangeData] = await Promise.all([
-      this.getSalesPeriod(todayRange, yesterdayRange),
-      this.getSalesPeriod(thisWeekRange, lastWeekRange),
-      this.getSalesPeriod(thisMonthRange, lastMonthRange),
-      this.getSalesPeriod(thisYearRange, lastYearRange),
-      this.dashboardRepository.getTopSellingProducts(TOP_SELLING_PRODUCTS_LIMIT),
-      this.dashboardRepository.getSalesByPriceRange(),
+      this.getSalesPeriod(todayRange, yesterdayRange, userId),
+      this.getSalesPeriod(thisWeekRange, lastWeekRange, userId),
+      this.getSalesPeriod(thisMonthRange, lastMonthRange, userId),
+      this.getSalesPeriod(thisYearRange, lastYearRange, userId),
+      this.dashboardRepository.getTopSellingProducts(TOP_SELLING_PRODUCTS_LIMIT, userId),
+      this.dashboardRepository.getSalesByPriceRange(userId),
     ]);
 
     // 3. Process price range percentages

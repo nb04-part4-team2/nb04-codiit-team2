@@ -11,41 +11,54 @@ const PRICE_RANGES = [
 ];
 
 export class DashboardRepository {
-  async getSalesSummary(startDate: Date, endDate: Date) {
+  async getSalesSummary(startDate: Date, endDate: Date, userId: string) {
     const where = {
-      createdAt: {
-        gte: startDate,
-        lte: endDate,
+      order: {
+        createdAt: {
+          gte: startDate,
+          lte: endDate,
+        },
+        status: {
+          in: COMPLETED_ORDER_STATUSES,
+        },
       },
-      status: {
-        in: COMPLETED_ORDER_STATUSES,
+      product: {
+        store: {
+          userId,
+        },
       },
     };
 
-    const totalOrders = await prisma.order.count({ where });
-
-    const totalSalesAggregate = await prisma.payment.aggregate({
-      _sum: {
+    const orderItems = await prisma.orderItem.findMany({
+      where,
+      select: {
+        orderId: true,
         price: true,
-      },
-      where: {
-        order: where,
+        quantity: true,
       },
     });
 
+    const totalOrders = new Set(orderItems.map((item) => item.orderId)).size;
+    const totalSales = orderItems.reduce((sum, item) => sum + item.price * item.quantity, 0);
+
     return {
       totalOrders,
-      totalSales: totalSalesAggregate._sum.price || 0,
+      totalSales,
     };
   }
 
-  async getTopSellingProducts(limit: number) {
+  async getTopSellingProducts(limit: number, userId: string) {
     const topProductsRaw = await prisma.orderItem.groupBy({
       by: ['productId'],
       where: {
         order: {
           status: {
             in: COMPLETED_ORDER_STATUSES,
+          },
+        },
+        product: {
+          store: {
+            userId,
           },
         },
       },
@@ -83,17 +96,22 @@ export class DashboardRepository {
     const productMap = new Map(products.map((p) => [p.id, p]));
 
     return topProductsRaw.map((raw) => ({
-      totalOrders: raw._sum.quantity || 0,
+      totalOrders: raw._sum?.quantity || 0,
       product: productMap.get(raw.productId)!,
     }));
   }
 
-  async getSalesByPriceRange() {
+  async getSalesByPriceRange(userId: string) {
     const orderItems = await prisma.orderItem.findMany({
       where: {
         order: {
           status: {
             in: COMPLETED_ORDER_STATUSES,
+          },
+        },
+        product: {
+          store: {
+            userId,
           },
         },
       },
