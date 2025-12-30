@@ -1,6 +1,9 @@
 name: Deploy to AWS (Deploy Branch)
 
 on:
+  push:
+    branches:
+      - deploy
   workflow_dispatch:
     inputs:
       environment:
@@ -10,12 +13,6 @@ on:
         options:
           - development
         default: development
-  workflow_run:
-    workflows: ["CI"]
-    types:
-      - completed
-    branches:
-      - deploy
 
 env:
   AWS_REGION: ap-northeast-2
@@ -29,9 +26,6 @@ env:
 
 jobs:
   deploy:
-    if: |
-      github.event_name == 'workflow_dispatch' ||
-      github.event.workflow_run.conclusion == 'success'
     runs-on: ubuntu-latest
 
     steps:
