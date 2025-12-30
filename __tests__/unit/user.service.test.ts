@@ -19,8 +19,8 @@ import bcrypt from 'bcrypt';
 describe('UserService 유닛 테스트', () => {
   let userService: UserService;
   let userRepository: DeepMockProxy<UserRepository>;
-  let hashSpy: jest.SpiedFunction<typeof bcrypt.hash>;
-  let compareSpy: jest.SpiedFunction<typeof bcrypt.compare>;
+  let hashSpy: jest.MockedFunction<(data: string, saltOrRounds: number) => Promise<string>>;
+  let compareSpy: jest.MockedFunction<(data: string, encrypted: string) => Promise<boolean>>;
 
   const userId = 'user-id-1';
 
@@ -31,11 +31,11 @@ describe('UserService 유닛 테스트', () => {
     userService = new UserService(userRepository);
 
     // bcrypt spyOn mock
-    hashSpy = jest.spyOn(bcrypt, 'hash') as jest.SpiedFunction<typeof bcrypt.hash>;
-    compareSpy = jest.spyOn(bcrypt, 'compare') as jest.SpiedFunction<typeof bcrypt.compare>;
+    hashSpy = jest.spyOn(bcrypt, 'hash') as typeof hashSpy;
+    compareSpy = jest.spyOn(bcrypt, 'compare') as typeof compareSpy;
 
-    hashSpy.mockResolvedValue('hashed-password' as never);
-    compareSpy.mockResolvedValue(true as never);
+    hashSpy.mockResolvedValue('hashed-password');
+    compareSpy.mockResolvedValue(true);
   });
 
   // 각 테스트가 끝난 후 모든 모의(mock)를 원래대로 복원
@@ -138,7 +138,7 @@ describe('UserService 유닛 테스트', () => {
       const updateData = updateUserInputMock();
 
       userRepository.findById.mockResolvedValue(user);
-      compareSpy.mockResolvedValue(false as never);
+      compareSpy.mockResolvedValue(false);
 
       // --- 실행 및 검증 (Act & Assert) ---
       await expect(userService.updateMe(userId, updateData)).rejects.toThrow(ForbiddenError);
