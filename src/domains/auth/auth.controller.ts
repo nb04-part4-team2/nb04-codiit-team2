@@ -5,8 +5,8 @@ import { UnauthorizedError } from '@/common/utils/errors.js';
 export class AuthController {
   private authService: AuthService;
 
-  constructor() {
-    this.authService = new AuthService();
+  constructor(authService: AuthService) {
+    this.authService = authService;
   }
 
   login = async (req: Request, res: Response): Promise<void> => {

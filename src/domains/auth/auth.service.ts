@@ -11,8 +11,8 @@ import { UserRepository } from '@/domains/user/user.repository.js';
 export class AuthService {
   private userRepository: UserRepository;
 
-  constructor() {
-    this.userRepository = new UserRepository();
+  constructor(userRepository: UserRepository) {
+    this.userRepository = userRepository;
   }
 
   async login(dto: unknown) {
