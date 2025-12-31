@@ -98,7 +98,7 @@ export class OrderService {
     // 0. 주문 생성에 필요한 데이터들 추출
     const productIds = orderItems.map((item) => item.productId);
     const products = await this.orderRepository.findManyProducts(productIds);
-    const buildedData = buildOrderData(products, orderItems);
+    const builtData = buildOrderData(products, orderItems);
 
     // 트랜잭션 외부로 전달할 알림용 전송 데이터 배열
     const ssePayloads: { userId: string; content: string }[] = [];
@@ -112,13 +112,13 @@ export class OrderService {
         phone,
         address,
         usePoint,
-        subtotal: buildedData.subtotal,
-        totalQuantity: buildedData.totalQuantity,
+        subtotal: builtData.subtotal,
+        totalQuantity: builtData.totalQuantity,
       };
       const order = await this.orderRepository.createOrder(orderData, tx);
 
       // 1-2. 주문 아이템들 생성 및 주문에 연결
-      orderItemsData = buildedData.matchedOrderItems.map((orderItem) => ({
+      orderItemsData = builtData.matchedOrderItems.map((orderItem) => ({
         ...orderItem,
         orderId: order.id,
       }));
@@ -138,7 +138,7 @@ export class OrderService {
       // 1-4. payment 생성 및 연결
       // 현재는 임의로 completedPayment 상태로 그냥 생성하는 것 같음
       // 실제로 외부 결제모듈을 연결한다면 어떻게 하는건지 우리 프로젝트에 실제로 결제 되도록 적용 가능한지 검토 필요
-      const finalPaymentPrice = buildedData.subtotal - usePoint; // 결제 금액은 총액 - 포인트 사용액
+      const finalPaymentPrice = builtData.subtotal - usePoint; // 결제 금액은 총액 - 포인트 사용액
       if (finalPaymentPrice < 0) {
         throw new BadRequestError('사용 포인트가 상품 총액을 초과할 수 없습니다.');
       }
@@ -164,7 +164,7 @@ export class OrderService {
       }
 
       // 1-5. 재고 감소 처리
-      const stockUpdatePromises = buildedData.matchedOrderItems.map(async (orderItem) => {
+      const stockUpdatePromises = builtData.matchedOrderItems.map(async (orderItem) => {
         const stockData = {
           productId: orderItem.productId,
           sizeId: orderItem.sizeId,

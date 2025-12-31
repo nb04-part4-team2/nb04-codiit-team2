@@ -207,9 +207,9 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
 
   // 2-4. 예상되는 계산 결과
   // 비즈니스 로직에서 실제로 계산하는 형태로 사용
-  const buildedData = buildOrderData(productsInfoOutput, orderServiceInput.orderItems);
-  const subtotal = buildedData.subtotal;
-  const totalQuantity = buildedData.totalQuantity;
+  const builtData = buildOrderData(productsInfoOutput, orderServiceInput.orderItems);
+  const subtotal = builtData.subtotal;
+  const totalQuantity = builtData.totalQuantity;
   const finalPrice = subtotal - usePoint; // 사용 포인트를 뺀 실제 결제 금액
   if (finalPrice < 0 || userInfoOutput.grade.rate < 0) {
     // 성공 시나리오에서는 상품 금액 총 합보다 포인트를 더 많이 사용할 수 없음
@@ -229,7 +229,7 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
   });
 
   // 2-5-2. 주문 아이템 생성 Repo Input
-  const orderItemsRepoInput = createOrderItemsRepoInputMock(buildedData.matchedOrderItems);
+  const orderItemsRepoInput = createOrderItemsRepoInputMock(builtData.matchedOrderItems);
 
   // 2-5-3. 포인트 차감 Repo Input
   const decreasePointRepoInput = createPointInputMock({
@@ -245,7 +245,7 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
   });
 
   // 2-5-5. 재고 감소 Repo Input
-  buildedData.matchedOrderItems.map((item, index) => {
+  builtData.matchedOrderItems.map((item, index) => {
     // 실제 비즈니스 로직 형태로 진행
     if (updatedStockOutput[index].quantity === 0) {
       // 2-5-6. 품절 알림 생성 Repo Input
@@ -292,15 +292,15 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
 
   // 2-6. Repository 반환값 예상 (Output)
   // 주문 생성 Repo output
-  const orderRepoOutput = createOrderMock({ subtotal, totalQuantity: buildedData.totalQuantity });
+  const orderRepoOutput = createOrderMock({ subtotal, totalQuantity: builtData.totalQuantity });
   // 주문 상세 조회 Repo output (주문 생성 로직의 반환 값)
   const getOrderOutput = createGetOrderMock({
     id: orderRepoOutput.id,
     buyerId: userId,
     subtotal,
-    totalQuantity: buildedData.totalQuantity,
+    totalQuantity: builtData.totalQuantity,
     usePoint,
-    orderItems: buildedData.matchedOrderItems.map((item, index) =>
+    orderItems: builtData.matchedOrderItems.map((item, index) =>
       createOrderItemMock({
         id: `order-item-id-${index + 1}`,
         productId: item.productId,
