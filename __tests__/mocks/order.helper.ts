@@ -75,11 +75,17 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
     itemsPrice = 10000,
     itemsQuantity = 1,
     orderItems = [
-      createOrderItemInputMock({
-        productId: 'product-id-1',
-        sizeId: 1,
-        quantity: itemsQuantity,
-      }),
+      {
+        ...createOrderItemInputMock({
+          productId: 'product-id-1',
+          sizeId: 1,
+          quantity: itemsQuantity,
+        }),
+        // 각 아이템의 할인 여부 및 할인율도 입력 가능
+        discountRate: 0,
+        discountStartTime: null,
+        discountEndTime: null,
+      },
     ] as ScenarioItemOption[],
   } = options;
 
@@ -113,6 +119,12 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
     const itemPrice = item.itemPrice ?? itemsPrice;
     // 사이즈 정보
     const sizeInfo = SIZE_MAP[sizeId];
+    // 할인율 정보
+    const discountRate = item.discountRate;
+    // 할인 시작 시간
+    const discountStartTime = item.discountStartTime;
+    // 할인 종료 시간
+    const discountEndTime = item.discountEndTime;
 
     productIds.push(productId);
 
@@ -147,6 +159,9 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
       productInfoMap[productId] = createProductInfoMock({
         id: productId,
         price: itemPrice,
+        discountRate,
+        discountStartTime,
+        discountEndTime,
         stocks: [], // 빈 배열로 시작
       });
     }
@@ -206,7 +221,11 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
   });
 
   // 2-4. 예상되는 계산 결과
-  // 비즈니스 로직에서 실제로 계산하는 형태로 사용
+  // 비즈니스 로직에서 실제로 계산하는 유틸 함수 그대로 사용
+  // 테스트의 의미가 좀 퇴색될 수 있음
+  // 하지만 주문 생성 시나리오에서는 계산 로직이 신뢰 가능한지 테스트 하는 것도 중요하지만
+  // 여러 도메인들의 트랜잭션도 중요함
+  // 계산 로직을 신뢰하고 트랜잭션 검증에 집중
   const builtData = buildOrderData(productsInfoOutput, orderServiceInput.orderItems);
   const subtotal = builtData.subtotal;
   const totalQuantity = builtData.totalQuantity;
@@ -342,6 +361,7 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
     verify: {
       // 검증에 쓸 객체들
       productIds,
+      finalPrice,
       orderRepoInput,
       orderItemsRepoInput,
       ...verifyUsePoint,
@@ -562,4 +582,11 @@ export const expectSellerNotificationSend = ({
 export const expectUpdateUserGrade = ({ mockUserService }: ExpectUserGradeInput) => {
   // 유저 등급 업데이트
   expect(mockUserService.updateGradeByPurchase).toHaveBeenCalledTimes(1);
+};
+/**
+ * 할인, 포인트 사용 등이 적용된 최종 결제 가격 expect
+ */
+export const expectFinalPrice = (scenario: ScenarioReturn, expectedFinalPrice: number) => {
+  const { verify } = scenario;
+  expect(verify.finalPrice).toBe(expectedFinalPrice);
 };

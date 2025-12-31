@@ -146,6 +146,9 @@ export const createProductInfoMock = (
     id: 'product-id-1',
     name: 'product-1',
     price: 10000,
+    discountRate: 0,
+    discountStartTime: null,
+    discountEndTime: null,
     stocks: stocks ? stocks.map(createStockOutputMock) : [],
     ...rest,
   };
@@ -482,10 +485,14 @@ export const createStockInputMock = (
 export const createScenarioItem = (
   overrides: Partial<ScenarioItemOption> = {},
 ): ScenarioItemOption => {
-  const { stockQuantity, itemPrice, ...rest } = overrides;
+  const { stockQuantity, itemPrice, discountRate, discountStartTime, discountEndTime, ...rest } =
+    overrides;
   return {
     ...createOrderItemInputMock(rest),
     stockQuantity,
     itemPrice,
+    discountRate: discountRate ?? 0,
+    discountStartTime: discountStartTime ?? null,
+    discountEndTime: discountEndTime ?? null,
   };
 };
