@@ -66,22 +66,35 @@ const toStoreResponse = (storeRawData: StoreRawData): StoreResponse => {
   return store;
 };
 
-export const toProductResponse = (productRawData: ProductRawData): ProductResponse => ({
-  id: productRawData.id,
-  storeId: productRawData.storeId,
-  name: productRawData.name,
-  price: productRawData.price,
-  image: productRawData.image,
-  discountRate: productRawData.discountRate,
-  discountStartTime: productRawData.discountStartTime?.toISOString() ?? null,
-  discountEndTime: productRawData.discountEndTime?.toISOString() ?? null,
-  createdAt: productRawData.createdAt.toISOString(),
-  updatedAt: productRawData.updatedAt.toISOString(),
-  reviewsRating: productRawData.reviewsRating,
-  categoryId: productRawData.categoryId,
-  store: toStoreResponse(productRawData.store),
-  stocks: productRawData.stocks.map(toStockResponse),
-});
+export const toProductResponse = (productRawData: ProductRawData): ProductResponse => {
+  const now = new Date();
+  const isDiscountActive =
+    productRawData.discountRate > 0 &&
+    (!productRawData.discountStartTime || now >= productRawData.discountStartTime) &&
+    (!productRawData.discountEndTime || now <= productRawData.discountEndTime);
+
+  const discountPrice = isDiscountActive
+    ? Math.floor(productRawData.price * (1 - productRawData.discountRate / 100))
+    : productRawData.price;
+
+  return {
+    id: productRawData.id,
+    storeId: productRawData.storeId,
+    name: productRawData.name,
+    price: productRawData.price,
+    image: productRawData.image,
+    discountPrice,
+    discountRate: productRawData.discountRate,
+    discountStartTime: productRawData.discountStartTime?.toISOString() ?? null,
+    discountEndTime: productRawData.discountEndTime?.toISOString() ?? null,
+    createdAt: productRawData.createdAt.toISOString(),
+    updatedAt: productRawData.updatedAt.toISOString(),
+    reviewsRating: productRawData.reviewsRating,
+    categoryId: productRawData.categoryId,
+    store: toStoreResponse(productRawData.store),
+    stocks: productRawData.stocks.map(toStockResponse),
+  };
+};
 
 const toItemResponse = (itemRawData: GetCartItemRawData): GetCartItemResponse => ({
   ...toCartItemBaseResponse(itemRawData),
