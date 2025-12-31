@@ -9,11 +9,16 @@ import {
   CreateOrderItemInputWithPrice,
   GetOrderItemRawData,
   GetOrderItemResponseData,
+  GradeBase,
   MetaResponse,
   OrderBase,
   PaymentRawData,
   PaymentResponse,
   PointHistoryBase,
+  ProductBase,
+  StockBase,
+  StockProductRawData,
+  StockSizeRawData,
 } from '@/domains/order/order.type.js';
 
 // ============================================
@@ -78,11 +83,32 @@ export interface GetOrderRawData extends OrderBase<Date> {
 // 주문 목록 조회 repo output dto
 export type GetOrdersRawData = GetOrderRawData[];
 // 주문 생성 repo output dto
-/**
- * @deprecated create 쿼리 반환 dto - 현재 미사용
- */
+// /**
+//  * @deprecated create 쿼리 반환 dto - 현재 미사용
+//  */
 export interface CreateOrderRawData extends OrderBase<Date> {
   buyerId: string;
+}
+// 외부 레포
+// 상품 정보 RawData
+export interface ProductInfoRawData extends Omit<ProductBase, 'image'> {
+  id: string;
+  price: number;
+  stocks: StockBase[];
+}
+// 상품 정보 목록 조회 repo output dto
+export type GetProductsInfoRawData = ProductInfoRawData[];
+// 유저 정보 repo output dto
+export interface UserInfoRawData {
+  point: number;
+  grade: GradeBase;
+}
+// 상품 재고 감소 repo output dto
+export interface DecreaseStockRawData extends StockBase {
+  id: string;
+  productId: string;
+  product: StockProductRawData;
+  size: StockSizeRawData;
 }
 
 // ============================================

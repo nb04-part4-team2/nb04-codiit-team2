@@ -123,7 +123,7 @@ export const createCartMock = (overrides: Partial<GetCartRawData> = {}): GetCart
   const { items, ...baseOverrides } = overrides;
   return {
     ...createCartBaseMock(baseOverrides),
-    items: items ?? [createGetCartItemMock()],
+    items: items ? items.map(createGetCartItemMock) : [],
   };
 };
 /**

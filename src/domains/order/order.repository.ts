@@ -5,14 +5,17 @@ import {
   CreateOrderRepoInput,
   CreatePaymentRepoInput,
   CreatePointHistoryRepoInput,
+  DecreaseStockRawData,
   GetCountRepoInput,
   GetOrderRawData,
   GetOrdersRawData,
   GetOrdersRepoInput,
   GetPointHistoryRepoInput,
+  ProductInfoRawData,
   UpdateOrderRepoInput,
   UpdatePointRepoInput,
   UpdateStockRepoInput,
+  UserInfoRawData,
 } from '@/domains/order/order.dto.js';
 
 export class OrderRepository {
@@ -253,7 +256,10 @@ export class OrderRepository {
    * 유저 포인트, 등급 조회
    **/
   // 등급 부분에 유니크 키가 없어 유저 쪽에서 연관 조회
-  async findUserInfo(userId: string, tx?: Prisma.TransactionClient) {
+  async findUserInfo(
+    userId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<UserInfoRawData | null> {
     const db = tx ?? this.prisma;
     return await db.user.findUnique({
       where: {
@@ -272,7 +278,7 @@ export class OrderRepository {
   /**
    * 상품 가격, 재고 조회
    **/
-  async findManyProducts(productIds: string[]) {
+  async findManyProducts(productIds: string[]): Promise<ProductInfoRawData[]> {
     return await this.prisma.product.findMany({
       where: {
         id: {
@@ -433,7 +439,7 @@ export class OrderRepository {
   async decreaseStock(
     { productId, sizeId, quantity }: UpdateStockRepoInput,
     tx?: Prisma.TransactionClient,
-  ) {
+  ): Promise<DecreaseStockRawData> {
     const db = tx ?? this.prisma;
     return await db.stock.update({
       where: {
