@@ -303,11 +303,22 @@ jobs:
           echo "🔀 ALB 트래픽 전환 중..."
           echo "   ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}"
 
+          # HTTP Listener (80) 전환
+          echo "🌐 HTTP Listener (80) 전환 중..."
           aws elbv2 modify-listener \
             --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
             --default-actions Type=forward,TargetGroupArn=${{ steps.detect.outputs.target_tg_arn }}
+          echo "✅ HTTP Listener 전환 완료"
 
-          echo "✅ 트래픽 전환 완료!"
+          # HTTPS Listener (443) 전환
+          echo "🔒 HTTPS Listener (443) 전환 중..."
+          aws elbv2 modify-listener \
+            --listener-arn ${{ secrets.ALB_LISTENER_HTTPS_ARN }} \
+            --default-actions Type=forward,TargetGroupArn=${{ steps.detect.outputs.target_tg_arn }}
+          echo "✅ HTTPS Listener 전환 완료"
+
+          echo ""
+          echo "✅ 모든 트래픽 전환 완료! (HTTP + HTTPS)"
           echo ""
           echo "📊 배포 결과:"
           echo "   • 이전: ${{ steps.detect.outputs.current_env }} (롤백 대기)"
@@ -319,31 +330,34 @@ jobs:
           echo "🎉 블루-그린 배포 완료!"
 
       # ============================================
-      # Step 8: 이전 타겟 Deregister (선택)
+      # Step 8: 이전 타겟 Deregister (비활성화)
       # ============================================
-      - name: Deregister old targets (optional)
-        if: success()
-        continue-on-error: true
-        run: |
-          echo "🔄 Deregistering old targets..."
-
-          OLD_TG_ARN=$([[ "${{ steps.detect.outputs.target_env }}" == "blue" ]] && \
-            echo "${{ secrets.GREEN_TARGET_GROUP_ARN }}" || \
-            echo "${{ secrets.BLUE_TARGET_GROUP_ARN }}")
-
-          OLD_TARGETS=$(aws elbv2 describe-target-health \
-            --target-group-arn $OLD_TG_ARN \
-            --query 'TargetHealthDescriptions[].Target.Id' \
-            --output text)
-
-          if [[ -n "$OLD_TARGETS" ]]; then
-            for TARGET in $OLD_TARGETS; do
-              aws elbv2 deregister-targets \
-                --target-group-arn $OLD_TG_ARN \
-                --targets Id=$TARGET || true
-              echo "✅ Deregistered $TARGET"
-            done
-          fi
+      # 주석 처리 이유: 즉시 롤백을 위해 Standby 환경을 Target Group에 유지
+      # Blue-Green 배포에서 비활성 환경도 등록 상태 유지 → 1초 롤백 가능
+      #
+      # - name: Deregister old targets (optional)
+      #   if: success()
+      #   continue-on-error: true
+      #   run: |
+      #     echo "🔄 Deregistering old targets..."
+      #
+      #     OLD_TG_ARN=$([[ "${{ steps.detect.outputs.target_env }}" == "blue" ]] && \
+      #       echo "${{ secrets.GREEN_TARGET_GROUP_ARN }}" || \
+      #       echo "${{ secrets.BLUE_TARGET_GROUP_ARN }}")
+      #
+      #     OLD_TARGETS=$(aws elbv2 describe-target-health \
+      #       --target-group-arn $OLD_TG_ARN \
+      #       --query 'TargetHealthDescriptions[].Target.Id' \
+      #       --output text)
+      #
+      #     if [[ -n "$OLD_TARGETS" ]]; then
+      #       for TARGET in $OLD_TARGETS; do
+      #         aws elbv2 deregister-targets \
+      #           --target-group-arn $OLD_TG_ARN \
+      #           --targets Id=$TARGET || true
+      #         echo "✅ Deregistered $TARGET"
+      #       done
+      #     fi
 
       # ============================================
       # 정리: 사용하지 않는 Docker 이미지 삭제
