@@ -271,14 +271,14 @@ jobs:
         run: |
           echo "⏳ Waiting for target to be healthy..."
 
-          for i in {1..20}; do
+          for i in {1..12}; do
             HEALTH=$(aws elbv2 describe-target-health \
               --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
               --targets Id=${{ steps.ec2-setup.outputs.instance_id }} \
               --query 'TargetHealthDescriptions[0].TargetHealth.State' \
               --output text)
 
-            echo "Target health: $HEALTH ($i/20)"
+            echo "Target health: $HEALTH ($i/12)"
 
             # Blue-Green 배포에서 비활성 Target Group은 'unused' 상태가 정상
             # ALB가 해당 TG를 사용하지 않으므로 Health Check가 실행되지 않음
@@ -288,7 +288,7 @@ jobs:
               exit 0
             fi
 
-            sleep 15
+            sleep 10
           done
 
           echo "❌ Target did not become healthy"
