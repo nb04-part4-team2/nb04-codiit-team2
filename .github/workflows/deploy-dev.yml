@@ -280,11 +280,8 @@ jobs:
 
             echo "Target health: $HEALTH ($i/20)"
 
-            # Blue-Green 배포에서 비활성 Target Group은 'unused' 상태가 정상
-            # ALB가 해당 TG를 사용하지 않으므로 Health Check가 실행되지 않음
-            # 'unused'는 배포 실패가 아니라 "대기 중" 상태를 의미
-            if [[ "$HEALTH" == "healthy" ]] || [[ "$HEALTH" == "unused" ]]; then
-              echo "✅ Target is ready! (Status: $HEALTH)"
+            if [[ "$HEALTH" == "healthy" ]]; then
+              echo "✅ Target is healthy!"
               exit 0
             fi
 
@@ -377,35 +374,3 @@ jobs:
           echo "디버깅 정보:"
           echo "  Instance ID: ${{ steps.ec2-setup.outputs.instance_id }}"
           echo "  Public IP: ${{ steps.get-ip.outputs.public_ip }}"
-
-      # ============================================
-      # Discord 알림
-      # ============================================
-      - name: Discord 배포 성공 알림
-        if: success()
-        uses: sarisia/actions-status-discord@v1
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          title: "✅ 배포 성공!"
-          description: |
-            **브랜치**: ${{ github.ref_name }}
-            **커밋**: ${{ github.event.head_commit.message }}
-            **작성자**: ${{ github.actor }}
-            **환경**: ${{ steps.detect.outputs.target_env }}
-            **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id }}
-            **워크플로우**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          color: 0x00FF00
-
-      - name: Discord 배포 실패 알림
-        if: failure()
-        uses: sarisia/actions-status-discord@v1
-        with:
-          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
-          title: "❌ 배포 실패!"
-          description: |
-            **브랜치**: ${{ github.ref_name }}
-            **커밋**: ${{ github.event.head_commit.message }}
-            **작성자**: ${{ github.actor }}
-            **환경**: ${{ steps.detect.outputs.target_env || 'unknown' }}
-            **로그**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-          color: 0xFF0000
