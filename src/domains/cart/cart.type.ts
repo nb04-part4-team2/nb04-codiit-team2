@@ -16,7 +16,7 @@ export interface CartItemBase<TDate> {
   updatedAt: TDate;
 }
 
-interface StoreBase<TDate> {
+export interface StoreBase<TDate> {
   id: string;
   userId: string;
   name: string;
