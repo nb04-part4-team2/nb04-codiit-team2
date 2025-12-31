@@ -289,6 +289,9 @@ export class OrderRepository {
         id: true,
         name: true,
         price: true,
+        discountRate: true,
+        discountStartTime: true,
+        discountEndTime: true,
         stocks: {
           select: {
             sizeId: true,
