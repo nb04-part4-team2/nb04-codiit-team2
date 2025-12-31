@@ -94,6 +94,9 @@ export interface CreateOrderRawData extends OrderBase<Date> {
 export interface ProductInfoRawData extends Omit<ProductBase, 'image'> {
   id: string;
   price: number;
+  discountRate: number;
+  discountStartTime: Date | null;
+  discountEndTime: Date | null;
   stocks: StockBase[];
 }
 // 상품 정보 목록 조회 repo output dto

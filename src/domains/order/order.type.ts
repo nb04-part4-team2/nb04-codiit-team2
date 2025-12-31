@@ -167,6 +167,9 @@ export interface CreateOrderItemInputWithPrice extends CreateOrderItemBody {
 export interface ScenarioItemOption extends CreateOrderItemBody {
   stockQuantity?: number;
   itemPrice?: number;
+  discountRate?: number;
+  discountStartTime?: Date | null;
+  discountEndTime?: Date | null;
 }
 // 성공 시나리오 기본 옵션
 export interface OrderScenarioOptions {
@@ -189,6 +192,7 @@ interface MockRepo {
 // 성공 시나리오 검증용 객체들
 interface Verify {
   productIds: string[];
+  finalPrice: number;
   orderRepoInput: CreateOrderRepoInput;
   orderItemsRepoInput: CreateOrderItemRepoInput[];
   decreasePointRepoInput?: UpdatePointRepoInput;
