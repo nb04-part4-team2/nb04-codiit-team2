@@ -264,6 +264,11 @@ jobs:
           for i in {1..12}; do
             if curl -f http://localhost:3000/api/health > /dev/null 2>&1; then
               echo "✅ Local health check passed! ($i/12 = $((i*5))s elapsed)"
+
+              # ECR 로그아웃 (보안)
+              echo "🔓 Logging out from ECR..."
+              docker logout $ECR_REGISTRY || true
+
               exit 0
             fi
 
