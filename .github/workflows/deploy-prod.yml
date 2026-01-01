@@ -22,11 +22,11 @@ env:
   ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
   ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
   IMAGE_TAG: ${{ github.sha }}
-  # AWS 인프라 리소스 (GitHub Secrets로 관리)
-  SECURITY_GROUP_ID: ${{ secrets.SECURITY_GROUP_ID }}        # Security Group for EC2
-  SUBNET_ID: ${{ secrets.SUBNET_ID }}                        # Public Subnet (AZ 1a)
-  IAM_INSTANCE_PROFILE: ${{ secrets.IAM_INSTANCE_PROFILE }}  # IAM Role for EC2
-  KEY_NAME: ${{ secrets.KEY_NAME }}                          # SSH Key Pair name
+  AMI_ID: ${{ secrets.AMI_ID }}
+  SECURITY_GROUP_ID: ${{ secrets.SECURITY_GROUP_ID }}
+  SUBNET_ID: ${{ secrets.SUBNET_ID }}
+  IAM_INSTANCE_PROFILE: ${{ secrets.IAM_INSTANCE_PROFILE }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
 
 jobs:
   deploy:
@@ -100,7 +100,7 @@ jobs:
             echo "🔨 Creating new EC2 from Golden AMI..."
 
             INSTANCE_ID=$(aws ec2 run-instances \
-              --image-id ${{ secrets.GOLDEN_AMI_ID }} \
+              --image-id ${{ secrets.AMI_ID }} \
               --instance-type t3.micro \
               --key-name ${{ env.KEY_NAME }} \
               --security-group-ids ${{ env.SECURITY_GROUP_ID }} \
