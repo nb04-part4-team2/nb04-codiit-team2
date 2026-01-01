@@ -468,8 +468,8 @@ jobs:
             **브랜치**: ${{ github.ref_name }}
             **커밋**: ${{ github.event.head_commit.message }}
             **작성자**: ${{ github.actor }}
-            **전환 상태**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
-            **환경**: ${{ steps.detect.outputs.target_env }}
+            **배포 전환**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
+            ✅ **운영 환경**: ${{ steps.detect.outputs.target_env }} (Active)
             **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id }}
             **워크플로우**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           color: 0x00FF00
@@ -484,6 +484,8 @@ jobs:
             **브랜치**: ${{ github.ref_name }}
             **커밋**: ${{ github.event.head_commit.message }}
             **작성자**: ${{ github.actor }}
-            **환경**: ${{ steps.detect.outputs.target_env || 'unknown' }}
+            **배포 시도**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
+            ⚠️ **실패 환경**: ${{ steps.detect.outputs.target_env || 'unknown' }}
+            **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id || 'N/A' }}
             **로그**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
           color: 0xFF0000
