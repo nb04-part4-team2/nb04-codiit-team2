@@ -471,10 +471,10 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
           title: "✅ 프로덕션 배포 성공!"
           description: |
-            🌿 **브랜치**: ${{ github.ref_name }}
-            🔄 **배포 전환**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
-            🌐 **운영 환경**: ${{ steps.detect.outputs.target_env }} (Active)
-            🖥️ **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id }}
+            - 🌿 **브랜치**: ${{ github.ref_name }}
+            - 🔄 **배포 전환**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
+            - 🌐 **운영 환경**: ${{ steps.detect.outputs.target_env }} (Active)
+            - 🖥️ **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id }}
           color: 0x00FF00
 
       - name: Send Discord notification on failure
@@ -484,8 +484,8 @@ jobs:
           webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
           title: "❌ 프로덕션 배포 실패!"
           description: |
-            🌿 **브랜치**: ${{ github.ref_name }}
-            🔄 **배포 시도**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
-            🌐 **실패 환경**: ${{ steps.detect.outputs.target_env || 'unknown' }}
-            🖥️ **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id || 'N/A' }}
+            - 🌿 **브랜치**: ${{ github.ref_name }}
+            - 🔄 **배포 시도**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
+            - 🌐 **실패 환경**: ${{ steps.detect.outputs.target_env || 'unknown' }}
+            - 🖥️ **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id || 'N/A' }}
           color: 0xFF0000
