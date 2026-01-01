@@ -314,11 +314,6 @@ describe('OrderService', () => {
     });
     it('주문 성공 (다중 상품, 포인트 사용 O, 알림 발송 O, 할인(상시 할인) O)', async () => {
       // given
-      const now = new Date();
-      const yesterday = new Date(now);
-      yesterday.setDate(now.getDate() - 1);
-      const tomorrow = new Date(now);
-      tomorrow.setDate(now.getDate() + 1);
       const scenario = setupCreateOrderScenario({
         usePoint: 1000,
         orderItems: [
