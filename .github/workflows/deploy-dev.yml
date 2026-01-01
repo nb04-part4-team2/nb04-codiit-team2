@@ -346,6 +346,12 @@ jobs:
           done
 
           echo "❌ Target did not become healthy"
+          echo ""
+          echo "🔍 Target Group 상태:"
+          aws elbv2 describe-target-health \
+            --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+            --targets Id=${{ steps.ec2-setup.outputs.instance_id }} \
+            --output table || true
           exit 1
 
       # ============================================
@@ -462,6 +468,7 @@ jobs:
             **브랜치**: ${{ github.ref_name }}
             **커밋**: ${{ github.event.head_commit.message }}
             **작성자**: ${{ github.actor }}
+            **전환 상태**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
             **환경**: ${{ steps.detect.outputs.target_env }}
             **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id }}
             **워크플로우**: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
