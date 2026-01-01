@@ -332,7 +332,7 @@ describe('OrderService', () => {
             quantity: 2,
             stockQuantity: 10,
             itemPrice: 10000,
-            discountRate: 20, // 10% 할인
+            discountRate: 20, // 20% 할인
           }),
         ],
       });
