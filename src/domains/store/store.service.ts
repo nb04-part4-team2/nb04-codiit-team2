@@ -77,10 +77,8 @@ export class StoreService {
       const stock = product.stocks.reduce((sum, s) => sum + s.quantity, 0);
       const isDiscount =
         product.discountRate > 0 &&
-        product.discountStartTime !== null &&
-        product.discountEndTime !== null &&
-        product.discountStartTime <= now &&
-        now <= product.discountEndTime;
+        (!product.discountStartTime || now >= product.discountStartTime) &&
+        (!product.discountEndTime || now <= product.discountEndTime);
 
       return {
         id: product.id,
