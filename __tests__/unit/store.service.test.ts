@@ -216,6 +216,36 @@ describe('StoreService 유닛 테스트', () => {
       // --- 검증 (Assert) ---
       expect(result.products[0].isDiscount).toBe(true);
     });
+
+    it('할인율은 있지만 기간이 설정되지 않은 경우(상시 할인) isDiscount가 true', async () => {
+      // --- 준비 (Arrange) ---
+      const store = createStoreMock({ id: storeId, userId });
+      const mockProducts = [
+        {
+          id: 'product-1',
+          image: 'image1.jpg',
+          name: '상시 할인 상품',
+          price: 10000,
+          isSoldOut: false,
+          discountRate: 5,
+          discountStartTime: null, // 기간 없음
+          discountEndTime: null, // 기간 없음
+          createdAt: new Date(),
+          stocks: [{ quantity: 10 }],
+        },
+      ];
+
+      storeRepository.findByUserId.mockResolvedValue(store);
+      storeRepository.findProductsWithStock.mockResolvedValue(mockProducts);
+      storeRepository.countProducts.mockResolvedValue(1);
+
+      // --- 실행 (Act) ---
+      const result = await storeService.getMyStoreProducts(userId, {});
+
+      // --- 검증 (Assert) ---
+      expect(result.products[0].isDiscount).toBe(true);
+      expect(result.products[0].price).toBe(10000); // 원가 그대로
+    });
   });
 
   // 스토어 수정

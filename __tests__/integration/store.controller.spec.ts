@@ -277,6 +277,94 @@ describe('Store API Integration Test', () => {
 
       expect(response.status).toBe(404);
     });
+
+    it('200: 할인율은 있지만 기간이 null인 상품(상시 할인) isDiscount가 true', async () => {
+      // 기존 상품 삭제
+      await prisma.product.deleteMany({ where: { storeId: store.id } });
+
+      const category = await createTestCategory('할인카테고리1');
+
+      // 상시 할인 상품 생성
+      await prisma.product.create({
+        data: {
+          name: '상시 할인 상품',
+          price: 10000,
+          image: 'https://example.com/discount.jpg',
+          storeId: store.id,
+          categoryId: category.id,
+          discountRate: 10,
+          discountStartTime: null,
+          discountEndTime: null,
+        },
+      });
+
+      const response = await authRequest(sellerToken).get('/api/stores/detail/my/product');
+
+      expect(response.status).toBe(200);
+      expect(response.body.list).toHaveLength(1);
+      expect(response.body.list[0].name).toBe('상시 할인 상품');
+      expect(response.body.list[0].price).toBe(10000); // 원가
+      expect(response.body.list[0].isDiscount).toBe(true); // 할인 활성
+    });
+
+    it('200: 할인 기간 내 상품 isDiscount가 true', async () => {
+      // 기존 상품 삭제
+      await prisma.product.deleteMany({ where: { storeId: store.id } });
+
+      const category = await createTestCategory('할인카테고리2');
+      const now = new Date();
+
+      // 할인 기간 내 상품 생성
+      await prisma.product.create({
+        data: {
+          name: '기간 할인 상품',
+          price: 20000,
+          image: 'https://example.com/period-discount.jpg',
+          storeId: store.id,
+          categoryId: category.id,
+          discountRate: 20,
+          discountStartTime: new Date(now.getTime() - 1000 * 60 * 60), // 1시간 전
+          discountEndTime: new Date(now.getTime() + 1000 * 60 * 60), // 1시간 후
+        },
+      });
+
+      const response = await authRequest(sellerToken).get('/api/stores/detail/my/product');
+
+      expect(response.status).toBe(200);
+      expect(response.body.list).toHaveLength(1);
+      expect(response.body.list[0].name).toBe('기간 할인 상품');
+      expect(response.body.list[0].price).toBe(20000); // 원가
+      expect(response.body.list[0].isDiscount).toBe(true); // 할인 활성
+    });
+
+    it('200: 할인 없는 상품 isDiscount가 false', async () => {
+      // 기존 상품 삭제
+      await prisma.product.deleteMany({ where: { storeId: store.id } });
+
+      const category = await createTestCategory('할인카테고리3');
+
+      // 할인 없는 상품 생성
+      await prisma.product.create({
+        data: {
+          name: '일반 상품',
+          price: 15000,
+          image: 'https://example.com/normal.jpg',
+          storeId: store.id,
+          categoryId: category.id,
+          discountRate: 0,
+          discountStartTime: null,
+          discountEndTime: null,
+        },
+      });
+
+      const response = await authRequest(sellerToken).get('/api/stores/detail/my/product');
+
+      expect(response.status).toBe(200);
+      expect(response.body.list).toHaveLength(1);
+      expect(response.body.list[0].name).toBe('일반 상품');
+      expect(response.body.list[0].price).toBe(15000);
+      expect(response.body.list[0].isDiscount).toBe(false); // 할인 없음
+    });
   });
 
   // ===== POST /api/stores/:storeId/favorite - 관심 스토어 등록 =====
