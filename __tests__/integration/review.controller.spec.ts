@@ -131,7 +131,8 @@ describe('⭐ Review API Integration Test', () => {
         .post(`/api/products/${productId}/reviews`)
         .send(requestBody);
 
-      expect(res.status).toBeGreaterThanOrEqual(400);
+      // [수정 2] 모호한 검증(>=400) 대신 명확한 400 Bad Request 검증으로 변경
+      expect(res.status).toBe(400);
     });
 
     it('400: 존재하지 않는 상품(또는 주문과 일치하지 않는 상품)에 리뷰 작성 시 실패한다', async () => {
@@ -141,13 +142,10 @@ describe('⭐ Review API Integration Test', () => {
         orderItemId: orderItemId,
       };
 
-      // Zod 형식을 만족하는 가짜 ID 사용
       const res = await authRequest(buyerToken)
         .post(`/api/products/${nonExistentCuid}/reviews`)
         .send(requestBody);
 
-      // 서비스 로직에서 `orderItem.productId`와 요청한 `productId`가 일치하는지 먼저 검사하므로,
-      // 상품 존재 여부(404)를 체크하기 전에 상품 불일치로 인한 400 Bad Request가 먼저 반환됩니다.
       expect(res.status).toBe(400);
     });
 
@@ -160,7 +158,7 @@ describe('⭐ Review API Integration Test', () => {
   // --- 리뷰 목록 조회 테스트 ---
   describe('GET /api/products/:productId/reviews', () => {
     beforeEach(async () => {
-      await prisma.review.deleteMany();
+      // [수정 1] 불필요한 deleteMany 삭제 (global setup에서 처리됨)
       await prisma.review.create({
         data: {
           userId: ctx.buyer.id,
@@ -179,13 +177,11 @@ describe('⭐ Review API Integration Test', () => {
       expect(Array.isArray(res.body.items)).toBe(true);
       expect(res.body.items.length).toBeGreaterThan(0);
       expect(res.body.items[0].content).toBe('목록 조회용 리뷰');
-      // ReviewListItemDto는 ReviewResponseDto를 확장하므로 id 필드가 존재
       expect(res.body.items[0].id).toBeDefined();
       expect(res.body.meta).toBeDefined();
     });
 
     it('404: 존재하지 않는 상품의 리뷰 조회 시 404를 반환한다', async () => {
-      // Zod 형식을 만족하는 가짜 ID 사용
       const res = await testClient.get(`/api/products/${nonExistentCuid}/reviews`);
       expect(res.status).toBe(404);
     });
@@ -210,7 +206,6 @@ describe('⭐ Review API Integration Test', () => {
       const res = await testClient.get(`/api/review/${reviewId}`);
 
       expect(res.status).toBe(200);
-      // ReviewDetailResponseDto는 id 대신 reviewId 필드를 가짐
       expect(res.body.reviewId).toBe(reviewId);
       expect(res.body.content).toBe('상세 조회용 리뷰');
       expect(res.body.rating).toBe(4);
@@ -256,7 +251,7 @@ describe('⭐ Review API Integration Test', () => {
     it('403: 다른 유저가 리뷰 수정 시도 시 권한 없음 에러 발생', async () => {
       const updateBody: UpdateReviewDto = { rating: 1, content: '나쁜 리뷰로 변경' };
 
-      const res = await authRequest(otherBuyerToken) // 본인이 아님
+      const res = await authRequest(otherBuyerToken)
         .patch(`/api/review/${reviewId}`)
         .send(updateBody);
 
@@ -287,7 +282,6 @@ describe('⭐ Review API Integration Test', () => {
     it('204: 작성자가 자신의 리뷰를 삭제한다', async () => {
       const res = await authRequest(buyerToken).delete(`/api/review/${reviewId}`);
 
-      // 삭제 성공 시 Body 없이 204 No Content 반환
       expect(res.status).toBe(204);
 
       const deleted = await prisma.review.findUnique({ where: { id: reviewId } });
