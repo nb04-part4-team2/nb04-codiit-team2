@@ -9,7 +9,6 @@ import {
 import { OrderRepository } from '@/domains/order/order.repository.js';
 import type { NotificationService } from '@/domains/notification/notification.service.js';
 import { OrderStatus, PaymentStatus, PointHistoryType, PrismaClient } from '@prisma/client';
-import { CreateOrderItemInputWithPrice } from '@/domains/order/order.type.js';
 import {
   BadRequestError,
   ForbiddenError,
@@ -17,8 +16,9 @@ import {
   NotFoundError,
   UnauthorizedError,
 } from '@/common/utils/errors.js';
-import { sseManager } from '@/common/utils/sse.manager.js';
+import { SseManager } from '@/common/utils/sse.manager.js';
 import { UserService } from '@/domains/user/user.service.js';
+import { buildOrderData } from '@/domains/order/order.utils.js';
 
 export class OrderService {
   constructor(
@@ -26,6 +26,7 @@ export class OrderService {
     private notificationService: NotificationService,
     private prisma: PrismaClient,
     private userService: UserService,
+    private sseManager: SseManager,
   ) {}
   private async validateOwner(userId: string, orderId: string) {
     const owner = await this.orderRepository.findOwnerById(orderId);
@@ -97,30 +98,7 @@ export class OrderService {
     // 0. 주문 생성에 필요한 데이터들 추출
     const productIds = orderItems.map((item) => item.productId);
     const products = await this.orderRepository.findManyProducts(productIds);
-    const buildedData = orderItems.reduce(
-      (acc, item) => {
-        // 상품 존재 여부 체크 (방어코드)
-        const product = products.find((p) => p.id === item.productId);
-        if (!product) {
-          throw new NotFoundError('상품 없음');
-        }
-        // 재고 수량 검증 (방어코드)
-        const stock = product.stocks.find((stock) => stock.sizeId === item.sizeId);
-        if (!stock || stock.quantity < item.quantity) {
-          throw new BadRequestError(`'${product.name}' 상품의 재고가 부족합니다.`);
-        }
-        acc.subtotal += product.price * item.quantity; // 상품 총액
-        acc.totalQuantity += item.quantity; // 총 주문 수량
-        acc.matchedOrderItems.push({
-          productId: item.productId,
-          sizeId: item.sizeId,
-          quantity: item.quantity,
-          price: product.price,
-        }); // 주문 아이템에 price 추가해서 조립
-        return acc;
-      },
-      { subtotal: 0, totalQuantity: 0, matchedOrderItems: [] as CreateOrderItemInputWithPrice[] },
-    );
+    const builtData = buildOrderData(products, orderItems);
 
     // 트랜잭션 외부로 전달할 알림용 전송 데이터 배열
     const ssePayloads: { userId: string; content: string }[] = [];
@@ -134,13 +112,13 @@ export class OrderService {
         phone,
         address,
         usePoint,
-        subtotal: buildedData.subtotal,
-        totalQuantity: buildedData.totalQuantity,
+        subtotal: builtData.subtotal,
+        totalQuantity: builtData.totalQuantity,
       };
       const order = await this.orderRepository.createOrder(orderData, tx);
 
       // 1-2. 주문 아이템들 생성 및 주문에 연결
-      orderItemsData = buildedData.matchedOrderItems.map((orderItem) => ({
+      orderItemsData = builtData.matchedOrderItems.map((orderItem) => ({
         ...orderItem,
         orderId: order.id,
       }));
@@ -160,7 +138,7 @@ export class OrderService {
       // 1-4. payment 생성 및 연결
       // 현재는 임의로 completedPayment 상태로 그냥 생성하는 것 같음
       // 실제로 외부 결제모듈을 연결한다면 어떻게 하는건지 우리 프로젝트에 실제로 결제 되도록 적용 가능한지 검토 필요
-      const finalPaymentPrice = buildedData.subtotal - usePoint; // 결제 금액은 총액 - 포인트 사용액
+      const finalPaymentPrice = builtData.subtotal - usePoint; // 결제 금액은 총액 - 포인트 사용액
       if (finalPaymentPrice < 0) {
         throw new BadRequestError('사용 포인트가 상품 총액을 초과할 수 없습니다.');
       }
@@ -186,7 +164,7 @@ export class OrderService {
       }
 
       // 1-5. 재고 감소 처리
-      const stockUpdatePromises = buildedData.matchedOrderItems.map(async (orderItem) => {
+      const stockUpdatePromises = builtData.matchedOrderItems.map(async (orderItem) => {
         const stockData = {
           productId: orderItem.productId,
           sizeId: orderItem.sizeId,
@@ -286,7 +264,7 @@ export class OrderService {
     // 판매자 알림(객체)과 구매자 알림(배열)이 모두 포함된 배열을 순회
     if (result.ssePayloads.length > 0) {
       result.ssePayloads.forEach((payload) => {
-        sseManager.sendMessage(payload.userId, payload);
+        this.sseManager.sendMessage(payload.userId, payload);
       });
     }
 

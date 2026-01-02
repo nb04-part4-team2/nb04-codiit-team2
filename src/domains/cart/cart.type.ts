@@ -16,7 +16,7 @@ export interface CartItemBase<TDate> {
   updatedAt: TDate;
 }
 
-interface StoreBase<TDate> {
+export interface StoreBase<TDate> {
   id: string;
   userId: string;
   name: string;
@@ -42,6 +42,7 @@ interface ProductBase<TStocks, TStore, TTime> {
   name: string;
   price: number;
   image: string;
+  discountPrice?: number;
   discountRate: number;
   discountStartTime: TTime | null;
   discountEndTime: TTime | null;
