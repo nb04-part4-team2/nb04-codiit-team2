@@ -1,6 +1,7 @@
 import express, { Request, Response } from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
+import morgan from 'morgan';
 import { pinoHttp } from 'pino-http';
 import cookieParser from 'cookie-parser';
 import { logger } from '@/config/logger.js';
@@ -30,22 +31,29 @@ const app = express();
 // 보안 미들웨어
 app.use(helmet());
 
-// HTTP 요청 로깅 (Pino)
-app.use(
-  pinoHttp({
-    logger,
-    // 로그 레벨 커스터마이징
-    customLogLevel: (req: Request, res: Response, err?: Error) => {
-      if (res.statusCode >= 500 || err) return 'error';
-      if (res.statusCode >= 400) return 'warn';
-      return 'info';
-    },
-    // Health check 요청은 로그 생략 (불필요한 로그 방지)
-    autoLogging: {
-      ignore: (req: Request) => req.url === '/api/health',
-    },
-  }),
-);
+// HTTP 요청 로깅 (환경별 분기)
+if (env.NODE_ENV === 'development') {
+  // 개발 환경: morgan으로 읽기 쉬운 컬러 로그
+  app.use(morgan('dev'));
+} else if (env.NODE_ENV === 'production') {
+  // 프로덕션 환경: pino로 구조화된 JSON 로그
+  app.use(
+    pinoHttp({
+      logger,
+      // 로그 레벨 커스터마이징
+      customLogLevel: (req: Request, res: Response, err?: Error) => {
+        if (res.statusCode >= 500 || err) return 'error';
+        if (res.statusCode >= 400) return 'warn';
+        return 'info';
+      },
+      // Health check 요청은 로그 생략 (불필요한 로그 방지)
+      autoLogging: {
+        ignore: (req: Request) => req.url === '/api/health',
+      },
+    }),
+  );
+}
+// 테스트 환경(test): HTTP 로거 사용하지 않음 (clean test output)
 
 // 기본 미들웨어
 app.use(
