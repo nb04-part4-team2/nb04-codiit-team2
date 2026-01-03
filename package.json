@@ -38,6 +38,10 @@
     "**/*.ts": [
       "npx eslint --fix",
       "npx prettier --write"
+    ],
+    "prisma/schema.prisma": [
+      "npx prisma validate",
+      "npx prisma format"
     ]
   },
   "devDependencies": {

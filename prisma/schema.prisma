@@ -36,10 +36,10 @@ enum OrderStatus {
 }
 
 enum PointHistoryType {
-  USE         // 사용
-  EARN        // 적립
+  USE // 사용
+  EARN // 적립
   EARN_CANCEL // 적립 취소
-  REFUND      // 환불
+  REFUND // 환불
 }
 
 // --------------------------------------
@@ -354,10 +354,10 @@ model StoreLike {
 }
 
 model PointHistory {
-  id        String   @id @default(cuid())
+  id        String           @id @default(cuid())
   type      PointHistoryType
   amount    Int
-  createdAt DateTime @default(now())
+  createdAt DateTime         @default(now())
 
   // FK
   userId  String
