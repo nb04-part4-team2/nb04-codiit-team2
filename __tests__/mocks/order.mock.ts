@@ -22,14 +22,16 @@ import {
   CreatePointHistoryRepoInput,
   DecreaseStockRawData,
   GetOrderRawData,
+  GetOrdersServiceInput,
   ProductInfoRawData,
+  UpdateOrderServiceInput,
   UpdatePointRepoInput,
   UpdateStockRepoInput,
   UserInfoRawData,
 } from '@/domains/order/order.dto.js';
 import { CreateOrderItemBody } from '@/domains/order/order.schema.js';
 import { createSizeMock } from './cart.mock.js';
-import { PaymentStatus, PointHistoryType } from '@prisma/client';
+import { OrderStatus, PaymentStatus, PointHistoryType } from '@prisma/client';
 import { CreateNotificationBody } from '@/domains/notification/notification.type.js';
 
 // ============================================
@@ -122,6 +124,15 @@ export const basePaymentMock = {
   createdAt: date1,
   updatedAt: date2,
   ...basePaymentInputMock,
+};
+/**
+ * [부품] 베이스 GetOrders Input mock
+ */
+export const baseGetOrdersInputMock = {
+  userId: 'buyer-id-1',
+  status: OrderStatus.CompletedPayment,
+  limit: 10,
+  page: 1,
 };
 // ============================================
 // 부품 팩토리 (output 객체용 부품들)
@@ -369,7 +380,7 @@ export const createOrderServiceInputMock = (
 ): CreateOrderServiceInput => {
   const { orderItems, ...baseInputOverrides } = overrides;
   return {
-    userId: 'buyer-id-1',
+    userId: overrides.userId ?? 'buyer-id-1',
     orderItems: orderItems ? orderItems.map(createOrderItemInputMock) : [],
     ...baseOrderInputMock,
     ...baseInputOverrides,
@@ -422,8 +433,8 @@ export const createOrderItemsRepoInputMock = (
 export const createPointInputMock = (
   overrides: Partial<UpdatePointRepoInput> = {},
 ): UpdatePointRepoInput => ({
-  userId: 'buyer-id-1',
-  amount: 1000,
+  userId: overrides.userId ?? 'buyer-id-1',
+  amount: overrides.amount ?? 1000,
   ...overrides,
 });
 // 5. 포인트 히스토리 repo input
@@ -474,6 +485,31 @@ export const createStockInputMock = (
   overrides: Partial<UpdateStockRepoInput> = {},
 ): UpdateStockRepoInput => ({
   ...baseStockInputMock,
+  ...overrides,
+});
+// 9. 주문 수정 service input
+/**
+ * [완성본] UpdateOrderServiceInput 팩토리
+ */
+export const updateOrderServiceInputMock = (
+  overrides: Partial<UpdateOrderServiceInput> = {},
+): UpdateOrderServiceInput => {
+  const { usePoint: _usePoint, ...baseUpateInput } = baseOrderInputMock;
+  return {
+    userId: overrides.userId ?? 'buyer-id-1',
+    orderId: overrides.orderId ?? 'order-id-1',
+    ...baseUpateInput,
+    ...overrides,
+  };
+};
+// 10. 주문 목록 조회 service input
+/**
+ * [완성본] GetOrdersServiceInput 팩토리
+ */
+export const getOrdersServiceInputMock = (
+  overrides: Partial<GetOrdersServiceInput> = {},
+): GetOrdersServiceInput => ({
+  ...baseGetOrdersInputMock,
   ...overrides,
 });
 // ============================================

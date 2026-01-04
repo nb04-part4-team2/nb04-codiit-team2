@@ -1,9 +1,17 @@
 import { beforeEach, describe, it, jest } from '@jest/globals';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import { Prisma, PrismaClient } from '@prisma/client';
+import { OrderStatus, Prisma, PrismaClient } from '@prisma/client';
 import { OrderRepository } from '@/domains/order/order.repository.js';
 import { OrderService } from '@/domains/order/order.service.js';
-import { createScenarioItem } from '../mocks/order.mock.js';
+import {
+  createGetOrderMock,
+  createGetProductsInfoMock,
+  createGetUserInfoMock,
+  createOrderServiceInputMock,
+  createScenarioItem,
+  getOrdersServiceInputMock,
+  updateOrderServiceInputMock,
+} from '../mocks/order.mock.js';
 import { NotificationService } from '@/domains/notification/notification.service.js';
 import { TxMock } from '../helpers/test.type.js';
 import { UserService } from '@/domains/user/user.service.js';
@@ -23,6 +31,12 @@ import {
   setUpMockRepos,
 } from '../mocks/order.helper.js';
 import { SseManager } from '@/common/utils/sse.manager.js';
+import {
+  BadRequestError,
+  ForbiddenError,
+  InternalServerError,
+  NotFoundError,
+} from '@/common/utils/errors.js';
 
 describe('OrderService', () => {
   let mockOrderRepo: DeepMockProxy<OrderRepository>;
@@ -48,6 +62,78 @@ describe('OrderService', () => {
       mockUserService,
       mockSseManager,
     );
+  });
+  describe('주문 조회', () => {
+    it('주문 조회 성공', async () => {
+      // given
+      const orderId = 'order-id-1';
+      const userId = 'buyer-id-1';
+      const getOrderOutput = createGetOrderMock({
+        buyerId: userId,
+      });
+      mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
+
+      // when
+      const result = await mockOrderService.getOrder(userId, orderId);
+
+      // then
+      expect(result).toEqual(getOrderOutput);
+      expect(mockOrderRepo.findById).toHaveBeenCalledWith(orderId);
+    });
+    it('주문 조회 실패 (주문 조회 결과가 없는 경우 NotFoundError 발생)', async () => {
+      // given
+      const orderId = 'order-id-1';
+      const userId = 'buyer-id-1';
+      mockOrderRepo.findById.mockResolvedValue(null);
+
+      // when
+      // then
+      await expect(mockOrderService.getOrder(userId, orderId)).rejects.toThrow(NotFoundError);
+    });
+    it('주문 조회 실패 (본인 주문이 아닌 경우 ForbiddenError 발생)', async () => {
+      // given
+      const orderId = 'order-id-1';
+      const userId = 'buyer-id-1';
+      const getOrderOutput = createGetOrderMock({
+        buyerId: 'other-id-1',
+      });
+      mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
+
+      // when
+      // then
+      await expect(mockOrderService.getOrder(userId, orderId)).rejects.toThrow(ForbiddenError);
+    });
+  });
+  describe('주문 목록 조회', () => {
+    it('주문 목록 조회 성공', async () => {
+      // given
+      const input = getOrdersServiceInputMock();
+      const countInput = {
+        buyerId: input.userId,
+        status: input.status,
+      };
+      const findManyInput = {
+        ...countInput,
+        skip: (input.page - 1) * input.limit,
+        take: input.limit,
+      };
+      const getOrderOutput = createGetOrderMock();
+      const getOrdersOutput = [getOrderOutput];
+      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
+        cb(mockPrisma as Prisma.TransactionClient),
+      );
+
+      mockOrderRepo.findMany.mockResolvedValue(getOrdersOutput);
+      mockOrderRepo.count.mockResolvedValue(1);
+
+      // when
+      const result = await mockOrderService.getOrders(input);
+
+      // then
+      expect(result).toEqual({ rawOrders: getOrdersOutput, totalCount: 1 });
+      expect(mockOrderRepo.findMany).toHaveBeenCalledWith(findManyInput, mockPrisma);
+      expect(mockOrderRepo.count).toHaveBeenCalledWith(countInput, mockPrisma);
+    });
   });
   // 목 데이터들을 각 테스트 마다 너무 많이 만들어줘야하는 상황
   // object mother 패턴 적용 (학습 필요)
@@ -370,6 +456,274 @@ describe('OrderService', () => {
       expectUpdateUserGrade({ mockUserService });
       // 상품 최종 가격 검증
       expectFinalPrice(scenario, 25000);
+    });
+    it('주문 성공 (할인 기간이 지난 상품은 원가로 계산된다.)', async () => {
+      // 1. 기간이 지난 날짜 생성
+      const now = new Date();
+      // pastStart: 2일 전 (그저께 할인 시작)
+      const pastStart = new Date(now);
+      pastStart.setDate(now.getDate() - 2);
+      // pastEnd: 1일 전 (어제 종료됨)
+      const pastEnd = new Date(now);
+      pastEnd.setDate(now.getDate() - 1);
+
+      // 2. 시나리오 생성
+      const scenario = setupCreateOrderScenario({
+        orderItems: [
+          createScenarioItem({
+            itemPrice: 10000,
+            discountRate: 50, // 50% 할인 설정
+            discountStartTime: pastStart, // 시작일: 그저께
+            discountEndTime: pastEnd, // 종료일: 어제
+          }),
+        ],
+      });
+
+      const { input, mocks } = scenario;
+      // mockRepo
+      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
+        cb(mockPrisma as Prisma.TransactionClient),
+      );
+      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      const result = await mockOrderService.createOrder(input);
+
+      // then
+      // 시나리오 생성하는 시점에 비즈니스 로직 흐름에 맞게 데이터를 고정해둬서 검증 순서는 상관 없음
+      // 기본 주문 완료 검증
+      expectBaseOrderCreated({
+        result,
+        mockOrderRepo,
+        mockPrisma,
+        scenario,
+      });
+      // 포인트 적립 검증
+      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
+      // 포인트 히스토리 검증
+      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
+      // 재고 감소 검증
+      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
+      // 유저 등급 업데이트 검증
+      expectUpdateUserGrade({ mockUserService });
+      // 상품 최종 가격 검증
+      expectFinalPrice(scenario, 10000);
+    });
+    it('주문 성공 (최종 결제 금액이 0원이면 포인트도 0원 적립된다.)', async () => {
+      const scenario = setupCreateOrderScenario({
+        usePoint: 5000,
+        orderItems: [
+          createScenarioItem({
+            itemPrice: 10000,
+            discountRate: 50, // 50% 할인 설정
+          }),
+        ],
+      }); // 50% 할인에 남은 금액 전부 포인트 차감 처리 하는 상황 가정
+      const { input, mocks } = scenario;
+      // mockRepo
+      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
+        cb(mockPrisma as Prisma.TransactionClient),
+      );
+      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      const result = await mockOrderService.createOrder(input);
+
+      // then
+      // 시나리오 생성하는 시점에 비즈니스 로직 흐름에 맞게 데이터를 고정해둬서 검증 순서는 상관 없음
+      // 기본 주문 완료 검증
+      expectBaseOrderCreated({
+        result,
+        mockOrderRepo,
+        mockPrisma,
+        scenario,
+      });
+      // 포인트가 의도적으로 적립되지 않는 상황 검증
+      expect(mockOrderRepo.increasePoint).toHaveBeenCalledTimes(0);
+      // 재고 감소 검증
+      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
+      // 유저 등급 업데이트 검증
+      expectUpdateUserGrade({ mockUserService });
+      // 상품 최종 가격 검증
+      expectFinalPrice(scenario, 0);
+    });
+    it('주문 실패 (유저가 보유한 포인트보다 사용하려는 포인트가 많은 경우 BadRequestError 발생)', async () => {
+      // given
+      // 초반부에 검증되는 부분은 전체 시나리오 대신 개별 목으로 필요한 것만 사용
+      const input = createOrderServiceInputMock({
+        userId: 'buyer-error',
+        usePoint: 5000,
+      });
+      const errorUser = createGetUserInfoMock({ point: 1000 });
+      mockOrderRepo.findUserInfo.mockResolvedValue(errorUser);
+      // when
+      // then
+      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
+    });
+    it('주문 실패 (상품 총액 보다 사용하려는 포인트가 많을 경우 BadRequestError 발생)', async () => {
+      // given
+      // 성공 시나리오대로 생성한 후 실패 유도
+      const { input, mocks } = setupCreateOrderScenario({
+        itemsPrice: 5000,
+        usePoint: 0,
+      });
+      input.usePoint = 100000; // 실패 상황 설정
+      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
+      mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
+
+      // when
+      // then
+      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
+    });
+    it('주문 실패 (재고보다 주문 수량이 많은 경우 BadRequestError 발생)', async () => {
+      // given
+      // 성공 시나리오대로 생성한 후 실패 유도
+      const { input, mocks } = setupCreateOrderScenario();
+      input.orderItems[0].quantity = 50;
+      // mockRepo
+      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
+      mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
+
+      // when
+      // then
+      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
+    });
+    it('주문 실패 (존재하지 않는 사이즈로 주문한 경우 BadRequestError 발생)', async () => {
+      // given
+      const { input, mocks } = setupCreateOrderScenario();
+      input.orderItems[0].sizeId = 9999;
+
+      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
+      mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
+
+      // when
+      // then
+      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
+    });
+    it('주문 실패 (존재하지 않는 상품인 경우 NotFoundError 발생)', async () => {
+      // given
+      const input = createOrderServiceInputMock({
+        orderItems: [
+          createScenarioItem({
+            productId: 'error-product',
+          }),
+        ],
+      });
+
+      mockOrderRepo.findUserInfo.mockResolvedValue(createGetUserInfoMock());
+      mockOrderRepo.findManyProducts.mockResolvedValue(createGetProductsInfoMock());
+
+      // when
+      // then
+      await expect(mockOrderService.createOrder(input)).rejects.toThrow(NotFoundError);
+    });
+    it('주문 실패 (트랜잭션 실패시 알림 미발송)', async () => {
+      // given
+      const { input, mocks } = setupCreateOrderScenario();
+
+      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
+        cb(mockPrisma as Prisma.TransactionClient),
+      );
+      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
+      mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
+      mockOrderRepo.createOrder.mockRejectedValue(new BadRequestError('주문 실패'));
+
+      // when
+      // then
+      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
+      expect(mockSseManager.sendMessage).not.toHaveBeenCalled();
+    });
+  });
+  describe('주문 수정', () => {
+    it('주문 수정 성공', async () => {
+      // given
+      const buyerId = 'buyer-id-1';
+      const orderStatus = OrderStatus.WaitingPayment; // 결제 대기 상태에서만 수정 가능
+      const input = updateOrderServiceInputMock({
+        userId: buyerId,
+      });
+      const getOrderOutput = createGetOrderMock({
+        phoneNumber: input.phone,
+        address: input.address,
+        name: input.name,
+      });
+      const { userId: _userId, ...repoInput } = input;
+
+      mockOrderRepo.findOwnerById.mockResolvedValue({ buyerId });
+      mockOrderRepo.findStatusById.mockResolvedValue({ status: orderStatus });
+      mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
+
+      // when
+      const result = await mockOrderService.updateOrder(input);
+
+      // then
+      expect(result).toEqual(getOrderOutput);
+      expect(mockOrderRepo.updateOrder).toHaveBeenCalledWith(repoInput);
+      expect(mockOrderRepo.findById).toHaveBeenCalledWith(input.orderId);
+    });
+    it('주문 수정 실패 (본인의 주문 내역이 아닌 경우 ForbiddenError 발생)', async () => {
+      // given
+      const buyerId = 'buyer-id-1';
+      const input = updateOrderServiceInputMock({
+        userId: buyerId,
+      });
+      mockOrderRepo.findOwnerById.mockResolvedValue({ buyerId: 'other-id-1' });
+
+      // when
+      // then
+      await expect(mockOrderService.updateOrder(input)).rejects.toThrow(ForbiddenError);
+    });
+    it('주문 수정 실패 (해당 주문 건이 없는 겨우 NotFoundError 발생)', async () => {
+      // given
+      const buyerId = 'buyer-id-1';
+      const input = updateOrderServiceInputMock({
+        userId: buyerId,
+      });
+      mockOrderRepo.findOwnerById.mockResolvedValue(null);
+
+      // when
+      // then
+      await expect(mockOrderService.updateOrder(input)).rejects.toThrow(NotFoundError);
+    });
+    it('주문 수정 실패 (주문 상태 조회가 실패한 경우 InternalServerError 발생)', async () => {
+      // given
+      const buyerId = 'buyer-id-1';
+      const input = updateOrderServiceInputMock({
+        userId: buyerId,
+      });
+      mockOrderRepo.findOwnerById.mockResolvedValue({ buyerId });
+      mockOrderRepo.findStatusById.mockResolvedValue(null);
+
+      // when
+      // then
+      await expect(mockOrderService.updateOrder(input)).rejects.toThrow(InternalServerError);
+    });
+    it('주문 수정 실패 (주문 상태가 WaitingPayment 상태가 아닌 경우 BadRequestError 발생)', async () => {
+      // given
+      const buyerId = 'buyer-id-1';
+      const input = updateOrderServiceInputMock({
+        userId: buyerId,
+      });
+      mockOrderRepo.findOwnerById.mockResolvedValue({ buyerId });
+      mockOrderRepo.findStatusById.mockResolvedValue({ status: OrderStatus.CompletedPayment });
+
+      // when
+      // then
+      await expect(mockOrderService.updateOrder(input)).rejects.toThrow(BadRequestError);
+    });
+    it('주문 수정 실패 (주문 수정 후 주문 정보 조회가 실패한 경우 InternalServerError 발생)', async () => {
+      // given
+      const buyerId = 'buyer-id-1';
+      const input = updateOrderServiceInputMock({
+        userId: buyerId,
+      });
+      mockOrderRepo.findOwnerById.mockResolvedValue({ buyerId });
+      mockOrderRepo.findStatusById.mockResolvedValue({ status: OrderStatus.WaitingPayment });
+      mockOrderRepo.findById.mockResolvedValue(null);
+
+      // when
+      // then
+      await expect(mockOrderService.updateOrder(input)).rejects.toThrow(InternalServerError);
     });
   });
 });
