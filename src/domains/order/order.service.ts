@@ -320,6 +320,11 @@ export class OrderService {
       }
       // await this.orderRepository.updatePaymentStatus(order.payments.id, PaymentStatus.Cancelled, tx);
       await this.orderRepository.deletePayment(order.payments.id, tx);
+
+      const userInfo = await this.orderRepository.findUserInfo(userId, tx);
+      if (!userInfo) {
+        throw new InternalServerError('유저 정보를 찾을 수 없습니다.');
+      }
       // 2-3. 사용한 포인트가 있다면 포인트 환불
       if (order.usePoint > 0) {
         const usePoint = order.usePoint;
@@ -338,10 +343,6 @@ export class OrderService {
       );
       if (earnedHistory) {
         const earnedAmount = earnedHistory.amount;
-        const userInfo = await this.orderRepository.findUserInfo(userId, tx);
-        if (!userInfo) {
-          throw new InternalServerError('유저 정보를 찾을 수 없습니다.');
-        }
         if (userInfo.point < earnedAmount) {
           throw new BadRequestError(
             '보유 포인트가 적립됐던 포인트보다 적어 주문 취소를 진행할 수 없습니다.',

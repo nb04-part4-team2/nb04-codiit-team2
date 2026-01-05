@@ -10,6 +10,7 @@ import {
   GetOrderRawData,
   GetOrdersRawData,
   GetOrdersRepoInput,
+  GetOrderStatusRawData,
   GetPointHistoryRepoInput,
   ProductInfoRawData,
   UpdateOrderRepoInput,
@@ -36,7 +37,7 @@ export class OrderRepository {
   /**
    * 주문 상태 조회
    */
-  async findStatusById(orderId: string) {
+  async findStatusById(orderId: string): Promise<GetOrderStatusRawData | null> {
     return await this.prisma.order.findUnique({
       where: {
         id: orderId,

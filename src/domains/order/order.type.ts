@@ -16,6 +16,7 @@ import {
   CreatePointHistoryRepoInput,
   DecreaseStockRawData,
   GetOrderRawData,
+  GetOrderStatusRawData,
   ProductInfoRawData,
   UpdatePointRepoInput,
   UpdateStockRepoInput,
@@ -172,7 +173,7 @@ export interface ScenarioItemOption extends CreateOrderItemBody {
   discountEndTime?: Date | null;
 }
 // 성공 시나리오 기본 옵션
-export interface OrderScenarioOptions {
+export interface CreateOrderScenarioOptions {
   userId?: string;
   usePoint?: number;
   userPoint?: number;
@@ -181,16 +182,29 @@ export interface OrderScenarioOptions {
   itemsQuantity?: number;
   orderItems?: ScenarioItemOption[];
 }
+// 주문 삭제 시나리오 기본 옵션
+export interface DeleteOrderScenarioOptions {
+  userId?: string;
+  orderId?: string;
+  usePoint?: number;
+  orderItems?: CreateOrderItemBody[];
+}
 // 성공 시나리오 mock Repo output
-interface MockRepo {
+interface CreateOrderMockRepo {
   userInfoOutput: UserInfoRawData;
   productsInfoOutput: ProductInfoRawData[];
   orderRepoOutput: CreateOrderRawData;
   updatedStockOutput: DecreaseStockRawData[];
   getOrderOutput: GetOrderRawData;
 }
+// 주문 삭제 시나리오 mock Repo output
+interface DeleteOrderMockRepo {
+  getOrderOutput: GetOrderRawData;
+  orderStatus: GetOrderStatusRawData;
+  userInfoOutput: UserInfoRawData;
+}
 // 성공 시나리오 검증용 객체들
-interface Verify {
+interface CreateOrderVerify {
   productIds: string[];
   finalPrice: number;
   orderRepoInput: CreateOrderRepoInput;
@@ -204,24 +218,52 @@ interface Verify {
   increasePointRepoInput: UpdatePointRepoInput;
   increasePointHistoryRepoInput: CreatePointHistoryRepoInput;
 }
+// 주문 삭제 시나리오 검증용 객체들
+interface DeleteOrderVerify {
+  userId: string;
+  orderId: string;
+  restoreStockDatas: UpdateStockRepoInput[];
+  pointHistoryRepoInput: Omit<CreatePointHistoryRepoInput, 'amount'>;
+}
 
 // 성공 시나리오 object mother 반환 타입
-export interface ScenarioReturn {
+export interface CreateScenarioResult {
   input: CreateOrderServiceInput;
-  mocks: MockRepo;
-  verify: Verify;
+  mocks: CreateOrderMockRepo;
+  verify: CreateOrderVerify;
+}
+
+// 주문 삭제 시나리오 object mother 반환 타입
+export interface DeleteScenarioResult {
+  mocks: DeleteOrderMockRepo;
+  verify: DeleteOrderVerify;
 }
 
 // 성공 시나리오 기본 repo output 세팅
-export interface SetupMockReposInput {
+export interface SetupCreateOrderMockReposInput {
   mockOrderRepo: DeepMockProxy<OrderRepository>;
-  mockData: MockRepo;
+  mockData: CreateOrderMockRepo;
+}
+
+// 주문 삭제 시나리오 기본 repo output 세팅
+export interface SetupDeleteOrderMockReposInput {
+  mockOrderRepo: DeepMockProxy<OrderRepository>;
+  mockData: DeleteOrderMockRepo;
 }
 
 // 성공 시나리오 검증 베이스 input
 export interface ExpectBaseInput {
   mockPrisma: DeepMockProxy<PrismaClient>;
-  scenario: ScenarioReturn;
+  scenario: CreateScenarioResult;
+}
+
+// 주문 삭제 시나리오 검증 베이스 input
+export interface ExpectDeleteBaseInput {
+  mockPrisma: DeepMockProxy<PrismaClient>;
+  mockOrderRepo: DeepMockProxy<OrderRepository>;
+  mockUserService: DeepMockProxy<UserService>;
+  mocks: DeleteOrderMockRepo;
+  verify: DeleteOrderVerify;
 }
 
 // 성공 시나리오 기본 공통 검증 세팅
@@ -246,7 +288,7 @@ export interface ExpectNotificationInput extends ExpectBaseInput {
 // 성공 시나리오 알림 발송 검증
 export interface ExpectSendNotificationInput {
   mockSseManager: DeepMockProxy<SseManager>;
-  scenario: ScenarioReturn;
+  scenario: CreateScenarioResult;
 }
 
 // 성공 시나리오 유저 등급 업데이트 검증
