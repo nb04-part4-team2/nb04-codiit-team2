@@ -20,7 +20,7 @@ export const createLoginResponseMock = (overrides: Partial<LoginResponseMock> = 
     email: 'test@example.com',
     name: '테스트 유저',
     type: 'BUYER' as const,
-    point: 0,
+    points: 0,
     image: null,
     grade: {
       id: 'grade_green',

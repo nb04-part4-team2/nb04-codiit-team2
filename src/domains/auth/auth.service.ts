@@ -41,7 +41,7 @@ export class AuthService {
         email: user.email,
         name: user.name,
         type: user.type,
-        point: user.point,
+        points: user.point,
         image: user.image,
         grade: {
           id: user.grade.id,
