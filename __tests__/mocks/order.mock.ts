@@ -516,11 +516,11 @@ export const createStockInputMock = (
 export const updateOrderServiceInputMock = (
   overrides: Partial<UpdateOrderServiceInput> = {},
 ): UpdateOrderServiceInput => {
-  const { usePoint: _usePoint, ...baseUpateInput } = baseOrderInputMock;
+  const { usePoint: _usePoint, ...baseUpdateInput } = baseOrderInputMock;
   return {
     userId: overrides.userId ?? 'buyer-id-1',
     orderId: overrides.orderId ?? 'order-id-1',
-    ...baseUpateInput,
+    ...baseUpdateInput,
     ...overrides,
   };
 };

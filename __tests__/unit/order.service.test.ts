@@ -650,7 +650,7 @@ describe('OrderService', () => {
       // then
       await expect(mockOrderService.updateOrder(input)).rejects.toThrow(ForbiddenError);
     });
-    it('주문 수정 실패 (해당 주문 건이 없는 겨우 NotFoundError 발생)', async () => {
+    it('주문 수정 실패 (해당 주문 건이 없는 경우 NotFoundError 발생)', async () => {
       // given
       const input = updateOrderServiceInputMock({
         userId: buyerId,
