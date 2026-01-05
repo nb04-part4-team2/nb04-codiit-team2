@@ -1,6 +1,15 @@
 import prisma from '@/config/prisma.js';
 import bcrypt from 'bcrypt';
-import type { Grade, User, Store, Category, Product, Inquiry, Reply } from '@prisma/client';
+import type {
+  Grade,
+  User,
+  Store,
+  Category,
+  Product,
+  Inquiry,
+  Reply,
+  Notification,
+} from '@prisma/client';
 
 // ============================================
 // 상수
@@ -229,6 +238,25 @@ export const createTestReply = async (
       content: options.content ?? '테스트 답변 내용입니다.',
       userId,
       inquiryId,
+    },
+  });
+};
+
+// ============================================
+// Notification
+// ============================================
+interface CreateNotificationOptions {
+  content?: string;
+}
+
+export const createTestNotification = async (
+  userId: string,
+  options: CreateNotificationOptions = {},
+): Promise<Notification> => {
+  return prisma.notification.create({
+    data: {
+      content: options.content ?? '테스트 알림 내용입니다.',
+      userId,
     },
   });
 };
