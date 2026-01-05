@@ -62,7 +62,7 @@ describe('Notification API Integration Test', () => {
   // =================================================================
   // sse 연결
   // =================================================================
-  describe('GET /api/notifications/subscribe', () => {
+  describe('GET /api/notifications/sse', () => {
     it('200: SSE 연결 성공 및 헤더 검증', async () => {
       const req = authRequest(buyerToken)
         .get('/api/notifications/sse')
@@ -136,7 +136,7 @@ describe('Notification API Integration Test', () => {
       expect(response.status).toBe(404);
     });
 
-    it('403: 본인 아닌 다른 사용자는 문의 수정 실패', async () => {
+    it('403: 본인 아닌 다른 사용자는 알림 수정 실패', async () => {
       const response = await authRequest(otherBuyerToken).patch(
         `/api/notifications/${notification.id}/check`,
       );
