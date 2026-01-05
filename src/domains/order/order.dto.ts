@@ -89,6 +89,10 @@ export type GetOrdersRawData = GetOrderRawData[];
 export interface CreateOrderRawData extends OrderBase<Date> {
   buyerId: string;
 }
+// 주문 상태 조회 repo output dto
+export interface GetOrderStatusRawData {
+  status: OrderStatus;
+}
 // 외부 레포
 // 상품 정보 RawData
 export interface ProductInfoRawData extends Omit<ProductBase, 'image'> {
@@ -112,6 +116,13 @@ export interface DecreaseStockRawData extends StockBase {
   productId: string;
   product: StockProductRawData;
   size: StockSizeRawData;
+}
+// 포인트 히스토리 repo output dto
+export interface GetPointHistoryRepoOutput extends PointHistoryBase {
+  id: string;
+  amount: number;
+  userId: string;
+  createdAt: Date;
 }
 
 // ============================================
