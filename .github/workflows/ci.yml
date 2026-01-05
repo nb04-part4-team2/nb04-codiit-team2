@@ -24,14 +24,19 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Check Prisma Format
+        run: |
+          npx prisma format
+          git diff --exit-code prisma/schema.prisma
+
+      - name: Run TypeScript type check
+        run: npm run typecheck:all
+
       - name: Run ESLint
         run: npm run lint
 
       - name: Run Prettier check
         run: npm run format
-
-      - name: Run TypeScript type check
-        run: npm run typecheck:all
 
   unit-test:
     name: Unit Test

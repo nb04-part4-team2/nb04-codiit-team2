@@ -6,6 +6,7 @@ export function buildOrderData(
   products: ProductInfoRawData[],
   orderItems: CreateOrderServiceInput['orderItems'],
 ) {
+  const now = new Date();
   return orderItems.reduce(
     (acc, item) => {
       // 상품 존재 여부 체크 (방어코드)
@@ -14,26 +15,17 @@ export function buildOrderData(
         throw new NotFoundError('상품 없음');
       }
 
-      // 할인 가격 계산 로직
-      const now = new Date();
       let realPrice = product.price; // 기본은 원가
 
-      // 할인율이 있는 경우
-      const hasDiscount = product.discountRate > 0;
+      const isDiscountActive =
+        product.discountRate > 0 &&
+        // 할인 로직 카트 부분이랑 통일
+        // 시작일이 없거나(null) 지났으면 할인 적용
+        (!product.discountStartTime || now >= product.discountStartTime) &&
+        // 종료일이 없거나(null) 아직 안 지났어도 적용
+        (!product.discountEndTime || now <= product.discountEndTime);
 
-      // 기간 할인 여부
-      const isPeriodDiscount =
-        hasDiscount &&
-        product.discountStartTime !== null &&
-        product.discountEndTime !== null &&
-        now >= product.discountStartTime &&
-        now <= product.discountEndTime;
-
-      // 상시 할인 여부
-      const isAlwaysDiscount =
-        hasDiscount && product.discountStartTime === null && product.discountEndTime === null;
-
-      if (isPeriodDiscount || isAlwaysDiscount) {
+      if (isDiscountActive) {
         realPrice = Math.floor(product.price * (1 - product.discountRate / 100));
       }
 

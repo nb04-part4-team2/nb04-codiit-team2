@@ -1,6 +1,15 @@
 import prisma from '@/config/prisma.js';
 import bcrypt from 'bcrypt';
-import type { Grade, User, Store, Category, Product } from '@prisma/client';
+import type {
+  Grade,
+  User,
+  Store,
+  Category,
+  Product,
+  Inquiry,
+  Reply,
+  Notification,
+} from '@prisma/client';
 
 // ============================================
 // 상수
@@ -185,4 +194,69 @@ export const createSellerWithProduct = async (
   });
 
   return { grade, seller, buyer, store, category, product };
+};
+
+// ============================================
+// Inquiries
+// ============================================
+interface CreateInquiryOptions {
+  title?: string;
+  content?: string;
+  isSecret?: boolean;
+}
+
+export const createTestInquiry = async (
+  userId: string,
+  productId: string,
+  options: CreateInquiryOptions = {},
+): Promise<Inquiry> => {
+  return prisma.inquiry.create({
+    data: {
+      title: options.title ?? '테스트 문의',
+      content: options.content ?? '테스트 문의 내용입니다.',
+      isSecret: options.isSecret ?? false,
+      userId,
+      productId,
+    },
+  });
+};
+
+// ============================================
+// Reply
+// ============================================
+interface CreateReplyOptions {
+  content?: string;
+}
+
+export const createTestReply = async (
+  userId: string,
+  inquiryId: string,
+  options: CreateReplyOptions = {},
+): Promise<Reply> => {
+  return prisma.reply.create({
+    data: {
+      content: options.content ?? '테스트 답변 내용입니다.',
+      userId,
+      inquiryId,
+    },
+  });
+};
+
+// ============================================
+// Notification
+// ============================================
+interface CreateNotificationOptions {
+  content?: string;
+}
+
+export const createTestNotification = async (
+  userId: string,
+  options: CreateNotificationOptions = {},
+): Promise<Notification> => {
+  return prisma.notification.create({
+    data: {
+      content: options.content ?? '테스트 알림 내용입니다.',
+      userId,
+    },
+  });
 };
