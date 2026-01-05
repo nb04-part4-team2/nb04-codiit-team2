@@ -23,6 +23,7 @@ import {
   DecreaseStockRawData,
   GetOrderRawData,
   GetOrdersServiceInput,
+  GetPointHistoryRepoOutput,
   ProductInfoRawData,
   UpdateOrderServiceInput,
   UpdatePointRepoInput,
@@ -126,13 +127,13 @@ export const basePaymentMock = {
   ...basePaymentInputMock,
 };
 /**
- * [부품] 베이스 GetOrders Input mock
+ * [부품] 베이스 Point History mock
  */
-export const baseGetOrdersInputMock = {
-  userId: 'buyer-id-1',
-  status: OrderStatus.CompletedPayment,
-  limit: 10,
-  page: 1,
+export const basePointHistory = {
+  id: 'point-history-1',
+  type: PointHistoryType.EARN,
+  amount: 1000,
+  createdAt: date1,
 };
 // ============================================
 // 부품 팩토리 (output 객체용 부품들)
@@ -274,10 +275,11 @@ export const createStockSizeMock = (
   en: 'M',
   ...overrides,
 });
+
 // ============================================
 // 부품 팩토리 (input 객체용 부품들)
 // ============================================
-// 1. service input용 주문 아이템 팩토리
+// 1. 주문 생성 service input용 주문 아이템 팩토리
 /**
  * [부품] 베이스 orderItem Input 팩토리
  */
@@ -287,7 +289,16 @@ export const createOrderItemInputMock = (
   ...baseOrderItemInputMock,
   ...overrides,
 });
-
+// 2. 주문 목록 조회 input용 팩토리
+/**
+ * [부품] 베이스 GetOrders Input mock
+ */
+export const baseGetOrdersInputMock = {
+  userId: 'buyer-id-1',
+  status: OrderStatus.CompletedPayment,
+  limit: 10,
+  page: 1,
+};
 // ============================================
 // RawData 객체 조립
 // ============================================
@@ -367,7 +378,18 @@ export const createStockDataMock = (
     ...rest,
   };
 };
-
+// 6. 포인트 히스토리 조회 repo output
+/**
+ * [완성본] findPointHistoryRawData 팩토리
+ */
+export const createGetPointHistoryMock = (
+  overrides: Partial<GetPointHistoryRepoOutput> = {},
+): GetPointHistoryRepoOutput => ({
+  ...basePointHistory,
+  userId: 'buyer-id-1',
+  orderId: 'order-id-1',
+  ...overrides,
+});
 // ============================================
 // INPUT 객체 조립
 // ============================================
@@ -433,8 +455,8 @@ export const createOrderItemsRepoInputMock = (
 export const createPointInputMock = (
   overrides: Partial<UpdatePointRepoInput> = {},
 ): UpdatePointRepoInput => ({
-  userId: overrides.userId ?? 'buyer-id-1',
-  amount: overrides.amount ?? 1000,
+  userId: 'buyer-id-1',
+  amount: 1000,
   ...overrides,
 });
 // 5. 포인트 히스토리 repo input

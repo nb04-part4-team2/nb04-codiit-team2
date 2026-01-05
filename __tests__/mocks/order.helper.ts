@@ -34,10 +34,14 @@ import {
   ExpectSendNotificationInput,
   ExpectStockInput,
   ExpectUserGradeInput,
-  OrderScenarioOptions,
   ScenarioItemOption,
-  ScenarioReturn,
-  SetupMockReposInput,
+  CreateScenarioResult,
+  CreateOrderScenarioOptions,
+  DeleteOrderScenarioOptions,
+  DeleteScenarioResult,
+  SetupCreateOrderMockReposInput,
+  SetupDeleteOrderMockReposInput,
+  ExpectDeleteBaseInput,
 } from '@/domains/order/order.type.js';
 import {
   DecreaseStockRawData,
@@ -65,7 +69,9 @@ const SIZE_MAP: Record<number, { en: string; ko: string }> = {
 /**
  * [시나리오] 주문 생성 테스트를 위한 데이터 세트 조립 (Object Mother)
  */
-export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): ScenarioReturn => {
+export const setupCreateOrderScenario = (
+  options: CreateOrderScenarioOptions = {},
+): CreateScenarioResult => {
   // 0. 옵션 및 기본값 설정
   const {
     userId = 'buyer-id-1',
@@ -375,13 +381,76 @@ export const setupCreateOrderScenario = (options: OrderScenarioOptions = {}): Sc
   };
 };
 
+/**
+ * [시나리오] 주문 삭제 테스트를 위한 데이터 세트 조립 (Object Mother)
+ * 기본적으로 포인트를 사용하지도 않고 적립하지도 않았던 경우로 설정
+ */
+export const setupDeleteOrderScenario = (
+  options: DeleteOrderScenarioOptions = {},
+): DeleteScenarioResult => {
+  // 0. 기본 값 설정
+  const {
+    orderId = 'order-id-1',
+    userId = 'buyer-id-1',
+    usePoint = 0,
+    orderItems = [createOrderItemMock()],
+  } = options;
+
+  // 1. 주문 데이터 조회 output
+  const getOrderOutput = createGetOrderMock({
+    id: orderId,
+    buyerId: userId,
+    usePoint,
+    payments: createPaymentMock(),
+    orderItems: orderItems.map((item) => createOrderItemMock(item)),
+  });
+
+  // 2. 주문 상태 조회 output
+  const orderStatus = { status: OrderStatus.WaitingPayment };
+
+  // 3. 재고 복구 repo input
+  const restoreStockDatas = getOrderOutput.orderItems.map((item) => {
+    return {
+      productId: item.productId,
+      sizeId: item.size.id,
+      quantity: item.quantity,
+    };
+  });
+
+  // 4. 유저 정보 조회 Output
+  const userInfoOutput = createGetUserInfoMock({
+    point: 10000, // 포인트 넉넉하게 기본 설정
+  });
+
+  // 5. 포인트 적립내역 조회 input
+  const { amount: _amount, ...pointHistoryRepoInput } = createPointHistoryInputMock({
+    type: PointHistoryType.EARN,
+  });
+
+  return {
+    mocks: {
+      getOrderOutput,
+      orderStatus,
+      userInfoOutput,
+    },
+    verify: {
+      userId,
+      orderId,
+      restoreStockDatas,
+      pointHistoryRepoInput,
+    },
+  };
+};
 // ============================================
 // repo output 모킹
 // ============================================
 /**
  * 공통 mock 설정 코드
  */
-export const setUpMockRepos = ({ mockOrderRepo, mockData }: SetupMockReposInput) => {
+export const setUpCreateOrderMockRepos = ({
+  mockOrderRepo,
+  mockData,
+}: SetupCreateOrderMockReposInput) => {
   mockOrderRepo.findUserInfo.mockResolvedValue(mockData.userInfoOutput);
   mockOrderRepo.findManyProducts.mockResolvedValue(mockData.productsInfoOutput);
   mockOrderRepo.createOrder.mockResolvedValue(mockData.orderRepoOutput);
@@ -390,7 +459,18 @@ export const setUpMockRepos = ({ mockOrderRepo, mockData }: SetupMockReposInput)
   });
   mockOrderRepo.findById.mockResolvedValue(mockData.getOrderOutput);
 };
-
+/**
+ * 삭제 로직 공통 mock 설정
+ */
+export const setUpDeleteOrderMockRepos = ({
+  mockOrderRepo,
+  mockData,
+}: SetupDeleteOrderMockReposInput) => {
+  mockOrderRepo.findById.mockResolvedValue(mockData.getOrderOutput);
+  mockOrderRepo.findStatusById.mockResolvedValue(mockData.orderStatus);
+  mockOrderRepo.findUserInfo.mockResolvedValue(mockData.userInfoOutput);
+  mockOrderRepo.findPointHistory.mockResolvedValue(null);
+};
 // ============================================
 // 성공 시나리오 expect
 // ============================================
@@ -586,7 +666,39 @@ export const expectUpdateUserGrade = ({ mockUserService }: ExpectUserGradeInput)
 /**
  * 할인, 포인트 사용 등이 적용된 최종 결제 가격 expect
  */
-export const expectFinalPrice = (scenario: ScenarioReturn, expectedFinalPrice: number) => {
+export const expectFinalPrice = (scenario: CreateScenarioResult, expectedFinalPrice: number) => {
   const { verify } = scenario;
   expect(verify.finalPrice).toBe(expectedFinalPrice);
+};
+// ============================================
+// 주문 취소 시나리오 expect
+// ============================================
+/**
+ * 주문 취소 시나리오 기본 expect
+ * (기본 로직 + 주문 취소 검증)
+ */
+export const expectBaseOrderDeleted = ({
+  mockOrderRepo,
+  mockUserService,
+  mockPrisma,
+  mocks,
+  verify,
+}: ExpectDeleteBaseInput) => {
+  expect(mockOrderRepo.findById).toHaveBeenCalledWith(verify.orderId);
+  expect(mockOrderRepo.findStatusById).toHaveBeenCalledWith(mocks.getOrderOutput.id);
+  expect(mockOrderRepo.increaseStock).toHaveBeenCalledTimes(verify.restoreStockDatas.length);
+  verify.restoreStockDatas.forEach((stockInput) => {
+    expect(mockOrderRepo.increaseStock).toHaveBeenCalledWith(stockInput, mockPrisma);
+  });
+  expect(mockOrderRepo.deletePayment).toHaveBeenCalledWith(
+    mocks.getOrderOutput.payments?.id,
+    mockPrisma,
+  );
+  expect(mockOrderRepo.findUserInfo).toHaveBeenCalledWith(verify.userId, mockPrisma);
+  expect(mockOrderRepo.findPointHistory).toHaveBeenCalledWith(
+    verify.pointHistoryRepoInput,
+    mockPrisma,
+  );
+  expect(mockOrderRepo.deleteOrder).toHaveBeenCalledWith(mocks.getOrderOutput.id, mockPrisma);
+  expect(mockUserService.updateGradeByPurchase).toHaveBeenCalledWith(verify.userId);
 };
