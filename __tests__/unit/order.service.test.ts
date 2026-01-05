@@ -1,13 +1,17 @@
 import { beforeEach, describe, it, jest } from '@jest/globals';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import { OrderStatus, Prisma, PrismaClient } from '@prisma/client';
+import { OrderStatus, PointHistoryType, Prisma, PrismaClient } from '@prisma/client';
 import { OrderRepository } from '@/domains/order/order.repository.js';
 import { OrderService } from '@/domains/order/order.service.js';
 import {
   createGetOrderMock,
+  createGetPointHistoryMock,
   createGetProductsInfoMock,
   createGetUserInfoMock,
   createOrderServiceInputMock,
+  createPaymentMock,
+  createPointHistoryInputMock,
+  createPointInputMock,
   createScenarioItem,
   getOrdersServiceInputMock,
   updateOrderServiceInputMock,
@@ -28,7 +32,10 @@ import {
   expectSellerNotificationSend,
   expectUpdateUserGrade,
   setupCreateOrderScenario,
-  setUpMockRepos,
+  setUpCreateOrderMockRepos,
+  setupDeleteOrderScenario,
+  expectBaseOrderDeleted,
+  setUpDeleteOrderMockRepos,
 } from '../mocks/order.helper.js';
 import { SseManager } from '@/common/utils/sse.manager.js';
 import {
@@ -39,6 +46,10 @@ import {
 } from '@/common/utils/errors.js';
 
 describe('OrderService', () => {
+  const buyerId = 'buyer-id-1';
+  const userId = 'buyer-id-1';
+  const otherId = 'other-id-1';
+  const orderId = 'order-id-1';
   let mockOrderRepo: DeepMockProxy<OrderRepository>;
   let mockPrisma: DeepMockProxy<PrismaClient>;
   let mockNotificationService: DeepMockProxy<NotificationService>;
@@ -62,12 +73,14 @@ describe('OrderService', () => {
       mockUserService,
       mockSseManager,
     );
+
+    (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
+      cb(mockPrisma as Prisma.TransactionClient),
+    );
   });
   describe('주문 조회', () => {
     it('주문 조회 성공', async () => {
       // given
-      const orderId = 'order-id-1';
-      const userId = 'buyer-id-1';
       const getOrderOutput = createGetOrderMock({
         buyerId: userId,
       });
@@ -82,8 +95,6 @@ describe('OrderService', () => {
     });
     it('주문 조회 실패 (주문 조회 결과가 없는 경우 NotFoundError 발생)', async () => {
       // given
-      const orderId = 'order-id-1';
-      const userId = 'buyer-id-1';
       mockOrderRepo.findById.mockResolvedValue(null);
 
       // when
@@ -92,10 +103,8 @@ describe('OrderService', () => {
     });
     it('주문 조회 실패 (본인 주문이 아닌 경우 ForbiddenError 발생)', async () => {
       // given
-      const orderId = 'order-id-1';
-      const userId = 'buyer-id-1';
       const getOrderOutput = createGetOrderMock({
-        buyerId: 'other-id-1',
+        buyerId: otherId,
       });
       mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
 
@@ -119,9 +128,6 @@ describe('OrderService', () => {
       };
       const getOrderOutput = createGetOrderMock();
       const getOrdersOutput = [getOrderOutput];
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      );
 
       mockOrderRepo.findMany.mockResolvedValue(getOrdersOutput);
       mockOrderRepo.count.mockResolvedValue(1);
@@ -150,11 +156,8 @@ describe('OrderService', () => {
       });
       const { input, mocks } = scenario;
       // mockRepo
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      ); // 파일 분리하니 타입 추론이 에러 발생 -> 테스트 본문에서 직접 선언
-      // 나머지 기본 mockRepo 세팅
-      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+      // 기본 mockRepo 세팅
+      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -197,11 +200,8 @@ describe('OrderService', () => {
       });
       const { input, mocks } = scenario;
       // mockRepo
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      );
-      // 나머지 기본 mockRepo 세팅
-      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+      // 기본 mockRepo 세팅
+      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -245,10 +245,7 @@ describe('OrderService', () => {
       });
       const { input, mocks } = scenario;
       // mockRepo
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      );
-      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -294,10 +291,7 @@ describe('OrderService', () => {
       });
       const { input, mocks } = scenario;
       // mockRepo
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      );
-      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -360,10 +354,7 @@ describe('OrderService', () => {
       });
       const { input, mocks } = scenario;
       // mockRepo
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      );
-      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -419,10 +410,7 @@ describe('OrderService', () => {
       });
       const { input, mocks } = scenario;
       // mockRepo
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      );
-      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -481,10 +469,7 @@ describe('OrderService', () => {
 
       const { input, mocks } = scenario;
       // mockRepo
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      );
-      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -521,10 +506,7 @@ describe('OrderService', () => {
       }); // 50% 할인에 남은 금액 전부 포인트 차감 처리 하는 상황 가정
       const { input, mocks } = scenario;
       // mockRepo
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      );
-      setUpMockRepos({ mockOrderRepo, mockData: mocks });
+      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -621,9 +603,6 @@ describe('OrderService', () => {
       // given
       const { input, mocks } = setupCreateOrderScenario();
 
-      (mockPrisma.$transaction as jest.MockedFunction<TxMock>).mockImplementation(async (cb) =>
-        cb(mockPrisma as Prisma.TransactionClient),
-      );
       mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
       mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
       mockOrderRepo.createOrder.mockRejectedValue(new BadRequestError('주문 실패'));
@@ -637,7 +616,6 @@ describe('OrderService', () => {
   describe('주문 수정', () => {
     it('주문 수정 성공', async () => {
       // given
-      const buyerId = 'buyer-id-1';
       const orderStatus = OrderStatus.WaitingPayment; // 결제 대기 상태에서만 수정 가능
       const input = updateOrderServiceInputMock({
         userId: buyerId,
@@ -663,11 +641,10 @@ describe('OrderService', () => {
     });
     it('주문 수정 실패 (본인의 주문 내역이 아닌 경우 ForbiddenError 발생)', async () => {
       // given
-      const buyerId = 'buyer-id-1';
       const input = updateOrderServiceInputMock({
         userId: buyerId,
       });
-      mockOrderRepo.findOwnerById.mockResolvedValue({ buyerId: 'other-id-1' });
+      mockOrderRepo.findOwnerById.mockResolvedValue({ buyerId: otherId });
 
       // when
       // then
@@ -675,7 +652,6 @@ describe('OrderService', () => {
     });
     it('주문 수정 실패 (해당 주문 건이 없는 겨우 NotFoundError 발생)', async () => {
       // given
-      const buyerId = 'buyer-id-1';
       const input = updateOrderServiceInputMock({
         userId: buyerId,
       });
@@ -687,7 +663,6 @@ describe('OrderService', () => {
     });
     it('주문 수정 실패 (주문 상태 조회가 실패한 경우 InternalServerError 발생)', async () => {
       // given
-      const buyerId = 'buyer-id-1';
       const input = updateOrderServiceInputMock({
         userId: buyerId,
       });
@@ -700,7 +675,6 @@ describe('OrderService', () => {
     });
     it('주문 수정 실패 (주문 상태가 WaitingPayment 상태가 아닌 경우 BadRequestError 발생)', async () => {
       // given
-      const buyerId = 'buyer-id-1';
       const input = updateOrderServiceInputMock({
         userId: buyerId,
       });
@@ -713,7 +687,6 @@ describe('OrderService', () => {
     });
     it('주문 수정 실패 (주문 수정 후 주문 정보 조회가 실패한 경우 InternalServerError 발생)', async () => {
       // given
-      const buyerId = 'buyer-id-1';
       const input = updateOrderServiceInputMock({
         userId: buyerId,
       });
@@ -724,6 +697,208 @@ describe('OrderService', () => {
       // when
       // then
       await expect(mockOrderService.updateOrder(input)).rejects.toThrow(InternalServerError);
+    });
+  });
+  describe('주문 삭제', () => {
+    it('주문 취소 (사용한 포인트 x, 포인트 적립 x)', async () => {
+      // given
+      const { mocks, verify } = setupDeleteOrderScenario();
+
+      setUpDeleteOrderMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      await mockOrderService.deleteOrder(userId, orderId);
+
+      // then
+      // 기본 주문 취소 로직 검증
+      expectBaseOrderDeleted({ mockOrderRepo, mockPrisma, mockUserService, mocks, verify });
+    });
+    it('주문 취소 (사용한 포인트 x, 포인트 적립 O)', async () => {
+      // given
+      const { mocks, verify } = setupDeleteOrderScenario({
+        userId,
+        orderId,
+      });
+      const getPointHistoryRepoOutput = createGetPointHistoryMock({
+        userId: verify.userId,
+        orderId: verify.orderId,
+        amount: 100,
+      });
+      const earnCancelPointRepoInput = createPointInputMock({ userId: verify.userId, amount: 100 });
+      const earnCancelPointHistoryRepoInput = createPointHistoryInputMock({
+        orderId: verify.orderId,
+        userId: verify.userId,
+        type: PointHistoryType.EARN_CANCEL,
+        amount: 100,
+      });
+
+      setUpDeleteOrderMockRepos({ mockOrderRepo, mockData: mocks });
+      mockOrderRepo.findPointHistory.mockResolvedValue(getPointHistoryRepoOutput);
+
+      // when
+      await mockOrderService.deleteOrder(userId, orderId);
+
+      // then
+      // 기본 주문 취소 로직 검증
+      expectBaseOrderDeleted({ mockOrderRepo, mockPrisma, mocks, mockUserService, verify });
+      // 주문시 사용한 포인트 환불 검증
+      expect(mockOrderRepo.decreasePoint).toHaveBeenCalledWith(
+        earnCancelPointRepoInput,
+        mockPrisma,
+      );
+      expect(mockOrderRepo.createPointHistory).toHaveBeenCalledWith(
+        earnCancelPointHistoryRepoInput,
+        mockPrisma,
+      );
+    });
+    it('주문 취소 (사용한 포인트 O, 포인트 적립 O)', async () => {
+      // 기본 시나리오 + 주문 시 사용한 포인트 환불 + 적립 됐던 포인트 적립 취소
+      // given
+      const { mocks, verify } = setupDeleteOrderScenario({
+        userId,
+        orderId,
+        usePoint: 1000,
+      });
+      // 주문시 사용한 포인트 환불
+      const refundPointRepoInput = createPointInputMock({ userId: verify.userId, amount: 1000 });
+      const refundPointHistoryRepoInput = createPointHistoryInputMock({
+        orderId: verify.orderId,
+        userId: verify.userId,
+        type: PointHistoryType.REFUND,
+        amount: 1000,
+      });
+      // 포인트 적립 취소
+      const getPointHistoryRepoOutput = createGetPointHistoryMock({
+        userId: verify.userId,
+        orderId: verify.orderId,
+        amount: 100,
+      });
+      const earnCancelPointRepoInput = createPointInputMock({ userId: verify.userId, amount: 100 });
+      const earnCancelPointHistoryRepoInput = createPointHistoryInputMock({
+        orderId: verify.orderId,
+        userId: verify.userId,
+        type: PointHistoryType.EARN_CANCEL,
+        amount: 100,
+      });
+
+      // repo mock
+      setUpDeleteOrderMockRepos({ mockOrderRepo, mockData: mocks });
+      mockOrderRepo.findPointHistory.mockResolvedValue(getPointHistoryRepoOutput);
+
+      // when
+      await mockOrderService.deleteOrder(userId, orderId);
+
+      // then
+      // 기본 주문 취소 로직 검증
+      expectBaseOrderDeleted({ mockOrderRepo, mockPrisma, mocks, mockUserService, verify });
+      // 주문시 사용한 포인트 환불 검증
+      expect(mockOrderRepo.increasePoint).toHaveBeenCalledWith(refundPointRepoInput, mockPrisma);
+      expect(mockOrderRepo.createPointHistory).toHaveBeenCalledWith(
+        refundPointHistoryRepoInput,
+        mockPrisma,
+      );
+      // 포인트 적립 취소 검증
+      expect(mockOrderRepo.decreasePoint).toHaveBeenCalledWith(
+        earnCancelPointRepoInput,
+        mockPrisma,
+      );
+      expect(mockOrderRepo.createPointHistory).toHaveBeenCalledWith(
+        earnCancelPointHistoryRepoInput,
+        mockPrisma,
+      );
+    });
+    it('주문 취소 실패 (주문 정보 조회 결과가 없는 경우 NotFoundError 발생)', async () => {
+      // given
+      mockOrderRepo.findById.mockResolvedValue(null);
+      // when
+      // then
+      await expect(mockOrderService.deleteOrder(userId, orderId)).rejects.toThrow(NotFoundError);
+    });
+    it('주문 취소 실패 (본인 주문이 아닌 경우 ForbiddenError 발생)', async () => {
+      // given
+      const getOrderOutput = createGetOrderMock({
+        id: orderId,
+        buyerId: otherId,
+      });
+      mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
+      // when
+      // then
+      await expect(mockOrderService.deleteOrder(userId, orderId)).rejects.toThrow(ForbiddenError);
+    });
+    it('주문 취소 실패 (주문 상태 조회 실패한 경우 InternalServerError 발생)', async () => {
+      // given
+      const getOrderOutput = createGetOrderMock({
+        id: orderId,
+        buyerId: userId,
+      });
+      mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
+      mockOrderRepo.findStatusById.mockResolvedValue(null);
+      // when
+      // then
+      await expect(mockOrderService.deleteOrder(userId, orderId)).rejects.toThrow(
+        InternalServerError,
+      );
+    });
+    it('주문 취소 실패 (결제 정보가 없는 경우 InternalServerError 발생)', async () => {
+      // given
+      const getOrderOutput = createGetOrderMock({
+        id: orderId,
+        buyerId: userId,
+      });
+      const orderStatus = { status: OrderStatus.WaitingPayment };
+      mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
+      mockOrderRepo.findStatusById.mockResolvedValue(orderStatus);
+      // when
+      // then
+      await expect(mockOrderService.deleteOrder(userId, orderId)).rejects.toThrow(
+        InternalServerError,
+      );
+    });
+    it('주문 취소 실패 (유저 정보 조회가 실패한 경우 InternalServerError 발생)', async () => {
+      // given
+      const getOrderOutput = createGetOrderMock({
+        id: orderId,
+        buyerId: userId,
+        payments: createPaymentMock(),
+      });
+      const orderStatus = { status: OrderStatus.WaitingPayment };
+      mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
+      mockOrderRepo.findStatusById.mockResolvedValue(orderStatus);
+      mockOrderRepo.findUserInfo.mockResolvedValue(null);
+      // when
+      // then
+      await expect(mockOrderService.deleteOrder(userId, orderId)).rejects.toThrow(
+        InternalServerError,
+      );
+    });
+    it('주문 취소 실패 (유저가 현재 보유한 포인트보다 회수할 포인트 양이 더 많은 경우 BadRequestError 발생)', async () => {
+      // 이런 경우를 방지하기 위해 포인트 적립은 결제 완료된 이후 적립하도록 추후 리팩토링 해야할 것 같음
+      // 결제하고 배송 완료된 이후에도 사용자가 구매 취소, 교환 등 할 수 있기 때문에 포인트 적립 처리는 좀 더 정교해야할 것 같다.
+      // 무신사처럼 구매자가 명시적으로 구매확정을 누르면 포인트 적립되도록 하는 등
+      // 포인트 적립은 정책상 주문에서 트랜잭션 처리되지 않아야 할 것 같음
+      // 주문 후 일정기간이 지나거나 사용자가 명시적으로 취소, 교환 등의 변동 여지가 없음을 표현한 후 포인트 적립해야할 것 같음
+      // given
+      const getOrderOutput = createGetOrderMock({
+        id: orderId,
+        buyerId: userId,
+        payments: createPaymentMock(),
+      });
+      const orderStatus = { status: OrderStatus.WaitingPayment };
+      const userInfoOutput = createGetUserInfoMock({
+        point: 0,
+      });
+      const getPointHistoryRepoOutput = createGetPointHistoryMock({
+        userId,
+        orderId,
+        amount: 100,
+      });
+      mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
+      mockOrderRepo.findStatusById.mockResolvedValue(orderStatus);
+      mockOrderRepo.findUserInfo.mockResolvedValue(userInfoOutput);
+      mockOrderRepo.findPointHistory.mockResolvedValue(getPointHistoryRepoOutput);
+      // when
+      // then
+      await expect(mockOrderService.deleteOrder(userId, orderId)).rejects.toThrow(BadRequestError);
     });
   });
 });
