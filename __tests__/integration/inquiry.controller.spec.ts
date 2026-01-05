@@ -17,7 +17,7 @@ import { sseManager } from '@/common/utils/sse.manager.js';
 
 describe('Inquiry API Integration Test', () => {
   let ctx: TestContext;
-  let ottherCtx: TestContext;
+  let otherCtx: TestContext;
   let sellerToken: string;
   let buyerToken: string;
   let otherBuyerToken: string;
@@ -63,8 +63,8 @@ describe('Inquiry API Integration Test', () => {
     sellerToken = generateSellerToken(ctx.seller.id);
     buyerToken = generateBuyerToken(ctx.buyer.id);
     // 다른 유저 생성
-    ottherCtx = await createTestContext();
-    otherBuyerToken = generateBuyerToken(ottherCtx.buyer.id);
+    otherCtx = await createTestContext();
+    otherBuyerToken = generateBuyerToken(otherCtx.buyer.id);
 
     // 기본 스토어, 상품 생성
     store = await createTestStore(ctx.seller.id);
@@ -355,8 +355,13 @@ describe('Inquiry API Integration Test', () => {
       const dbReply = await prisma.reply.findUnique({
         where: { id: response.body.id },
       });
+      // DB에 실제로 데이터가 수정되었는지 확인
+      const dbInquiry = await prisma.inquiry.findUnique({
+        where: { id: inquiry.id },
+      });
       expect(dbReply).not.toBeNull();
       expect(dbReply!.content).toBe(createReply.content);
+      expect(dbInquiry!.status).toBe('CompletedAnswer');
       expect(createNotificationSpy).toHaveBeenCalledTimes(1);
       expect(sendMessageSpy).toHaveBeenCalledTimes(1);
     });
