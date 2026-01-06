@@ -33,10 +33,11 @@ export type StoreProductQuery = z.infer<typeof storeProductQuerySchema>;
 const storeBaseSchema = z.object({
   name: z
     .string()
+    .trim()
     .min(1, '스토어 이름을 입력하세요.')
     .max(100, '스토어 이름은 최대 100자까지 가능합니다.'),
-  address: z.string().min(1, '주소를 입력하세요.'),
-  detailAddress: z.string().min(1, '상세 주소를 입력하세요.').optional(),
+  address: z.string().trim().min(1, '주소를 입력하세요.'),
+  detailAddress: z.string().trim().min(1, '상세 주소를 입력하세요.').optional(),
   phoneNumber: z
     .string()
     .min(1, '전화번호를 입력하세요.')
@@ -46,6 +47,7 @@ const storeBaseSchema = z.object({
     ),
   content: z
     .string()
+    .trim()
     .min(10, '스토어 소개는 최소 10자 이상 입력하세요.')
     .max(300, '스토어 소개는 최대 300자까지 가능합니다.'),
   image: z.string().optional(),
@@ -61,7 +63,6 @@ export type CreateStoreBody = z.infer<typeof createStoreSchema>;
 
 // ============================================
 // Request Body - Update Store
-// base.partial() + image nullable 오버라이드 (이미지 삭제 가능)
 // ============================================
 
 export const updateStoreSchema = storeBaseSchema
