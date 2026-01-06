@@ -1,4 +1,6 @@
 import { PrismaClient } from '@prisma/client';
+import bcrypt from 'bcrypt';
+
 const prisma = new PrismaClient();
 
 async function main() {
@@ -62,6 +64,38 @@ async function main() {
     });
   }
   console.log('✅ 사이즈 시딩 완료!');
+
+  // 테스트 계정 시딩 (로컬/개발 환경용)
+  const hashedPassword = await bcrypt.hash('test1234', 10);
+
+  const testUsers = [
+    {
+      email: 'buyer@codiit.com',
+      password: hashedPassword,
+      name: '테스트구매자',
+      type: 'BUYER' as const,
+      gradeId: 'grade_green',
+    },
+    {
+      email: 'seller@codiit.com',
+      password: hashedPassword,
+      name: '테스트판매자',
+      type: 'SELLER' as const,
+      gradeId: 'grade_green',
+    },
+  ];
+
+  for (const user of testUsers) {
+    await prisma.user.upsert({
+      where: { email: user.email },
+      update: {
+        password: user.password, // 강제 리셋
+        name: user.name,
+      },
+      create: user,
+    });
+  }
+  console.log('✅ 테스트 계정 시딩 완료!');
 }
 
 main()

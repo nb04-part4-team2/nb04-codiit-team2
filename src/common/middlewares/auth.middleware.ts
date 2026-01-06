@@ -2,6 +2,9 @@ import { Request, Response, NextFunction } from 'express';
 import { UnauthorizedError, ForbiddenError } from '@/common/utils/errors.js';
 import { verifyAccessToken } from '@/common/utils/jwt.util.js';
 import type { UserType } from '@prisma/client';
+import prisma from '@/config/prisma.js';
+
+const TEST_ACCOUNT_EMAILS = new Set(['buyer@codiit.com', 'seller@codiit.com']);
 
 export const authenticate = (req: Request, res: Response, next: NextFunction): void => {
   const authHeader = req.headers.authorization;
@@ -37,3 +40,25 @@ export const authorize = (...allowedTypes: UserType[]) => {
 // 편의 미들웨어 (자주 사용하는 역할)
 export const onlySeller = authorize('SELLER');
 export const onlyBuyer = authorize('BUYER');
+
+// 테스트 계정 보호 미들웨어
+export const excludeTestAccounts = async (
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<void> => {
+  const userId = req.user?.id;
+
+  if (userId) {
+    const user = await prisma.user.findUnique({
+      where: { id: userId },
+      select: { email: true },
+    });
+
+    if (user && TEST_ACCOUNT_EMAILS.has(user.email)) {
+      throw new ForbiddenError('테스트 계정은 수정/삭제할 수 없습니다.');
+    }
+  }
+
+  next();
+};
