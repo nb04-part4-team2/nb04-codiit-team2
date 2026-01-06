@@ -11,8 +11,9 @@ export const createProductSchema = z
       .number()
       .min(0)
       .max(100)
-      .nullish()
-      .transform((val) => val ?? 0),
+      .nullable()
+      .optional()
+      .transform((val) => (val === null ? 0 : val)),
 
     discountStartTime: z.string().datetime().nullish(),
     discountEndTime: z.string().datetime().nullish(),
