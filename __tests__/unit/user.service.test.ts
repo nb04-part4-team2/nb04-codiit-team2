@@ -1,7 +1,6 @@
 import { jest, beforeEach, afterEach, describe, it, expect } from '@jest/globals';
 import { UserRepository } from '@/domains/user/user.repository.js';
 import { UserService } from '@/domains/user/user.service.js';
-import { AuthRepository } from '@/domains/auth/auth.repository.js';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
 import {
   createUserWithGradeMock,
@@ -20,7 +19,6 @@ import bcrypt from 'bcrypt';
 describe('UserService 유닛 테스트', () => {
   let userService: UserService;
   let userRepository: DeepMockProxy<UserRepository>;
-  let authRepository: DeepMockProxy<AuthRepository>;
   let hashSpy: jest.MockedFunction<(data: string, saltOrRounds: number) => Promise<string>>;
   let compareSpy: jest.MockedFunction<(data: string, encrypted: string) => Promise<boolean>>;
 
@@ -30,8 +28,7 @@ describe('UserService 유닛 테스트', () => {
   beforeEach(() => {
     // 의존성 주입
     userRepository = mockDeep<UserRepository>();
-    authRepository = mockDeep<AuthRepository>();
-    userService = new UserService(userRepository, authRepository);
+    userService = new UserService(userRepository);
 
     // bcrypt spyOn mock
     hashSpy = jest.spyOn(bcrypt, 'hash') as typeof hashSpy;
@@ -39,9 +36,6 @@ describe('UserService 유닛 테스트', () => {
 
     hashSpy.mockResolvedValue('hashed-password');
     compareSpy.mockResolvedValue(true);
-
-    // AuthRepository 기본 mock 설정
-    authRepository.deleteAllByUserId.mockResolvedValue({ count: 0 });
   });
 
   // 각 테스트가 끝난 후 모든 모의(mock)를 원래대로 복원
@@ -192,7 +186,6 @@ describe('UserService 유닛 테스트', () => {
 
       // --- 검증 (Assert) ---
       expect(userRepository.update).toHaveBeenCalledWith(userId, { password: 'hashed-password' });
-      expect(authRepository.deleteAllByUserId).toHaveBeenCalledWith(userId);
       expect(result.id).toBe(userId);
     });
 

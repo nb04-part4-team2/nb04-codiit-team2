@@ -2,7 +2,6 @@ import bcrypt from 'bcrypt';
 import { env } from '@/config/constants.js';
 import { CreateUserDto, UpdateUserDto } from './user.schema.js';
 import { UserRepository } from './user.repository.js';
-import { AuthRepository } from '@/domains/auth/auth.repository.js';
 import type { UserResponseDto, StoreLikeResponseDto } from './user.dto.js';
 import { toUserResponse, toStoreLikeResponse } from './user.mapper.js';
 import {
@@ -13,10 +12,7 @@ import {
 } from '@/common/utils/errors.js';
 
 export class UserService {
-  constructor(
-    private userRepository: UserRepository,
-    private authRepository: AuthRepository,
-  ) {}
+  constructor(private userRepository: UserRepository) {}
 
   async createUser(dto: CreateUserDto): Promise<UserResponseDto> {
     const { name, email, password, type } = dto;
@@ -83,11 +79,6 @@ export class UserService {
     }
 
     const updatedUser = await this.userRepository.update(userId, updateData);
-
-    // 비밀번호 변경 시 모든 세션 로그아웃
-    if (password) {
-      await this.authRepository.deleteAllByUserId(userId);
-    }
 
     return toUserResponse(updatedUser);
   }
