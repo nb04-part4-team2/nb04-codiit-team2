@@ -37,8 +37,14 @@ export class AuthController {
   };
 
   logout = async (req: Request, res: Response): Promise<void> => {
+    const refreshToken = req.cookies.refreshToken;
+
+    // 토큰이 있으면 DB에서 삭제
+    if (refreshToken) {
+      await this.authService.logout(refreshToken);
+    }
+
     res.clearCookie('refreshToken');
-    const result = await this.authService.logout();
-    res.status(200).json(result);
+    res.status(200).json({ message: '로그아웃 되었습니다.' });
   };
 }
