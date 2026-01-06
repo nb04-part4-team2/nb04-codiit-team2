@@ -8,9 +8,9 @@ export const createOrderItemSchema = z.object({
 });
 
 export const orderSchema = z.object({
-  name: z.string().min(1, '이름을 입력해야 합니다.'),
+  name: z.string().trim().min(1, '이름을 입력해야 합니다.'),
   phone: z.string().max(13),
-  address: z.string().min(1, '주소를 입력해야 합니다.'),
+  address: z.string().trim().min(1, '주소를 입력해야 합니다.'),
 });
 
 export const createOrderSchema = orderSchema.extend({
