@@ -193,23 +193,53 @@ paths:
           content:
             text/event-stream:
               schema:
-                type: string
+                type: array
                 description: |
                   Server-Sent Events 스트림
 
-                  각 이벤트는 다음 형식으로 전송됩니다:
+                  실제 전송 형식:
                   data: JSON 형식의 알림 객체
                   빈 줄로 이벤트 구분
 
                   Keep-alive 메시지:
                   ": keep-alive" 형식
                   `30초`마다 전송
-                example: |
-                  data: {"id":"cmjtkpx3r001rp701n8q7w2yz","userId":"cmjthpery0003p701k9l2m5xq","content":"코디잇 오버핏 후드티에 새로운 문의가 등록되었습니다.","isChecked":false,"createdAt":"2025-01-05T10:30:00.000Z","updatedAt":"2025-01-05T10:30:00.000Z"}
-
-                  : keep-alive
-
-                  data: {"id":"cmjtkpy5k001tp701z9x3m4pq","userId":"cmjthpery0003p701k9l2m5xq","content":"베이직 면 티셔츠에 새로운 리뷰가 등록되었습니다.","isChecked":false,"createdAt":"2025-01-05T11:00:00.000Z","updatedAt":"2025-01-05T11:00:00.000Z"}
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      example: "cmjtkpx3r001rp701n8q7w2yz"
+                    userId:
+                      type: string
+                      example: "cmjthpery0003p701k9l2m5xq"
+                    content:
+                      type: string
+                      example: "코디잇 오버핏 후드티에 새로운 문의가 등록되었습니다."
+                    isChecked:
+                      type: boolean
+                      example: false
+                    createdAt:
+                      type: string
+                      format: date-time
+                      example: "2025-01-05T10:30:00.000Z"
+                    updatedAt:
+                      type: string
+                      format: date-time
+                      example: "2025-01-05T11:00:00.000Z"
+                example:
+                  - id: "cmjtkpx3r001rp701n8q7w2yz"
+                    userId: "cmjthpery0003p701k9l2m5xq"
+                    content: "코디잇 오버핏 후드티에 새로운 문의가 등록되었습니다."
+                    isChecked: false
+                    createdAt: "2025-01-05T10:30:00.000Z"
+                    updatedAt: "2025-01-05T10:30:00.000Z"
+                  - id: "cmjtkpy5k001tp701z9x3m4pq"
+                    userId: "cmjthpery0003p701k9l2m5xq"
+                    content: "베이직 면 티셔츠에 새로운 리뷰가 등록되었습니다."
+                    isChecked: false
+                    createdAt: "2025-01-05T11:00:00.000Z"
+                    updatedAt: "2025-01-05T11:00:00.000Z"
 
         '401':
           description: 인증 실패
