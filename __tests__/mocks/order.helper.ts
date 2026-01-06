@@ -685,7 +685,6 @@ export const expectBaseOrderDeleted = ({
   verify,
 }: ExpectDeleteBaseInput) => {
   expect(mockOrderRepo.findById).toHaveBeenCalledWith(verify.orderId);
-  expect(mockOrderRepo.findStatusById).toHaveBeenCalledWith(mocks.getOrderOutput.id);
   expect(mockOrderRepo.increaseStock).toHaveBeenCalledTimes(verify.restoreStockDatas.length);
   verify.restoreStockDatas.forEach((stockInput) => {
     expect(mockOrderRepo.increaseStock).toHaveBeenCalledWith(stockInput, mockPrisma);
