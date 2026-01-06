@@ -7,7 +7,12 @@ export const createProductSchema = z
     content: z.string().trim().min(1, '상세 설명은 필수입니다.'),
     image: z.string().url('유효한 이미지 URL이 아닙니다.'),
 
-    discountRate: z.number().min(0).max(100).default(0),
+    discountRate: z
+      .number()
+      .min(0)
+      .max(100)
+      .nullish()
+      .transform((val) => val ?? 0),
 
     discountStartTime: z.string().datetime().nullish(),
     discountEndTime: z.string().datetime().nullish(),
@@ -68,7 +73,12 @@ export const updateProductSchema = z
     price: z.number().min(0).optional(),
     content: z.string().trim().min(1).optional(),
     image: z.string().url().optional(),
-    discountRate: z.number().min(0).max(100).optional(),
+    discountRate: z
+      .number()
+      .min(0)
+      .max(100)
+      .nullish()
+      .transform((val) => val ?? 0),
     discountStartTime: z.string().datetime().nullish(),
     discountEndTime: z.string().datetime().nullish(),
     categoryName: z.string().min(1).optional(),
