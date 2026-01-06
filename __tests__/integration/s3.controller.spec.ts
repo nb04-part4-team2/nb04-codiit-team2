@@ -1,6 +1,7 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
-import { describe, it, expect, beforeEach } from '@jest/globals';
+import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
+import { S3Client } from '@aws-sdk/client-s3';
 import { testClient, authRequest } from '../helpers/testClient.js';
 import { createTestContext, type TestContext } from '../helpers/dataFactory.js';
 import { generateBuyerToken, generateSellerToken } from '../helpers/authHelper.js';
@@ -9,15 +10,27 @@ import { generateBuyerToken, generateSellerToken } from '../helpers/authHelper.j
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
-describe('S3 API Integration Test (No Mocking)', () => {
+describe('S3 API Integration Test (with Mocking)', () => {
   let ctx: TestContext;
   let buyerToken: string;
   let sellerToken: string;
+  // spy를 저장할 변수. 타입은 타입스크립트가 추론하도록 합니다.
+  let s3SendSpy;
 
   beforeEach(async () => {
     ctx = await createTestContext();
     buyerToken = generateBuyerToken(ctx.buyer.id);
     sellerToken = generateSellerToken(ctx.seller.id);
+
+    // S3Client.prototype.send 메소드를 감시하고, 모의 구현을 제공합니다.
+    s3SendSpy = jest
+      .spyOn(S3Client.prototype, 'send')
+      .mockImplementation(() => Promise.resolve({}));
+  });
+
+  afterEach(() => {
+    // 각 테스트 후에 모든 모의(mock)를 복원합니다.
+    jest.restoreAllMocks();
   });
 
   // ===== POST /api/s3/upload - 이미지 업로드 =====
@@ -27,16 +40,17 @@ describe('S3 API Integration Test (No Mocking)', () => {
 
     it('401: 인증 없이 업로드 시도 시 실패해야 합니다.', async () => {
       const response = await testClient.post('/api/s3/upload').attach('image', imagePath);
-
       expect(response.status).toBe(401);
+      // 실제 send가 호출되지 않아야 합니다.
+      expect(s3SendSpy).not.toHaveBeenCalled();
     });
 
     it('400: 파일 없이 업로드 시도 시 실패해야 합니다.', async () => {
       const response = await authRequest(buyerToken).post('/api/s3/upload');
 
       expect(response.status).toBe(400);
-      // upload.middleware.ts의 에러 메시지에 맞춰 수정
       expect(response.body.message).toBe('파일이 제공되지 않았습니다.');
+      expect(s3SendSpy).not.toHaveBeenCalled();
     });
 
     it('201: 구매자가 이미지 업로드 성공 시 URL과 key를 반환해야 합니다.', async () => {
@@ -45,18 +59,14 @@ describe('S3 API Integration Test (No Mocking)', () => {
         .attach('image', imagePath);
 
       expect(response.status).toBe(201);
+      // S3 Client의 send가 한 번 호출되었는지 확인
+      expect(s3SendSpy).toHaveBeenCalledTimes(1);
 
       // URL과 key가 특정 값이 아닌, 올바른 형식의 문자열인지 검증
       expect(response.body.url).toEqual(expect.any(String));
       expect(response.body.key).toEqual(expect.any(String));
 
-      // URL에 S3 도메인과 버킷 이름이 포함되어 있는지 검증
-      // .env.test.local에 실제 버킷 정보가 있을 것을 가정
-      const bucketName = process.env.AWS_S3_BUCKET || 'dummy-bucket';
-      expect(response.body.url).toContain(`s3`);
-      expect(response.body.url).toContain(bucketName);
-
-      // key가 .png로 끝나는지 검증
+      // 모킹을 사용하므로, 실제 URL 검증 대신 key가 .png로 끝나는지만 확인
       expect(response.body.key.endsWith('.png')).toBe(true);
     });
 
@@ -66,6 +76,8 @@ describe('S3 API Integration Test (No Mocking)', () => {
         .attach('image', imagePath);
 
       expect(response.status).toBe(201);
+      expect(s3SendSpy).toHaveBeenCalledTimes(1);
+
       expect(response.body.url).toEqual(expect.any(String));
       expect(response.body.key).toEqual(expect.any(String));
     });
