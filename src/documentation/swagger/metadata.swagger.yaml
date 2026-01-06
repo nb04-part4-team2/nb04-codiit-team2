@@ -1,0 +1,124 @@
+# ========================================
+# Metadata API Swagger Documentation
+# ========================================
+# 작성일: 2025-01-05
+# 도메인: 메타데이터(Metadata) - 시스템 고정 데이터
+# 총 1개 엔드포인트
+#
+# 엔드포인트:
+# - GET /api/metadata/grade - 등급 정책 조회
+#
+# 특징:
+# - 인증 불필요 (Public API)
+# - Prisma seed에 정의된 고정 데이터 반환
+# - 사용자 등급별 포인트 적립률 및 조건 제공
+# ========================================
+
+paths:
+  /api/metadata/grade:
+    get:
+      tags:
+        - Metadata
+      summary: 등급 정책 조회
+      description: |
+        시스템의 사용자 등급(Grade) 정책 정보를 조회합니다.
+
+        인증 불필요:
+        Public API (누구나 접근 가능)
+
+        등급 시스템:
+        사용자의 누적 구매 금액(`minAmount`)에 따라 등급 자동 승급
+        등급별로 포인트 적립률(`rate`) 차등 적용
+        5단계 등급: green → orange → red → black → vip
+
+        등급별 정보:
+
+        | 등급 | ID | 승급 조건 | 적립률 |
+        |------|----|-----------|----|
+        | green | grade_green | 0원 이상 | 1% |
+        | orange | grade_orange | 10만원 이상 | 3% |
+        | red | grade_red | 30만원 이상 | 5% |
+        | black | grade_black | 50만원 이상 | 7% |
+        | vip | grade_vip | 100만원 이상 | 10% |
+
+        정렬:
+        `minAmount` 오름차순 (green → vip 순서)
+
+        사용 시나리오:
+        회원가입 시 등급 정보 표시
+        마이페이지에서 현재 등급 및 다음 등급 조건 안내
+        상품 상세 페이지에서 예상 적립 포인트 계산
+        주문 완료 시 실제 적립 포인트 표시
+
+        데이터 출처:
+        Prisma seed 파일에 정의된 고정 데이터
+        서버 재시작 없이 변경 불가 (시스템 정책)
+      responses:
+        '200':
+          description: 등급 정책 조회 성공
+          content:
+            application/json:
+              schema:
+                type: array
+                description: 등급 목록 (minAmount 오름차순)
+                items:
+                  type: object
+                  properties:
+                    id:
+                      type: string
+                      description: |
+                        등급 고유 ID
+
+                        형식: grade_{등급명}
+                        Prisma seed에 정의된 고정값
+                      example: "grade_green"
+                    name:
+                      type: string
+                      description: 등급명 (영문 소문자)
+                      enum:
+                        - green
+                        - orange
+                        - red
+                        - black
+                        - vip
+                      example: "green"
+                    rate:
+                      type: integer
+                      description: |
+                        포인트 적립률 (정수 퍼센트)
+
+                        DB 저장: 소수점 형태 (0.01, 0.03, 0.05, 0.07, 0.1)
+                        응답: 정수 퍼센트 (1, 3, 5, 7, 10)
+                        변환식: `Math.round(rate * 100)`
+                      example: 1
+                    minAmount:
+                      type: integer
+                      description: |
+                        해당 등급 승급에 필요한 최소 누적 구매 금액 (원)
+
+                        사용자의 총 구매 금액이 이 값 이상이면 해당 등급 적용
+                      example: 0
+              examples:
+                전체등급목록:
+                  summary: 5개 등급 전체 목록
+                  value:
+                    - id: "grade_green"
+                      name: "green"
+                      rate: 1
+                      minAmount: 0
+                    - id: "grade_orange"
+                      name: "orange"
+                      rate: 3
+                      minAmount: 100000
+                    - id: "grade_red"
+                      name: "red"
+                      rate: 5
+                      minAmount: 300000
+                    - id: "grade_black"
+                      name: "black"
+                      rate: 7
+                      minAmount: 500000
+                    - id: "grade_vip"
+                      name: "vip"
+                      rate: 10
+                      minAmount: 1000000

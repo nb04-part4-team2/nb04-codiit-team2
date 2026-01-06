@@ -1,0 +1,752 @@
+# ========================================
+# Store API Swagger Documentation
+# ========================================
+# 작성일: 2025-01-05
+# 도메인: Store - 스토어 관리
+# 총 7개 엔드포인트
+#
+# 엔드포인트:
+# - POST   /api/stores - 스토어 생성 (SELLER)
+# - GET    /api/stores/detail/my - 내 스토어 상세 조회 (SELLER)
+# - GET    /api/stores/detail/my/product - 내 스토어 상품 목록 조회 (SELLER)
+# - GET    /api/stores/:storeId - 스토어 상세 조회 (공개)
+# - PATCH  /api/stores/:storeId - 스토어 수정 (SELLER)
+# - POST   /api/stores/:storeId/favorite - 관심 스토어 등록 (BUYER)
+# - DELETE /api/stores/:storeId/favorite - 관심 스토어 해제 (BUYER)
+#
+# 특징:
+# - 판매자 전용 (스토어 생성/수정)
+# - 구매자 전용 (관심 스토어 관리)
+# - 공개 API (스토어 상세 조회)
+# - 스토어 통계 (상품 수, 찜 수, 판매 수)
+# ========================================
+
+paths:
+  /api/stores:
+    post:
+      tags:
+        - Store
+      summary: 스토어 생성
+      description: |
+        판매자가 새로운 스토어를 생성합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        `SELLER` 전용
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - name
+                - address
+                - phoneNumber
+                - content
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  description: |
+                    스토어 이름
+
+                    최소 `1자`, 최대 `100자`
+                  example: "코디잇 패션스토어"
+                address:
+                  type: string
+                  minLength: 1
+                  description: 주소 (필수)
+                  example: "서울시 강남구"
+                detailAddress:
+                  type: string
+                  description: 상세 주소 (선택)
+                  example: "테헤란로 123"
+                phoneNumber:
+                  type: string
+                  pattern: '^(0\d{1,2}-?\d{3,4}-?\d{4}|1\d{3}-?\d{4})$'
+                  description: |
+                    전화번호 (필수)
+
+                    형식: 010-1234-5678 또는 02-1234-5678
+                  example: "010-1234-5678"
+                content:
+                  type: string
+                  minLength: 10
+                  maxLength: 300
+                  description: |
+                    스토어 소개
+
+                    최소 `10자`, 최대 `300자`
+                  example: "트렌디한 아이템을 합리적인 가격에 제공하는 패션 스토어입니다."
+                image:
+                  type: string
+                  format: uri
+                  description: 스토어 이미지 URL (선택)
+                  example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-main-sample.jpg"
+      responses:
+        '201':
+          description: 스토어 생성 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: 스토어 고유 ID
+                    example: "cmjtkn0td0017p701tp5nwslg"
+                  userId:
+                    type: string
+                    description: 판매자 사용자 ID
+                    example: "cmjthper90001p7017spnm7y5"
+                  name:
+                    type: string
+                    example: "코디잇 패션스토어"
+                  address:
+                    type: string
+                    example: "서울시 강남구"
+                  detailAddress:
+                    type: string
+                    nullable: true
+                    example: "테헤란로 123"
+                  phoneNumber:
+                    type: string
+                    example: "010-1234-5678"
+                  content:
+                    type: string
+                    example: "트렌디한 아이템을 합리적인 가격에 제공하는 패션 스토어입니다."
+                  image:
+                    type: string
+                    nullable: true
+                    example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-main-sample.jpg"
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2025-12-31T05:24:20.066Z"
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    example: "2025-12-31T05:24:20.066Z"
+        '400':
+          description: 유효성 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "유효성 검증에 실패했습니다."
+                details:
+                  - field: "content"
+                    message: "스토어 소개는 최소 10자 이상 입력하세요."
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음 (`SELLER`만 가능)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "판매자만 스토어를 생성할 수 있습니다."
+                details: []
+
+  /api/stores/detail/my:
+    get:
+      tags:
+        - Store
+      summary: 내 스토어 상세 조회
+      description: |
+        로그인한 판매자의 스토어 상세 정보를 조회합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        판매자 전용 (`SELLER`)
+
+        포함 정보: 상품 수, 찜 수, 이번달 찜 수, 총 판매 수
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 내 스토어 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: "스토어 고유 ID"
+                    example: "cmjtkn0td0017p701tp5nwslg"
+                  userId:
+                    type: string
+                    description: "판매자 사용자 ID"
+                    example: "cmjthper90001p7017spnm7y5"
+                  name:
+                    type: string
+                    example: "코디잇 패션스토어"
+                  address:
+                    type: string
+                    example: "서울시 강남구"
+                  detailAddress:
+                    type: string
+                    nullable: true
+                    example: "테헤란로 123"
+                  phoneNumber:
+                    type: string
+                    example: "010-1234-5678"
+                  content:
+                    type: string
+                    example: "트렌디한 아이템을 합리적인 가격에 제공하는 패션 스토어입니다."
+                  image:
+                    type: string
+                    nullable: true
+                    example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-main-sample.jpg"
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2025-12-31T05:24:20.066Z"
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    example: "2025-12-31T05:25:09.150Z"
+                  productCount:
+                    type: integer
+                    description: "등록된 상품 수"
+                    example: 15
+                  favoriteCount:
+                    type: integer
+                    description: "총 찜 수"
+                    example: 42
+                  monthFavoriteCount:
+                    type: integer
+                    description: "이번 달 찜 수"
+                    example: 8
+                  totalSoldCount:
+                    type: integer
+                    description: "총 판매 수"
+                    example: 127
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음 (판매자만 가능)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "판매자만 접근할 수 있습니다."
+                details: []
+        '404':
+          description: 스토어를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "스토어를 찾을 수 없습니다."
+                details: []
+
+  /api/stores/detail/my/product:
+    get:
+      tags:
+        - Store
+      summary: 내 스토어 상품 목록 조회
+      description: |
+        로그인한 판매자의 스토어에 등록된 상품 목록을 조회합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        판매자 전용 (`SELLER`)
+
+        페이지네이션: `page`, `pageSize` 지원
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: "페이지 번호"
+        - name: pageSize
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            maximum: 100
+            default: 10
+          description: "페이지당 항목 수"
+      responses:
+        '200':
+          description: 상품 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  list:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          description: "상품 고유 ID"
+                          example: "cmjtpqr890xyz123abc456def"
+                        image:
+                          type: string
+                          description: "상품 이미지 URL"
+                          example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-sample-001.jpg"
+                        name:
+                          type: string
+                          example: "오버핏 후드 티셔츠"
+                        price:
+                          type: integer
+                          example: 39000
+                        stock:
+                          type: integer
+                          description: "재고 수량"
+                          example: 50
+                        isDiscount:
+                          type: boolean
+                          description: "할인 여부"
+                          example: true
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-12-28T10:30:00.000Z"
+                        isSoldOut:
+                          type: boolean
+                          description: "품절 여부 (stock === 0)"
+                          example: false
+                  totalCount:
+                    type: integer
+                    description: "전체 상품 수"
+                    example: 15
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음 (판매자만 가능)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/stores/{storeId}:
+    get:
+      tags:
+        - Store
+      summary: 스토어 상세 조회
+      description: |
+        특정 스토어의 상세 정보를 조회합니다.
+
+        인증 불필요:
+        공개 API (누구나 조회 가능)
+        포함 정보: 찜 수
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "스토어 ID"
+          example: "cmjtkn0td0017p701tp5nwslg"
+      responses:
+        '200':
+          description: 스토어 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: "스토어 고유 ID"
+                    example: "cmjtkn0td0017p701tp5nwslg"
+                  userId:
+                    type: string
+                    description: "판매자 사용자 ID"
+                    example: "cmjthper90001p7017spnm7y5"
+                  name:
+                    type: string
+                    example: "코디잇 패션스토어"
+                  address:
+                    type: string
+                    example: "서울시 강남구"
+                  detailAddress:
+                    type: string
+                    nullable: true
+                    example: "테헤란로 123"
+                  phoneNumber:
+                    type: string
+                    example: "010-1234-5678"
+                  content:
+                    type: string
+                    example: "트렌디한 아이템을 합리적인 가격에 제공하는 패션 스토어입니다."
+                  image:
+                    type: string
+                    nullable: true
+                    example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-main-sample.jpg"
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2025-12-31T05:24:20.066Z"
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    example: "2025-12-31T05:25:09.150Z"
+                  favoriteCount:
+                    type: integer
+                    description: "찜 수"
+                    example: 42
+        '400':
+          description: 유효하지 않은 스토어 ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "유효한 스토어 ID를 입력하세요."
+                details: []
+        '404':
+          description: 스토어를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "스토어를 찾을 수 없습니다."
+                details: []
+
+    patch:
+      tags:
+        - Store
+      summary: 스토어 수정
+      description: |
+        스토어 정보를 수정합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        판매자 전용 (`SELLER`, 본인 스토어만 수정 가능)
+        참고: 모든 필드는 선택 사항이며, image는 null로 설정하여 삭제 가능
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "스토어 ID"
+          example: "cmjtkn0td0017p701tp5nwslg"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                name:
+                  type: string
+                  minLength: 1
+                  maxLength: 100
+                  example: "코디잇 패션스토어 (수정)"
+                address:
+                  type: string
+                  example: "서울시 서초구"
+                detailAddress:
+                  type: string
+                  example: "강남대로 456"
+                phoneNumber:
+                  type: string
+                  pattern: '^(0\d{1,2}-?\d{3,4}-?\d{4}|1\d{3}-?\d{4})$'
+                  example: "02-1234-5678"
+                content:
+                  type: string
+                  minLength: 10
+                  maxLength: 300
+                  example: "더욱 트렌디한 아이템으로 새롭게 단장했습니다."
+                image:
+                  type: string
+                  nullable: true
+                  format: uri
+                  description: "이미지 URL (null로 설정 시 삭제)"
+                  example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-updated-sample.jpg"
+      responses:
+        '200':
+          description: 스토어 수정 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    example: "cmjtkn0td0017p701tp5nwslg"
+                  userId:
+                    type: string
+                    example: "cmjthper90001p7017spnm7y5"
+                  name:
+                    type: string
+                    example: "코디잇 패션스토어 (수정)"
+                  address:
+                    type: string
+                    example: "서울시 서초구"
+                  detailAddress:
+                    type: string
+                    nullable: true
+                    example: "강남대로 456"
+                  phoneNumber:
+                    type: string
+                    example: "02-1234-5678"
+                  content:
+                    type: string
+                    example: "더욱 트렌디한 아이템으로 새롭게 단장했습니다."
+                  image:
+                    type: string
+                    nullable: true
+                    example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-updated-sample.jpg"
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2025-12-31T05:24:20.066Z"
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    example: "2026-01-05T14:30:15.250Z"
+        '400':
+          description: 유효성 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음 (본인 스토어만 수정 가능)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "본인의 스토어만 수정할 수 있습니다."
+                details: []
+        '404':
+          description: 스토어를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+
+  /api/stores/{storeId}/favorite:
+    post:
+      tags:
+        - Store
+      summary: 관심 스토어 등록
+      description: |
+        스토어를 관심 목록에 추가합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        구매자 전용 (`BUYER`)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "스토어 ID"
+          example: "cmjtkn0td0017p701tp5nwslg"
+      responses:
+        '201':
+          description: 관심 스토어 등록 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [register]
+                    example: "register"
+                  store:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "cmjtkn0td0017p701tp5nwslg"
+                      userId:
+                        type: string
+                        example: "cmjthper90001p7017spnm7y5"
+                      name:
+                        type: string
+                        example: "코디잇 패션스토어"
+                      address:
+                        type: string
+                        example: "서울시 강남구"
+                      detailAddress:
+                        type: string
+                        nullable: true
+                        example: "테헤란로 123"
+                      phoneNumber:
+                        type: string
+                        example: "010-1234-5678"
+                      content:
+                        type: string
+                        example: "트렌디한 아이템을 합리적인 가격에 제공하는 패션 스토어입니다."
+                      image:
+                        type: string
+                        nullable: true
+                        example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-main-sample.jpg"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-12-31T05:24:20.066Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-12-31T05:25:09.150Z"
+        '400':
+          description: 유효하지 않은 스토어 ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음 (구매자만 가능)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "구매자만 관심 스토어를 등록할 수 있습니다."
+                details: []
+        '404':
+          description: 스토어를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '409':
+          description: 이미 관심 등록된 스토어
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "이미 관심 등록된 스토어입니다."
+                details: []
+
+    delete:
+      tags:
+        - Store
+      summary: 관심 스토어 해제
+      description: |
+        스토어를 관심 목록에서 제거합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        구매자 전용 (`BUYER`)
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: storeId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "스토어 ID"
+          example: "cmjtkn0td0017p701tp5nwslg"
+      responses:
+        '200':
+          description: 관심 스토어 해제 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  type:
+                    type: string
+                    enum: [delete]
+                    example: "delete"
+                  store:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        example: "cmjtkn0td0017p701tp5nwslg"
+                      userId:
+                        type: string
+                        example: "cmjthper90001p7017spnm7y5"
+                      name:
+                        type: string
+                        example: "코디잇 패션스토어"
+                      address:
+                        type: string
+                        example: "서울시 강남구"
+                      detailAddress:
+                        type: string
+                        nullable: true
+                        example: "테헤란로 123"
+                      phoneNumber:
+                        type: string
+                        example: "010-1234-5678"
+                      content:
+                        type: string
+                        example: "트렌디한 아이템을 합리적인 가격에 제공하는 패션 스토어입니다."
+                      image:
+                        type: string
+                        nullable: true
+                        example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-main-sample.jpg"
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: "2025-12-31T05:24:20.066Z"
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: "2025-12-31T05:25:09.150Z"
+        '400':
+          description: 유효하지 않은 스토어 ID
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '401':
+          $ref: '#/components/responses/Unauthorized'
+        '403':
+          description: 권한 없음 (구매자만 가능)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+        '404':
+          description: 스토어를 찾을 수 없음 또는 관심 등록되지 않은 스토어
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "관심 등록되지 않은 스토어입니다."
+                details: []

@@ -1,0 +1,191 @@
+# ========================================
+# S3 API Swagger Documentation
+# ========================================
+# 작성일: 2025-01-05
+# 도메인: S3 - AWS S3 파일 업로드
+# 총 1개 엔드포인트
+#
+# 엔드포인트:
+# - POST /api/s3/upload - 이미지 파일 업로드
+#
+# 특징:
+# - AWS S3를 이용한 이미지 파일 업로드
+# - Multer 미들웨어로 multipart/form-data 처리
+# - 5MB 파일 크기 제한
+# - 이미지 형식만 허용 (png, jpg, jpeg, gif, webp)
+# - UUID 기반 고유 파일명 생성
+# ========================================
+
+paths:
+  /api/s3/upload:
+    post:
+      tags:
+        - S3
+      summary: 이미지 파일 업로드
+      description: |
+        AWS S3 버킷에 이미지 파일을 업로드하고 접근 가능한 URL을 반환합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        파일 제약사항:
+        최대 크기: `5MB`
+        허용 형식: PNG, JPG, JPEG, GIF, WebP
+
+        업로드 프로세스:
+        클라이언트가 `multipart/form-data`로 파일 전송
+        Multer 미들웨어가 파일을 메모리에 임시 저장
+        파일 형식 및 크기 검증
+        `UUID` + 원본 확장자로 고유 파일명 생성
+        AWS S3 버킷에 업로드
+        공개 접근 가능한 URL 반환
+
+        생성 파일명 예시:
+        a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg
+
+        생성되는 URL 형식:
+        https://{bucket}.s3.{region}.amazonaws.com/{key}
+
+        사용 시나리오:
+        스토어 대표 이미지 업로드
+        상품 이미지 업로드
+        사용자 프로필 이미지 업로드
+
+        환경 변수 필요:
+        `AWS_S3_BUCKET` - S3 버킷 이름
+        `AWS_REGION` - AWS 리전 (예: ap-northeast-2)
+        `AWS_ACCESS_KEY_ID` - AWS 액세스 키
+        `AWS_SECRET_ACCESS_KEY` - AWS 시크릿 키
+
+        주의사항:
+        업로드된 파일은 영구적으로 S3에 저장됨
+        삭제 기능은 별도 구현 필요 시 `deleteFile` 유틸 사용
+        파일명은 `UUID`로 생성되어 원본 파일명과 다름
+      security:
+        - bearerAuth: []
+      requestBody:
+        required: true
+        content:
+          multipart/form-data:
+            schema:
+              type: object
+              required:
+                - image
+              properties:
+                image:
+                  type: string
+                  format: binary
+                  description: |
+                    업로드할 이미지 파일
+
+                    필드명: `image` (고정)
+                    최대 크기: `5MB`
+                    허용 형식: PNG, JPG, JPEG, GIF, WebP
+            encoding:
+              image:
+                contentType: image/png, image/jpeg, image/jpg, image/gif, image/webp
+      responses:
+        '201':
+          description: 파일 업로드 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    description: 업로드 성공 메시지
+                    example: "업로드 성공"
+                  url:
+                    type: string
+                    format: uri
+                    description: |
+                      업로드된 파일의 공개 접근 URL
+
+                      형식: https://{bucket}.s3.{region}.amazonaws.com/{key}
+
+                      브라우저에서 바로 접근 가능
+                    example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg"
+                  key:
+                    type: string
+                    description: |
+                      S3 버킷 내 파일 키 (고유 식별자)
+
+                      형식: {UUID}.{확장자}
+
+                      파일 삭제 시 이 키 사용
+                    example: "a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg"
+              examples:
+                jpg파일업로드:
+                  summary: JPG 파일 업로드 성공
+                  value:
+                    message: "업로드 성공"
+                    url: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg"
+                    key: "a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg"
+                png파일업로드:
+                  summary: PNG 파일 업로드 성공
+                  value:
+                    message: "업로드 성공"
+                    url: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/b9c8d7e6-f5a4-3210-bcde-1234567890ab.png"
+                    key: "b9c8d7e6-f5a4-3210-bcde-1234567890ab.png"
+
+        '400':
+          description: 잘못된 요청 (파일 미제공 또는 지원되지 않는 형식)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                파일미제공:
+                  summary: 파일이 제공되지 않음
+                  value:
+                    message: "파일이 제공되지 않았습니다."
+                지원안되는형식:
+                  summary: 지원되지 않는 파일 형식
+                  value:
+                    message: "지원되지 않는 파일 형식입니다. (png, jpg, jpeg, gif, webp)"
+                파일크기초과:
+                  summary: 파일 크기 초과 (5MB 제한)
+                  value:
+                    message: "파일 크기가 제한을 초과했습니다. (최대 5MB)"
+
+        '401':
+          description: 인증 실패
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "인증이 필요합니다."
+
+        '500':
+          description: 서버 오류 (S3 설정 오류 또는 업로드 실패)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+              examples:
+                환경변수누락:
+                  summary: S3 환경 변수 누락
+                  value:
+                    message: "S3 설정에 필요한 환경 변수가 누락되었습니다."
+                업로드실패:
+                  summary: S3 업로드 실패
+                  value:
+                    message: "파일 업로드에 실패했습니다. (Bucket: codiit-images, Key: a1b2c3d4-e5f6-7890-abcd-ef1234567890.jpg)"
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT 액세스 토큰 (로그인 후 발급)
