@@ -299,7 +299,6 @@ export class OrderService {
     if (order.buyerId !== userId) {
       throw new ForbiddenError('접근 권한이 없습니다.');
     }
-    await this.validateStatus(order.id);
     // 2. 주문 삭제 트랜잭션
     await this.prisma.$transaction(async (tx) => {
       // 2-1. 재고 복구
