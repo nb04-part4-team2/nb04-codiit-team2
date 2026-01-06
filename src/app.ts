@@ -26,6 +26,10 @@ import dashboardRouter from '@/domains/dashboard/dashboard.router.js';
 import metadataRouter from '@/domains/metadata/metadata.router.js';
 import s3Router from '@/domains/s3/s3.router.js';
 
+// Swagger
+import swaggerUi from 'swagger-ui-express';
+import { specs } from '@/documentation/swagger.config.js';
+
 const app = express();
 
 // 보안 미들웨어
@@ -88,6 +92,20 @@ app.use('/api/notifications', notificationRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/metadata', metadataRouter);
 app.use('/api/s3', s3Router);
+
+// Swagger UI
+app.use(
+  '/api/swagger',
+  swaggerUi.serve,
+  swaggerUi.setup(specs, {
+    customCss: '.swagger-ui .topbar .download-url-wrapper { display: none }',
+    customSiteTitle: 'Codiit API Documentation',
+    swaggerOptions: {
+      persistAuthorization: true,
+      displayRequestDuration: true,
+    },
+  }),
+);
 
 // 404 핸들러
 app.use((req: Request, res: Response) => {

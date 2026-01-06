@@ -1,0 +1,204 @@
+# ========================================
+# Auth API Swagger Documentation
+# ========================================
+# 작성일: 2025-01-06
+# 도메인: Auth - 인증 및 인가
+# 총 3개 엔드포인트
+#
+# 엔드포인트:
+# - POST /api/auth/login - 로그인
+# - POST /api/auth/refresh - Access Token 갱신
+# - POST /api/auth/logout - 로그아웃
+#
+# 특징:
+# - JWT 기반 인증 (Access Token + Refresh Token)
+# - Access Token은 응답 본문으로 반환
+# - Refresh Token은 HTTP-only 쿠키로 관리
+# - bcrypt를 이용한 비밀번호 해싱
+# - 테스트 계정 제공 (buyer@codiit.com, seller@codiit.com)
+# ========================================
+
+paths:
+  /api/auth/login:
+    post:
+      tags:
+        - Auth
+      summary: 로그인
+      description: |
+        이메일과 비밀번호로 로그인합니다.
+
+        인증 불필요:
+        Public API (누구나 접근 가능)
+
+        테스트 계정 (바로 사용 가능):
+        구매자: `buyer@codiit.com` / `test1234`
+        판매자: `seller@codiit.com` / `test1234`
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - email
+                - password
+              properties:
+                email:
+                  type: string
+                  format: email
+                  example: "buyer@codiit.com"
+                password:
+                  type: string
+                  format: password
+                  example: "test1234"
+      responses:
+        '200':
+          description: 로그인 성공
+          headers:
+            Set-Cookie:
+              description: |
+                Refresh Token (`HTTP-only` 쿠키)
+              schema:
+                type: string
+                example: "refreshToken=eyJhbGc...; HttpOnly; Secure; SameSite=Strict"
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+                  user:
+                    type: object
+                    properties:
+                      id:
+                        type: string
+                        description: 사용자 고유 ID
+                        example: "cm1abc123def456ghi789jkl"
+                      email:
+                        type: string
+                        example: "buyer@codiit.com"
+                      name:
+                        type: string
+                        example: "테스트구매자"
+                      type:
+                        type: string
+                        example: "BUYER"
+                      points:
+                        type: integer
+                        example: 0
+                      image:
+                        type: string
+                        nullable: true
+                        example: null
+                      grade:
+                        type: object
+                        properties:
+                          id:
+                            type: string
+                            example: "grade_green"
+                          name:
+                            type: string
+                            example: "green"
+                          rate:
+                            type: number
+                            example: 1
+                          minAmount:
+                            type: integer
+                            example: 0
+        '400':
+          description: 유효성 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "유효성 검증에 실패했습니다."
+                details:
+                  - field: "email"
+                    message: "유효한 이메일을 입력해주세요."
+        '401':
+          description: 잘못된 이메일 또는 비밀번호
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "이메일 또는 비밀번호가 일치하지 않습니다."
+                details: []
+
+  /api/auth/refresh:
+    post:
+      tags:
+        - Auth
+      summary: Access Token 갱신
+      description: |
+        Refresh Token을 사용하여 새로운 Access Token을 발급받습니다.
+
+        인증 필요:
+        `refreshToken` 쿠키 필수 (로그인 시 자동 저장됨)
+
+        토큰 갱신 프로세스:
+        클라이언트가 쿠키에 저장된 `refreshToken` 전송
+        서버가 토큰 유효성 검증
+        새로운 `accessToken` 발급 및 반환
+
+      responses:
+        '200':
+          description: 토큰 갱신 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  accessToken:
+                    type: string
+                    example: "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9..."
+        '401':
+          description: 토큰이 없거나 유효하지 않음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "토큰이 없습니다."
+                details: []
+
+  /api/auth/logout:
+    post:
+      tags:
+        - Auth
+      summary: 로그아웃
+      description: |
+        현재 세션을 종료하고 Refresh Token을 무효화합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        로그아웃 프로세스:
+        클라이언트가 `Authorization` 헤더에 `accessToken` 전송
+        서버가 쿠키의 `refreshToken` 무효화
+        클라이언트는 로컬의 `accessToken` 삭제 필요
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 로그아웃 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "로그아웃 되었습니다."
+        '401':
+          description: 인증 토큰이 필요함
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "인증 토큰이 필요합니다."
+                details: []

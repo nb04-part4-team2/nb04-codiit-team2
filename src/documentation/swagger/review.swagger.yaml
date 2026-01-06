@@ -1,0 +1,637 @@
+# ========================================
+# Review API Swagger Documentation
+# ========================================
+# 작성일: 2025-01-05
+# 도메인: Review - 리뷰 관리
+# 총 5개 엔드포인트
+#
+# 엔드포인트:
+# - POST   /api/products/:productId/reviews - 리뷰 작성
+# - GET    /api/products/:productId/reviews - 상품별 리뷰 목록 조회 (공개)
+# - GET    /api/reviews/:reviewId - 리뷰 상세 조회 (공개)
+# - PATCH  /api/reviews/:reviewId - 리뷰 수정
+# - DELETE /api/reviews/:reviewId - 리뷰 삭제
+#
+# 특징:
+# - 구매 인증 필수 (orderItemId)
+# - 별점 1-5 필수
+# - 중복 리뷰 방지
+# - 리뷰 작성 시 상품 평균 별점 자동 업데이트
+# - 페이지네이션 지원
+# ========================================
+
+paths:
+  /api/products/{productId}/reviews:
+    post:
+      tags:
+        - Review
+      summary: 리뷰 작성
+      description: |
+        주문한 상품에 대한 리뷰를 작성합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        `BUYER` 전용
+
+        작성 조건:
+        로그인 필수
+        실제로 구매한 상품만 리뷰 작성 가능
+        주문 아이템 ID (`orderItemId`) 필요
+        별점 `1`-`5` 필수
+        리뷰 내용 최소 `1`자 이상
+
+        주의사항:
+        동일한 주문 아이템에 대해 중복 리뷰 작성 불가
+        작성 후 상품의 평균 별점 자동 업데이트
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "상품 고유 ID"
+          example: "cm4abc123def456ghi789jkl"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - rating
+                - content
+                - orderItemId
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  description: "별점 (`1`-`5`)"
+                  example: 5
+                content:
+                  type: string
+                  minLength: 1
+                  description: "리뷰 내용"
+                  example: "정말 만족스러운 상품입니다! 품질도 좋고 배송도 빨랐어요."
+                orderItemId:
+                  type: string
+                  description: "주문 아이템 고유 ID (구매 인증용)"
+                  example: "cm7item456xyz789abc012def"
+      responses:
+        '201':
+          description: 리뷰 작성 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  id:
+                    type: string
+                    description: "리뷰 고유 ID"
+                    example: "cm8review123abc456def789"
+                  userId:
+                    type: string
+                    description: "작성자 ID"
+                    example: "cm2xyz789abc012def345ghi"
+                  productId:
+                    type: string
+                    example: "cm4abc123def456ghi789jkl"
+                  rating:
+                    type: integer
+                    example: 5
+                  content:
+                    type: string
+                    example: "정말 만족스러운 상품입니다! 품질도 좋고 배송도 빨랐어요."
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2025-01-07T14:20:00.000Z"
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    example: "2025-01-07T14:20:00.000Z"
+                  orderItemId:
+                    type: string
+                    example: "cm7item456xyz789abc012def"
+                  user:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        description: "작성자 이름"
+                        example: "김구매자"
+        '400':
+          description: 유효성 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidRating:
+                  value:
+                    message: "유효성 검증에 실패했습니다."
+                    details:
+                      - field: "rating"
+                        message: "별점은 `1`점 이상 `5`점 이하여야 합니다."
+                emptyContent:
+                  value:
+                    message: "유효성 검증에 실패했습니다."
+                    details:
+                      - field: "content"
+                        message: "리뷰 내용은 필수입니다."
+                invalidOrderItemId:
+                  value:
+                    message: "유효성 검증에 실패했습니다."
+                    details:
+                      - field: "orderItemId"
+                        message: "유효한 주문 아이템 ID 형식이 아닙니다."
+        '401':
+          description: 인증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "로그인이 필요합니다."
+                details: []
+        '403':
+          description: 권한 없음 (구매하지 않은 상품)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "구매한 상품만 리뷰를 작성할 수 있습니다."
+                details: []
+        '404':
+          description: 상품 또는 주문 아이템을 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                productNotFound:
+                  value:
+                    message: "상품을 찾을 수 없습니다."
+                    details: []
+                orderItemNotFound:
+                  value:
+                    message: "주문 아이템을 찾을 수 없습니다."
+                    details: []
+        '409':
+          description: 이미 리뷰 작성함 (중복 리뷰)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "이미 리뷰를 작성한 주문입니다."
+                details: []
+
+    get:
+      tags:
+        - Review
+      summary: 상품 리뷰 목록 조회
+      description: |
+        특정 상품의 리뷰 목록을 조회합니다.
+
+        인증 불필요:
+        Public API (누구나 접근 가능)
+
+        페이지네이션:
+        `page`: 페이지 번호 (기본값: `1`)
+        `limit`: 페이지당 항목 수 (기본값: `10`)
+
+        응답 구조:
+        `items`: 리뷰 목록 배열
+        `meta`: 페이지네이션 정보 (`total`, `page`, `limit`, `hasNextPage`)
+      parameters:
+        - name: productId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "상품 고유 ID"
+          example: "cm4abc123def456ghi789jkl"
+        - name: page
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 1
+          description: "페이지 번호"
+          example: 1
+        - name: limit
+          in: query
+          schema:
+            type: integer
+            minimum: 1
+            default: 10
+          description: "페이지당 항목 수"
+          example: 10
+      responses:
+        '200':
+          description: 리뷰 목록 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  items:
+                    type: array
+                    description: "리뷰 목록"
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: "cm8review123abc456def789"
+                        userId:
+                          type: string
+                          example: "cm2xyz789abc012def345ghi"
+                        productId:
+                          type: string
+                          example: "cm4abc123def456ghi789jkl"
+                        rating:
+                          type: integer
+                          example: 5
+                        content:
+                          type: string
+                          example: "정말 만족스러운 상품입니다!"
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: "2025-01-07T14:20:00.000Z"
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: "2025-01-07T14:20:00.000Z"
+                        orderItemId:
+                          type: string
+                          example: "cm7item456xyz789abc012def"
+                        user:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: "김구매자"
+                  meta:
+                    type: object
+                    description: "페이지네이션 정보"
+                    properties:
+                      total:
+                        type: integer
+                        description: "전체 리뷰 수"
+                        example: 127
+                      page:
+                        type: integer
+                        example: 1
+                      limit:
+                        type: integer
+                        example: 10
+                      hasNextPage:
+                        type: boolean
+                        description: "다음 페이지 존재 여부"
+                        example: true
+        '400':
+          description: 유효성 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "유효성 검증에 실패했습니다."
+                details:
+                  - field: "productId"
+                    message: "유효한 상품 ID 형식이 아닙니다."
+        '404':
+          description: 상품을 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "상품을 찾을 수 없습니다."
+                details: []
+
+  /api/reviews/{reviewId}:
+    get:
+      tags:
+        - Review
+      summary: 리뷰 상세 조회
+      description: |
+        특정 리뷰의 상세 정보를 조회합니다.
+
+        인증 불필요:
+        Public API (누구나 접근 가능)
+
+        포함 정보:
+        리뷰 내용 (별점, 내용)
+        작성자 정보
+        구매한 상품 정보 (상품명, 사이즈, 가격, 수량)
+        구매 일자 (주문 생성일)
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "리뷰 고유 ID"
+          example: "cm8review123abc456def789"
+      responses:
+        '200':
+          description: 리뷰 상세 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  reviewId:
+                    type: string
+                    example: "cm8review123abc456def789"
+                  productName:
+                    type: string
+                    description: "구매한 상품명"
+                    example: "코디잇 오버핏 후드티"
+                  size:
+                    type: object
+                    description: "구매한 사이즈"
+                    properties:
+                      en:
+                        type: string
+                        example: "M"
+                      ko:
+                        type: string
+                        example: "M"
+                  price:
+                    type: integer
+                    description: "구매 당시 가격 (할인 적용 후)"
+                    example: 71200
+                  quantity:
+                    type: integer
+                    description: "구매 수량"
+                    example: 2
+                  rating:
+                    type: integer
+                    description: "별점 (`1`-`5`)"
+                    example: 5
+                  content:
+                    type: string
+                    description: "리뷰 내용"
+                    example: "정말 만족스러운 상품입니다! 품질도 좋고 배송도 빨랐어요."
+                  reviewer:
+                    type: string
+                    description: "작성자 이름"
+                    example: "김구매자"
+                  reviewCreatedAt:
+                    type: string
+                    format: date-time
+                    description: "리뷰 작성 일시"
+                    example: "2025-01-07T14:20:00.000Z"
+                  purchasedAt:
+                    type: string
+                    format: date-time
+                    description: "구매 일시 (주문 생성일)"
+                    example: "2025-01-05T10:30:00.000Z"
+        '400':
+          description: 유효성 검증 실패 (잘못된 ID 형식)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "유효성 검증에 실패했습니다."
+                details:
+                  - field: "reviewId"
+                    message: "유효한 리뷰 ID 형식이 아닙니다."
+        '404':
+          description: 리뷰를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "리뷰를 찾을 수 없습니다."
+                details: []
+
+    patch:
+      tags:
+        - Review
+      summary: 리뷰 수정
+      description: |
+        자신이 작성한 리뷰를 수정합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        `BUYER` 전용
+
+        수정 가능 항목:
+        별점 (`rating`)
+        리뷰 내용 (`content`)
+
+        주의사항:
+        본인이 작성한 리뷰만 수정 가능
+        별점 또는 내용 중 최소 하나는 전송 필요
+        모든 필드는 선택사항이지만, 둘 다 없으면 에러
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "리뷰 고유 ID"
+          example: "cm8review123abc456def789"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                rating:
+                  type: integer
+                  minimum: 1
+                  maximum: 5
+                  description: "수정할 별점 (선택사항)"
+                  example: 4
+                content:
+                  type: string
+                  minLength: 1
+                  description: "수정할 리뷰 내용 (선택사항)"
+                  example: "생각보다 좋은 상품이네요. 별점 하나 낮춥니다."
+              example:
+                rating: 4
+                content: "생각보다 좋은 상품이네요."
+      responses:
+        '200':
+          description: 리뷰 수정 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                description: "POST /api/products/:productId/reviews 응답과 동일한 구조"
+                properties:
+                  id:
+                    type: string
+                    example: "cm8review123abc456def789"
+                  userId:
+                    type: string
+                    example: "cm2xyz789abc012def345ghi"
+                  productId:
+                    type: string
+                    example: "cm4abc123def456ghi789jkl"
+                  rating:
+                    type: integer
+                    description: "수정된 별점"
+                    example: 4
+                  content:
+                    type: string
+                    description: "수정된 내용"
+                    example: "생각보다 좋은 상품이네요."
+                  createdAt:
+                    type: string
+                    format: date-time
+                    example: "2025-01-07T14:20:00.000Z"
+                  updatedAt:
+                    type: string
+                    format: date-time
+                    description: "수정 일시 (업데이트됨)"
+                    example: "2025-01-08T09:15:00.000Z"
+                  orderItemId:
+                    type: string
+                    example: "cm7item456xyz789abc012def"
+                  user:
+                    type: object
+                    properties:
+                      name:
+                        type: string
+                        example: "김구매자"
+        '400':
+          description: 유효성 검증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              examples:
+                invalidReviewId:
+                  value:
+                    message: "유효성 검증에 실패했습니다."
+                    details:
+                      - field: "reviewId"
+                        message: "유효한 리뷰 ID 형식이 아닙니다."
+                noUpdate:
+                  value:
+                    message: "유효성 검증에 실패했습니다."
+                    details:
+                      - field: "rating"
+                        message: "평점 또는 리뷰 내용 중 최소 하나는 입력해야 합니다."
+                invalidRating:
+                  value:
+                    message: "유효성 검증에 실패했습니다."
+                    details:
+                      - field: "rating"
+                        message: "별점은 `1`점 이상 `5`점 이하여야 합니다."
+        '401':
+          description: 인증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "로그인이 필요합니다."
+                details: []
+        '403':
+          description: 권한 없음 (본인의 리뷰가 아님)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "본인의 리뷰만 수정할 수 있습니다."
+                details: []
+        '404':
+          description: 리뷰를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "리뷰를 찾을 수 없습니다."
+                details: []
+
+    delete:
+      tags:
+        - Review
+      summary: 리뷰 삭제
+      description: |
+        자신이 작성한 리뷰를 삭제합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        `BUYER` 전용
+
+        주의사항:
+        본인이 작성한 리뷰만 삭제 가능
+        삭제된 리뷰는 복구할 수 없음
+        삭제 후 상품의 평균 별점 자동 업데이트
+      security:
+        - bearerAuth: []
+      parameters:
+        - name: reviewId
+          in: path
+          required: true
+          schema:
+            type: string
+          description: "리뷰 고유 ID"
+          example: "cm8review123abc456def789"
+      responses:
+        '204':
+          description: 리뷰 삭제 성공 (응답 본문 없음)
+        '400':
+          description: 유효성 검증 실패 (잘못된 ID 형식)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "유효성 검증에 실패했습니다."
+                details:
+                  - field: "reviewId"
+                    message: "유효한 리뷰 ID 형식이 아닙니다."
+        '401':
+          description: 인증 실패
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "로그인이 필요합니다."
+                details: []
+        '403':
+          description: 권한 없음 (본인의 리뷰가 아님)
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "본인의 리뷰만 삭제할 수 있습니다."
+                details: []
+        '404':
+          description: 리뷰를 찾을 수 없음
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Error'
+              example:
+                message: "리뷰를 찾을 수 없습니다."
+                details: []
