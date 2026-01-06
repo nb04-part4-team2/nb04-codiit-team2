@@ -1,10 +1,6 @@
 import { jest } from '@jest/globals';
 import prisma from '../src/config/prisma.js';
 
-// morgan 모듈을 모킹합니다. morgan('dev')는 미들웨어 함수를 반환하므로,
-// 모의 구현은 next()를 호출하는 더미 미들웨어 함수를 반환해야 합니다.
-jest.mock('morgan', () => jest.fn(() => (req, res, next) => next()));
-
 // 테이블 TRUNCATE 순서 (FK 의존성 고려)
 const tableNames = [
   'notifications',

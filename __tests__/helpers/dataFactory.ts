@@ -151,9 +151,8 @@ export interface TestContext {
 }
 
 export const createTestContext = async (): Promise<TestContext> => {
-  // 시드된 등급 중 하나를 가져와 사용 (예: grade_green)
   const grade = await prisma.grade.findUniqueOrThrow({
-    where: { id: 'grade_green' }, // setup.integration.ts에서 시드된 등급 ID 사용
+    where: { id: 'grade_green' },
   });
   const seller = await createTestSeller(grade.id);
   const buyer = await createTestBuyer(grade.id);
