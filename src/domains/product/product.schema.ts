@@ -2,9 +2,9 @@ import { z } from 'zod';
 
 export const createProductSchema = z
   .object({
-    name: z.string().min(1, '상품 이름은 필수입니다.').max(100),
+    name: z.string().trim().min(1, '상품 이름은 필수입니다.').max(100),
     price: z.number().min(0, '가격은 0원 이상이어야 합니다.'),
-    content: z.string().min(1, '상세 설명은 필수입니다.'),
+    content: z.string().trim().min(1, '상세 설명은 필수입니다.'),
     image: z.string().url('유효한 이미지 URL이 아닙니다.'),
 
     discountRate: z.number().min(0).max(100).default(0),
@@ -64,9 +64,9 @@ export const productDetailSchema = z.object({
 export const updateProductSchema = z
   .object({
     id: z.string().cuid('유효한 상품 ID 형식이 아닙니다.'),
-    name: z.string().min(1).max(100).optional(),
+    name: z.string().trim().min(1).max(100).optional(),
     price: z.number().min(0).optional(),
-    content: z.string().min(1).optional(),
+    content: z.string().trim().min(1).optional(),
     image: z.string().url().optional(),
     discountRate: z.number().min(0).max(100).optional(),
     discountStartTime: z.string().datetime().nullish(),

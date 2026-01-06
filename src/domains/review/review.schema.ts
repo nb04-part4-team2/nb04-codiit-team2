@@ -6,7 +6,7 @@ export const createReviewSchema = z.object({
     .int()
     .min(1, '별점은 1점 이상이어야 합니다.')
     .max(5, '별점은 5점 이하여야 합니다.'),
-  content: z.string().min(1, '리뷰 내용은 필수입니다.'),
+  content: z.string().trim().min(1, '리뷰 내용은 필수입니다.'),
   orderItemId: z.string().cuid('유효한 주문 아이템 ID 형식이 아닙니다.'),
 });
 
@@ -34,7 +34,7 @@ export const updateReviewSchema = z
       .min(1, '별점은 1점 이상이어야 합니다.')
       .max(5, '별점은 5점 이하여야 합니다.')
       .optional(), // 선택적으로 받음
-    content: z.string().min(1, '리뷰 내용은 최소 1자 이상이어야 합니다.').optional(), // 선택적으로 받음
+    content: z.string().trim().min(1, '리뷰 내용은 최소 1자 이상이어야 합니다.').optional(), // 선택적으로 받음
   })
   .refine((data) => data.rating !== undefined || data.content !== undefined, {
     message: '평점 또는 리뷰 내용 중 최소 하나는 입력해야 합니다.',
