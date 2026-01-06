@@ -132,7 +132,7 @@ describe('Order API Integration Test', () => {
       // then
       expect(res.status).toBe(401);
     });
-    it('403: 판매자는 주문 목록을 조회 할 수 없다', async () => {
+    it('403: 판매자는 주문 목록을 조회 할 수 없다.', async () => {
       // when
       const res = await authRequest(sellerToken).get('/api/orders');
       // then
@@ -420,7 +420,7 @@ describe('Order API Integration Test', () => {
       // then
       expect(res.status).toBe(401);
     });
-    it('403: 판매자는 주문 할 수 없다', async () => {
+    it('403: 판매자는 주문 할 수 없다.', async () => {
       // when
       const res = await authRequest(sellerToken).post('/api/orders').send({});
       // then
@@ -556,13 +556,13 @@ describe('Order API Integration Test', () => {
       // then
       expect(res.status).toBe(401);
     });
-    it('403: 판매자는 주문을 조회 할 수 없다', async () => {
+    it('403: 판매자는 주문을 조회 할 수 없다.', async () => {
       // when
       const res = await authRequest(sellerToken).get(`/api/orders/test`); // zod 스키마 도달 전에 에러 발생하므로 cuid가 아니어도 됨
       // then
       expect(res.status).toBe(403);
     });
-    it('403: 본인 주문이 아니면 조회 할 수 없다', async () => {
+    it('403: 본인 주문이 아니면 조회 할 수 없다.', async () => {
       // when
       const res = await authRequest(otherToken).get(`/api/orders/${savedOrderId}`);
       // then
@@ -630,7 +630,7 @@ describe('Order API Integration Test', () => {
       // then
       expect(res.status).toBe(401);
     });
-    it('403: 판매자는 주문을 수정 할 수 없다', async () => {
+    it('403: 판매자는 주문을 수정 할 수 없다.', async () => {
       // when
       const res = await authRequest(sellerToken).patch(`/api/orders/test`).send({}); // zod 스키마 도달 전에 에러 발생하므로 cuid가 아니어도 됨
       // then
@@ -867,7 +867,7 @@ describe('Order API Integration Test', () => {
       // then
       expect(res.status).toBe(401);
     });
-    it('403: 판매자는 주문을 취소 할 수 없다', async () => {
+    it('403: 판매자는 주문을 취소 할 수 없다.', async () => {
       // when
       const res = await authRequest(sellerToken).delete(`/api/orders/test`); // zod 스키마 도달 전에 에러 발생하므로 cuid가 아니어도 됨
       // then
