@@ -1,6 +1,6 @@
 import prisma from '@/config/prisma.js';
 import bcrypt from 'bcrypt';
-import type {
+import {
   Grade,
   User,
   Store,
@@ -9,7 +9,10 @@ import type {
   Inquiry,
   Reply,
   Notification,
+  OrderStatus,
 } from '@prisma/client';
+import { GetOrderRawData } from '@/domains/order/order.dto.js';
+import { createGetOrderMock } from '../mocks/order.mock.js';
 
 // ============================================
 // 상수
@@ -251,6 +254,75 @@ export const createTestNotification = async (
     data: {
       content: options.content ?? '테스트 알림 내용입니다.',
       userId,
+    },
+  });
+};
+
+// ============================================
+// Order
+// ============================================
+/**
+ * [통합 테스트용] 주문 생성 팩토리
+ * - 기존 유닛 테스트용 Mock 데이터를 기반으로 실제 DB에 데이터를 생성합니다.
+ * - user, Product는 미리 DB에 존재해야 합니다.
+ */
+// 주문 통합테스트 객체 생성용 타입
+// 주문 상태 업데이트를 위해 추가
+interface CreateOrderTestOptions extends GetOrderRawData {
+  status: OrderStatus;
+}
+export const createTestOrder = async (overrides: Partial<CreateOrderTestOptions> = {}) => {
+  // 1. 기존 Mock 데이터를 생성 (기본값 + 오버라이드)
+  const mockData = createGetOrderMock(overrides);
+
+  // 2. DB 저장용 데이터로 분리
+  const {
+    id: _id,
+    createdAt: _createdAt,
+    buyerId,
+    orderItems,
+    payments,
+    ...scalarFields
+  } = mockData;
+
+  // 3. 실제 DB에 저장 (Nested Writes 활용)
+  return await prisma.order.create({
+    data: {
+      status: overrides.status ? overrides.status : OrderStatus.WaitingPayment,
+      ...scalarFields,
+
+      buyer: {
+        connect: {
+          id: buyerId,
+        },
+      },
+
+      // [OrderItem 관계 처리]
+      orderItems: {
+        create: orderItems?.map((item) => ({
+          quantity: item.quantity,
+          price: item.price,
+          product: { connect: { id: item.productId } },
+          // Size 연결 (사이즈도 미리 존재해야 함)
+          size: { connect: { id: item.size.id } },
+
+          // Review는 주문 생성 시점엔 보통 없으므로 제외
+        })),
+      },
+
+      // [Payment 관계 처리]
+      payments: payments
+        ? {
+            create: {
+              price: payments.price,
+              status: payments.status,
+            },
+          }
+        : undefined,
+    },
+    include: {
+      orderItems: true,
+      payments: true,
     },
   });
 };
