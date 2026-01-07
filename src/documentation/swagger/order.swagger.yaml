@@ -45,12 +45,6 @@ paths:
         응답 구조:
         `data`: 주문 목록 배열
         `meta`: 페이지네이션 정보 (total, page, limit, totalPages)
-
-        인증 필요:
-        `Bearer 토큰 필수`
-
-        권한:
-        `BUYER` 전용
       security:
         - bearerAuth: []
       parameters:
@@ -320,12 +314,6 @@ paths:
         최소 `1개` 이상의 상품 필요
         포인트는 보유 포인트 범위 내에서만 사용 가능
         재고 부족 시 주문 실패
-
-        인증 필요:
-        `Bearer 토큰 필수`
-
-        권한:
-        `BUYER` 전용
       security:
         - bearerAuth: []
       requestBody:
@@ -755,12 +743,6 @@ paths:
         주의사항:
         본인의 주문만 수정 가능
         결제 완료 전 또는 배송 전에만 수정 권장
-
-        인증 필요:
-        `Bearer 토큰 필수`
-
-        권한:
-        `BUYER` 전용
       security:
         - bearerAuth: []
       parameters:
