@@ -2,7 +2,7 @@ import {
   GetCartItemDetailRawData,
   GetCartRawData,
   GetCartResponse,
-} from '../../src/domains/cart/cart.dto.js';
+} from '@/domains/cart/cart.dto.js';
 import {
   SizeRawData,
   StockRawData,
@@ -10,9 +10,9 @@ import {
   GetCartItemRawData,
   CartBase,
   CartItemBase,
-} from '../../src/domains/cart/cart.type.js';
+} from '@/domains/cart/cart.type.js';
 import { createStoreMock } from './store.mock.js';
-import { toGetCartResponse } from '../../src/domains/cart/cart.mapper.js';
+import { toGetCartResponse } from '@/domains/cart/cart.mapper.js';
 
 // ============================================
 // 객체 조립용 부품들
