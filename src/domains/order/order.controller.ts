@@ -60,6 +60,6 @@ export class OrderController {
     const { id: userId } = req.user;
     const { orderId } = req.params;
     await this.orderService.deleteOrder(userId, orderId);
-    return res.status(200).json({ message: '주문이 취소되었습니다.' }); // swagger 예시 없음 임의로 작성
+    return res.status(200).json({ message: '주문이 성공적으로 취소되고 포인트가 복구되었습니다.' });
   };
 }
