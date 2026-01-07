@@ -70,7 +70,7 @@ paths:
             CompletedPayment: 결제 완료
             Cancelled: 주문 취소
             Delivered: 배송 완료
-          example: "CompletedPayment"
+          example: 'CompletedPayment'
         - name: limit
           in: query
           schema:
@@ -78,7 +78,7 @@ paths:
             minimum: 1
             maximum: 100
             default: 3
-          description: "페이지당 항목 수"
+          description: '페이지당 항목 수'
           example: 10
         - name: page
           in: query
@@ -86,7 +86,7 @@ paths:
             type: integer
             minimum: 1
             default: 1
-          description: "페이지 번호"
+          description: '페이지 번호'
           example: 1
       responses:
         '200':
@@ -98,123 +98,123 @@ paths:
                 properties:
                   data:
                     type: array
-                    description: "주문 목록"
+                    description: '주문 목록'
                     items:
                       type: object
                       properties:
                         id:
                           type: string
-                          description: "주문 고유 ID"
-                          example: "cm7order123abc456def789"
+                          description: '주문 고유 ID'
+                          example: 'cm7order123abc456def789'
                         name:
                           type: string
-                          description: "수령인 이름"
-                          example: "김구매자"
+                          description: '수령인 이름'
+                          example: '김구매자'
                         phoneNumber:
                           type: string
-                          description: "수령인 연락처"
-                          example: "010-1234-5678"
+                          description: '수령인 연락처'
+                          example: '010-1234-5678'
                         address:
                           type: string
-                          description: "배송지 주소"
-                          example: "서울시 강남구 테헤란로 123"
+                          description: '배송지 주소'
+                          example: '서울시 강남구 테헤란로 123'
                         subtotal:
                           type: integer
-                          description: "총 주문 금액 (포인트 차감 전)"
+                          description: '총 주문 금액 (포인트 차감 전)'
                           example: 150000
                         totalQuantity:
                           type: integer
-                          description: "총 주문 수량"
+                          description: '총 주문 수량'
                           example: 3
                         usePoint:
                           type: integer
-                          description: "사용한 포인트"
-                          example: 5000
+                          description: '사용한 포인트'
+                          example: 0 # 기본 유저는 포인트 없어서 0으로 설정
                         createdAt:
                           type: string
                           format: date-time
-                          example: "2025-01-05T10:30:00.000Z"
+                          example: '2025-01-05T10:30:00.000Z'
                         orderItems:
                           type: array
-                          description: "주문 상품 목록"
+                          description: '주문 상품 목록'
                           items:
                             type: object
                             properties:
                               id:
                                 type: string
-                                example: "cm7item456xyz789abc012"
+                                example: 'cm7item456xyz789abc012'
                               price:
                                 type: integer
-                                description: "상품 단가 (할인 적용 후)"
+                                description: '상품 단가 (할인 적용 후)'
                                 example: 71200
                               quantity:
                                 type: integer
                                 example: 2
                               productId:
                                 type: string
-                                example: "cm4abc123def456ghi789jkl"
+                                example: 'cm4abc123def456ghi789jkl'
                               product:
                                 type: object
                                 properties:
                                   name:
                                     type: string
-                                    example: "코디잇 오버핏 후드티"
+                                    example: '코디잇 오버핏 후드티'
                                   image:
                                     type: string
-                                    example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg"
+                                    example: 'https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg'
                                   reviews:
                                     type: array
-                                    description: "해당 주문 아이템에 대한 리뷰 (작성한 경우)"
+                                    description: '해당 주문 아이템에 대한 리뷰 (작성한 경우)'
                                     items:
                                       type: object
                                       properties:
                                         id:
                                           type: string
-                                          example: "cm7review123abc456def"
+                                          example: 'cm7review123abc456def'
                                         rating:
                                           type: integer
-                                          description: "별점 (`1`-`5`)"
+                                          description: '별점 (`1`-`5`)'
                                           example: 5
                                         content:
                                           type: string
-                                          example: "정말 만족스러운 상품입니다!"
+                                          example: '정말 만족스러운 상품입니다!'
                                         createdAt:
                                           type: string
                                           format: date-time
-                                          example: "2025-01-07T14:20:00.000Z"
+                                          example: '2025-01-07T14:20:00.000Z'
                               size:
                                 type: object
                                 properties:
                                   id:
                                     type: integer
-                                    description: "사이즈 ID (`1`:XS, `2`:S, `3`:M, `4`:L, `5`:XL, `6`:FREE)"
+                                    description: '사이즈 ID (`1`:XS, `2`:S, `3`:M, `4`:L, `5`:XL, `6`:FREE)'
                                     example: 3
                                   size:
                                     type: object
                                     properties:
                                       en:
                                         type: string
-                                        example: "M"
+                                        example: 'M'
                                       ko:
                                         type: string
-                                        example: "M"
+                                        example: 'M'
                               isReviewed:
                                 type: boolean
-                                description: "리뷰 작성 여부"
+                                description: '리뷰 작성 여부'
                                 example: true
                         payments:
                           type: object
-                          description: "결제 정보"
+                          description: '결제 정보'
                           properties:
                             id:
                               type: string
-                              example: "cm7payment789xyz012abc"
+                              example: 'cm7payment789xyz012abc'
                             orderId:
                               type: string
-                              example: "cm7order123abc456def789"
+                              example: 'cm7order123abc456def789'
                             price:
                               type: integer
-                              description: "최종 결제 금액 (포인트 차감 후)"
+                              description: '최종 결제 금액 (포인트 차감 후)'
                               example: 145000
                             status:
                               type: string
@@ -229,22 +229,22 @@ paths:
                                 `CompletedPayment`: 결제 완료
                                 `Failed`: 결제 실패
                                 `Cancelled`: 결제 취소
-                              example: "CompletedPayment"
+                              example: 'CompletedPayment'
                             createdAt:
                               type: string
                               format: date-time
-                              example: "2025-01-05T10:30:00.000Z"
+                              example: '2025-01-05T10:30:00.000Z'
                             updatedAt:
                               type: string
                               format: date-time
-                              example: "2025-01-05T10:30:00.000Z"
+                              example: '2025-01-05T10:30:00.000Z'
                   meta:
                     type: object
-                    description: "페이지네이션 정보"
+                    description: '페이지네이션 정보'
                     properties:
                       total:
                         type: integer
-                        description: "전체 주문 수"
+                        description: '전체 주문 수'
                         example: 42
                       page:
                         type: integer
@@ -254,7 +254,7 @@ paths:
                         example: 10
                       totalPages:
                         type: integer
-                        description: "전체 페이지 수"
+                        description: '전체 페이지 수'
                         example: 5
         '400':
           description: 유효성 검증 실패
@@ -265,16 +265,16 @@ paths:
               examples:
                 invalidStatus:
                   value:
-                    message: "유효성 검증에 실패했습니다."
+                    message: '유효성 검증에 실패했습니다.'
                     details:
-                      - field: "status"
-                        message: "올바른 주문 상태를 입력해주세요."
+                      - field: 'status'
+                        message: '올바른 주문 상태를 입력해주세요.'
                 invalidLimit:
                   value:
-                    message: "유효성 검증에 실패했습니다."
+                    message: '유효성 검증에 실패했습니다.'
                     details:
-                      - field: "limit"
-                        message: "limit는 `1`~`100` 사이의 값이어야 합니다."
+                      - field: 'limit'
+                        message: 'limit는 `1`~`100` 사이의 값이어야 합니다.'
         '401':
           description: 인증 실패
           content:
@@ -282,7 +282,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (판매자 접근 시도)
@@ -291,7 +291,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "구매자만 접근할 수 있습니다."
+                message: '구매자만 접근할 수 있습니다.'
                 details: []
 
     post:
@@ -344,27 +344,27 @@ paths:
                 name:
                   type: string
                   minLength: 1
-                  description: "수령인 이름"
-                  example: "김구매자"
+                  description: '수령인 이름'
+                  example: '김구매자'
                 phone:
                   type: string
                   maxLength: 13
-                  description: "수령인 연락처"
-                  example: "010-1234-5678"
+                  description: '수령인 연락처'
+                  example: '010-1234-5678'
                 address:
                   type: string
                   minLength: 1
-                  description: "배송지 주소"
-                  example: "서울시 강남구 테헤란로 123"
+                  description: '배송지 주소'
+                  example: '서울시 강남구 테헤란로 123'
                 usePoint:
                   type: integer
                   minimum: 0
-                  description: "사용할 포인트 (0 이상)"
+                  description: '사용할 포인트 (0 이상)'
                   example: 5000
                 orderItems:
                   type: array
                   minItems: 1
-                  description: "주문 상품 목록 (최소 1개)"
+                  description: '주문 상품 목록 (최소 1개)'
                   items:
                     type: object
                     required:
@@ -374,24 +374,24 @@ paths:
                     properties:
                       productId:
                         type: string
-                        description: "상품 고유 ID"
-                        example: "cm4abc123def456ghi789jkl"
+                        description: '상품 고유 ID'
+                        example: 'cm4abc123def456ghi789jkl'
                       sizeId:
                         type: integer
                         minimum: 1
                         maximum: 6
-                        description: "사이즈 ID (1:XS, 2:S, 3:M, 4:L, 5:XL, 6:FREE)"
+                        description: '사이즈 ID (1:XS, 2:S, 3:M, 4:L, 5:XL, 6:FREE)'
                         example: 3
                       quantity:
                         type: integer
                         minimum: 1
-                        description: "주문 수량"
+                        description: '주문 수량'
                         example: 2
                   example:
-                    - productId: "cm4abc123def456ghi789jkl"
+                    - productId: 'cm4abc123def456ghi789jkl'
                       sizeId: 3
                       quantity: 2
-                    - productId: "cm4xyz789abc012def345ghi"
+                    - productId: 'cm4xyz789abc012def345ghi'
                       sizeId: 2
                       quantity: 1
       responses:
@@ -401,20 +401,20 @@ paths:
             application/json:
               schema:
                 type: object
-                description: "GET /api/orders/:orderId 응답과 동일한 구조"
+                description: 'GET /api/orders/:orderId 응답과 동일한 구조'
                 properties:
                   id:
                     type: string
-                    example: "cm7order123abc456def789"
+                    example: 'cm7order123abc456def789'
                   name:
                     type: string
-                    example: "김구매자"
+                    example: '김구매자'
                   phoneNumber:
                     type: string
-                    example: "010-1234-5678"
+                    example: '010-1234-5678'
                   address:
                     type: string
-                    example: "서울시 강남구 테헤란로 123"
+                    example: '서울시 강남구 테헤란로 123'
                   subtotal:
                     type: integer
                     example: 150000
@@ -427,7 +427,7 @@ paths:
                   createdAt:
                     type: string
                     format: date-time
-                    example: "2025-01-05T10:30:00.000Z"
+                    example: '2025-01-05T10:30:00.000Z'
                   orderItems:
                     type: array
                     items:
@@ -435,7 +435,7 @@ paths:
                       properties:
                         id:
                           type: string
-                          example: "cm7item456xyz789abc012"
+                          example: 'cm7item456xyz789abc012'
                         price:
                           type: integer
                           example: 71200
@@ -444,19 +444,19 @@ paths:
                           example: 2
                         productId:
                           type: string
-                          example: "cm4abc123def456ghi789jkl"
+                          example: 'cm4abc123def456ghi789jkl'
                         product:
                           type: object
                           properties:
                             name:
                               type: string
-                              example: "코디잇 오버핏 후드티"
+                              example: '코디잇 오버핏 후드티'
                             image:
                               type: string
-                              example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg"
+                              example: 'https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg'
                             reviews:
                               type: array
-                              description: "신규 주문이므로 빈 배열"
+                              description: '신규 주문이므로 빈 배열'
                               items: {}
                               example: []
                         size:
@@ -470,38 +470,38 @@ paths:
                               properties:
                                 en:
                                   type: string
-                                  example: "M"
+                                  example: 'M'
                                 ko:
                                   type: string
-                                  example: "M"
+                                  example: 'M'
                         isReviewed:
                           type: boolean
-                          description: "신규 주문이므로 false"
+                          description: '신규 주문이므로 false'
                           example: false
                   payments:
                     type: object
                     properties:
                       id:
                         type: string
-                        example: "cm7payment789xyz012abc"
+                        example: 'cm7payment789xyz012abc'
                       orderId:
                         type: string
-                        example: "cm7order123abc456def789"
+                        example: 'cm7order123abc456def789'
                       price:
                         type: integer
-                        description: "최종 결제 금액 (subtotal - usePoint)"
+                        description: '최종 결제 금액 (subtotal - usePoint)'
                         example: 145000
                       status:
                         type: string
-                        example: "Pending"
+                        example: 'Pending'
                       createdAt:
                         type: string
                         format: date-time
-                        example: "2025-01-05T10:30:00.000Z"
+                        example: '2025-01-05T10:30:00.000Z'
                       updatedAt:
                         type: string
                         format: date-time
-                        example: "2025-01-05T10:30:00.000Z"
+                        example: '2025-01-05T10:30:00.000Z'
         '400':
           description: 유효성 검증 실패 또는 재고 부족
           content:
@@ -511,17 +511,17 @@ paths:
               examples:
                 noItems:
                   value:
-                    message: "유효성 검증에 실패했습니다."
+                    message: '유효성 검증에 실패했습니다.'
                     details:
-                      - field: "orderItems"
-                        message: "최소 한 개 이상의 상품이 있어야 합니다."
+                      - field: 'orderItems'
+                        message: '최소 한 개 이상의 상품이 있어야 합니다.'
                 insufficientStock:
                   value:
-                    message: "재고가 부족합니다."
+                    message: '재고가 부족합니다.'
                     details: []
                 insufficientPoint:
                   value:
-                    message: "포인트가 부족합니다."
+                    message: '포인트가 부족합니다.'
                     details: []
         '401':
           description: 인증 실패
@@ -530,7 +530,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (판매자 접근 시도)
@@ -539,7 +539,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "구매자만 접근할 수 있습니다."
+                message: '구매자만 접근할 수 있습니다.'
                 details: []
         '404':
           description: 상품을 찾을 수 없음
@@ -548,7 +548,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "상품을 찾을 수 없습니다."
+                message: '상품을 찾을 수 없습니다.'
                 details: []
 
   /api/orders/{orderId}:
@@ -579,8 +579,8 @@ paths:
           required: true
           schema:
             type: string
-          description: "주문 고유 ID"
-          example: "cm7order123abc456def789"
+          description: '주문 고유 ID'
+          example: 'cm7order123abc456def789'
       responses:
         '200':
           description: 주문 상세 조회 성공
@@ -588,20 +588,20 @@ paths:
             application/json:
               schema:
                 type: object
-                description: "POST /api/orders 응답과 동일한 구조"
+                description: 'POST /api/orders 응답과 동일한 구조'
                 properties:
                   id:
                     type: string
-                    example: "cm7order123abc456def789"
+                    example: 'cm7order123abc456def789'
                   name:
                     type: string
-                    example: "김구매자"
+                    example: '김구매자'
                   phoneNumber:
                     type: string
-                    example: "010-1234-5678"
+                    example: '010-1234-5678'
                   address:
                     type: string
-                    example: "서울시 강남구 테헤란로 123"
+                    example: '서울시 강남구 테헤란로 123'
                   subtotal:
                     type: integer
                     example: 150000
@@ -614,15 +614,81 @@ paths:
                   createdAt:
                     type: string
                     format: date-time
-                    example: "2025-01-05T10:30:00.000Z"
+                    example: '2025-01-05T10:30:00.000Z'
                   orderItems:
                     type: array
                     items:
                       type: object
-                      description: "주문 상품 아이템 (구조는 GET /api/orders 응답과 동일)"
+                      properties:
+                        id:
+                          type: string
+                          example: 'cm7item456xyz789abc012'
+                        price:
+                          type: integer
+                          example: 71200
+                        quantity:
+                          type: integer
+                          example: 2
+                        productId:
+                          type: string
+                          example: 'cm4abc123def456ghi789jkl'
+                        product:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: '코디잇 오버핏 후드티'
+                            image:
+                              type: string
+                              example: 'https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg'
+                            reviews:
+                              type: array
+                              description: '신규 주문이므로 빈 배열'
+                              items: {}
+                              example: []
+                        size:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 3
+                            size:
+                              type: object
+                              properties:
+                                en:
+                                  type: string
+                                  example: 'M'
+                                ko:
+                                  type: string
+                                  example: 'M'
+                        isReviewed:
+                          type: boolean
+                          description: '신규 주문이므로 false'
+                          example: false
                   payments:
                     type: object
-                    description: "결제 정보 (구조는 GET /api/orders 응답과 동일)"
+                    properties:
+                      id:
+                        type: string
+                        example: 'cm7payment789xyz012abc'
+                      orderId:
+                        type: string
+                        example: 'cm7order123abc456def789'
+                      price:
+                        type: integer
+                        description: '최종 결제 금액 (subtotal - usePoint)'
+                        example: 145000
+                      status:
+                        type: string
+                        example: 'Pending'
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: '2025-01-05T10:30:00.000Z'
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: '2025-01-05T10:30:00.000Z'
         '400':
           description: 유효성 검증 실패 (잘못된 ID 형식)
           content:
@@ -630,10 +696,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "유효성 검증에 실패했습니다."
+                message: '유효성 검증에 실패했습니다.'
                 details:
-                  - field: "orderId"
-                    message: "유효한 주문 ID를 입력하세요."
+                  - field: 'orderId'
+                    message: '유효한 주문 ID를 입력하세요.'
         '401':
           description: 인증 실패
           content:
@@ -641,7 +707,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (본인의 주문이 아님 또는 판매자)
@@ -652,11 +718,11 @@ paths:
               examples:
                 notBuyer:
                   value:
-                    message: "구매자만 접근할 수 있습니다."
+                    message: '구매자만 접근할 수 있습니다.'
                     details: []
                 notOwner:
                   value:
-                    message: "본인의 주문만 조회할 수 있습니다."
+                    message: '본인의 주문만 조회할 수 있습니다.'
                     details: []
         '404':
           description: 주문을 찾을 수 없음
@@ -665,7 +731,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "주문을 찾을 수 없습니다."
+                message: '주문을 찾을 수 없습니다.'
                 details: []
 
     patch:
@@ -703,8 +769,8 @@ paths:
           required: true
           schema:
             type: string
-          description: "주문 고유 ID"
-          example: "cm7order123abc456def789"
+          description: '주문 고유 ID'
+          example: 'cm7order123abc456def789'
       requestBody:
         required: true
         content:
@@ -719,18 +785,18 @@ paths:
                 name:
                   type: string
                   minLength: 1
-                  description: "수령인 이름"
-                  example: "김수정"
+                  description: '수령인 이름'
+                  example: '김수정'
                 phone:
                   type: string
                   maxLength: 13
-                  description: "수령인 연락처"
-                  example: "010-9876-5432"
+                  description: '수령인 연락처'
+                  example: '010-9876-5432'
                 address:
                   type: string
                   minLength: 1
-                  description: "배송지 주소"
-                  example: "서울시 송파구 올림픽로 300"
+                  description: '배송지 주소'
+                  example: '서울시 송파구 올림픽로 300'
       responses:
         '200':
           description: 주문 수정 성공
@@ -738,23 +804,20 @@ paths:
             application/json:
               schema:
                 type: object
-                description: "GET /api/orders/:orderId 응답과 동일한 구조 (수정된 정보 반영)"
+                description: 'GET /api/orders/:orderId 응답과 동일한 구조 (수정된 정보 반영)'
                 properties:
                   id:
                     type: string
-                    example: "cm7order123abc456def789"
+                    example: 'cm7order123abc456def789'
                   name:
                     type: string
-                    description: "수정된 수령인 이름"
-                    example: "김수정"
+                    example: '김구매자'
                   phoneNumber:
                     type: string
-                    description: "수정된 연락처"
-                    example: "010-9876-5432"
+                    example: '010-1234-5678'
                   address:
                     type: string
-                    description: "수정된 주소"
-                    example: "서울시 송파구 올림픽로 300"
+                    example: '서울시 강남구 테헤란로 123'
                   subtotal:
                     type: integer
                     example: 150000
@@ -767,15 +830,81 @@ paths:
                   createdAt:
                     type: string
                     format: date-time
-                    example: "2025-01-05T10:30:00.000Z"
+                    example: '2025-01-05T10:30:00.000Z'
                   orderItems:
                     type: array
                     items:
                       type: object
-                      description: "주문 상품 아이템 (수정되지 않음)"
+                      properties:
+                        id:
+                          type: string
+                          example: 'cm7item456xyz789abc012'
+                        price:
+                          type: integer
+                          example: 71200
+                        quantity:
+                          type: integer
+                          example: 2
+                        productId:
+                          type: string
+                          example: 'cm4abc123def456ghi789jkl'
+                        product:
+                          type: object
+                          properties:
+                            name:
+                              type: string
+                              example: '코디잇 오버핏 후드티'
+                            image:
+                              type: string
+                              example: 'https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg'
+                            reviews:
+                              type: array
+                              description: '신규 주문이므로 빈 배열'
+                              items: {}
+                              example: []
+                        size:
+                          type: object
+                          properties:
+                            id:
+                              type: integer
+                              example: 3
+                            size:
+                              type: object
+                              properties:
+                                en:
+                                  type: string
+                                  example: 'M'
+                                ko:
+                                  type: string
+                                  example: 'M'
+                        isReviewed:
+                          type: boolean
+                          description: '신규 주문이므로 false'
+                          example: false
                   payments:
                     type: object
-                    description: "결제 정보 (수정되지 않음)"
+                    properties:
+                      id:
+                        type: string
+                        example: 'cm7payment789xyz012abc'
+                      orderId:
+                        type: string
+                        example: 'cm7order123abc456def789'
+                      price:
+                        type: integer
+                        description: '최종 결제 금액 (subtotal - usePoint)'
+                        example: 145000
+                      status:
+                        type: string
+                        example: 'Pending'
+                      createdAt:
+                        type: string
+                        format: date-time
+                        example: '2025-01-05T10:30:00.000Z'
+                      updatedAt:
+                        type: string
+                        format: date-time
+                        example: '2025-01-05T10:30:00.000Z'
         '400':
           description: 유효성 검증 실패
           content:
@@ -785,16 +914,16 @@ paths:
               examples:
                 invalidOrderId:
                   value:
-                    message: "유효성 검증에 실패했습니다."
+                    message: '유효성 검증에 실패했습니다.'
                     details:
-                      - field: "orderId"
-                        message: "유효한 주문 ID를 입력하세요."
+                      - field: 'orderId'
+                        message: '유효한 주문 ID를 입력하세요.'
                 emptyName:
                   value:
-                    message: "유효성 검증에 실패했습니다."
+                    message: '유효성 검증에 실패했습니다.'
                     details:
-                      - field: "name"
-                        message: "이름을 입력해야 합니다."
+                      - field: 'name'
+                        message: '이름을 입력해야 합니다.'
         '401':
           description: 인증 실패
           content:
@@ -802,7 +931,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (본인의 주문이 아님 또는 판매자)
@@ -813,11 +942,11 @@ paths:
               examples:
                 notBuyer:
                   value:
-                    message: "구매자만 접근할 수 있습니다."
+                    message: '구매자만 접근할 수 있습니다.'
                     details: []
                 notOwner:
                   value:
-                    message: "본인의 주문만 수정할 수 있습니다."
+                    message: '본인의 주문만 수정할 수 있습니다.'
                     details: []
         '404':
           description: 주문을 찾을 수 없음
@@ -826,7 +955,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "주문을 찾을 수 없습니다."
+                message: '주문을 찾을 수 없습니다.'
                 details: []
 
     delete:
@@ -860,8 +989,8 @@ paths:
           required: true
           schema:
             type: string
-          description: "주문 고유 ID"
-          example: "cm7order123abc456def789"
+          description: '주문 고유 ID'
+          example: 'cm7order123abc456def789'
       responses:
         '200':
           description: 주문 취소 성공
@@ -872,7 +1001,7 @@ paths:
                 properties:
                   message:
                     type: string
-                    example: "주문이 취소되었습니다."
+                    example: '주문이 성공적으로 취소되고 포인트가 복구되었습니다.'
         '400':
           description: 유효성 검증 실패 (잘못된 ID 형식)
           content:
@@ -880,10 +1009,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "유효성 검증에 실패했습니다."
+                message: '유효성 검증에 실패했습니다.'
                 details:
-                  - field: "orderId"
-                    message: "유효한 주문 ID를 입력하세요."
+                  - field: 'orderId'
+                    message: '유효한 주문 ID를 입력하세요.'
         '401':
           description: 인증 실패
           content:
@@ -891,7 +1020,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (본인의 주문이 아님 또는 판매자)
@@ -902,11 +1031,11 @@ paths:
               examples:
                 notBuyer:
                   value:
-                    message: "구매자만 접근할 수 있습니다."
+                    message: '구매자만 접근할 수 있습니다.'
                     details: []
                 notOwner:
                   value:
-                    message: "본인의 주문만 취소할 수 있습니다."
+                    message: '본인의 주문만 취소할 수 있습니다.'
                     details: []
         '404':
           description: 주문을 찾을 수 없음
@@ -915,5 +1044,5 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "주문을 찾을 수 없습니다."
+                message: '주문을 찾을 수 없습니다.'
                 details: []

@@ -53,167 +53,167 @@ paths:
               schema:
                 oneOf:
                   - type: array
-                    description: "장바구니가 없는 경우"
+                    description: '장바구니가 없는 경우'
                     items: {}
                     example: []
                   - type: object
-                    description: "장바구니가 있는 경우"
+                    description: '장바구니가 있는 경우'
                     properties:
                       id:
                         type: string
-                        description: "장바구니 고유 ID"
-                        example: "cm6cart123abc456def789ghi"
+                        description: '장바구니 고유 ID'
+                        example: 'cm6cart123abc456def789ghi'
                       buyerId:
                         type: string
-                        description: "구매자 고유 ID"
-                        example: "cm2xyz789abc012def345ghi"
+                        description: '구매자 고유 ID'
+                        example: 'cm2xyz789abc012def345ghi'
                       createdAt:
                         type: string
                         format: date-time
-                        example: "2025-01-01T10:00:00.000Z"
+                        example: '2025-01-01T10:00:00.000Z'
                       updatedAt:
                         type: string
                         format: date-time
-                        example: "2025-01-05T15:30:00.000Z"
+                        example: '2025-01-05T15:30:00.000Z'
                       items:
                         type: array
-                        description: "장바구니에 담긴 상품 목록"
+                        description: '장바구니에 담긴 상품 목록'
                         items:
                           type: object
                           properties:
                             id:
                               type: string
-                              description: "장바구니 아이템 고유 ID"
-                              example: "cm6item456xyz789abc012def"
+                              description: '장바구니 아이템 고유 ID'
+                              example: 'cm6item456xyz789abc012def'
                             cartId:
                               type: string
-                              example: "cm6cart123abc456def789ghi"
+                              example: 'cm6cart123abc456def789ghi'
                             productId:
                               type: string
-                              example: "cm4abc123def456ghi789jkl"
+                              example: 'cm4abc123def456ghi789jkl'
                             sizeId:
                               type: integer
-                              description: "선택한 사이즈 ID (`1`:XS, `2`:S, `3`:M, `4`:L, `5`:XL, `6`:FREE)"
+                              description: '선택한 사이즈 ID (`1`:XS, `2`:S, `3`:M, `4`:L, `5`:XL, `6`:FREE)'
                               example: 3
                             quantity:
                               type: integer
-                              description: "장바구니에 담은 수량"
+                              description: '장바구니에 담은 수량'
                               example: 2
                             createdAt:
                               type: string
                               format: date-time
-                              example: "2025-01-03T14:20:00.000Z"
+                              example: '2025-01-03T14:20:00.000Z'
                             updatedAt:
                               type: string
                               format: date-time
-                              example: "2025-01-03T14:20:00.000Z"
+                              example: '2025-01-03T14:20:00.000Z'
                             product:
                               type: object
-                              description: "상품 상세 정보"
+                              description: '상품 상세 정보'
                               properties:
                                 id:
                                   type: string
-                                  example: "cm4abc123def456ghi789jkl"
+                                  example: 'cm4abc123def456ghi789jkl'
                                 storeId:
                                   type: string
-                                  example: "cmjtkn0td0017p701tp5nwslg"
+                                  example: 'cmjtkn0td0017p701tp5nwslg'
                                 name:
                                   type: string
-                                  example: "코디잇 오버핏 후드티"
+                                  example: '코디잇 오버핏 후드티'
                                 price:
                                   type: integer
-                                  description: "정가"
+                                  description: '정가'
                                   example: 89000
                                 discountPrice:
                                   type: integer
-                                  description: "할인 적용 후 실제 판매가 (할인 기간이 아닐 경우 정가와 동일)"
+                                  description: '할인 적용 후 실제 판매가 (할인 기간이 아닐 경우 정가와 동일)'
                                   example: 71200
                                 discountRate:
                                   type: integer
-                                  description: "할인율 (%)"
+                                  description: '할인율 (%)'
                                   example: 20
                                 discountStartTime:
                                   type: string
                                   format: date-time
                                   nullable: true
-                                  example: "2025-01-01T00:00:00.000Z"
+                                  example: '2025-01-01T00:00:00.000Z'
                                 discountEndTime:
                                   type: string
                                   format: date-time
                                   nullable: true
-                                  example: "2025-01-31T23:59:59.999Z"
+                                  example: '2025-01-31T23:59:59.999Z'
                                 image:
                                   type: string
-                                  example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg"
+                                  example: 'https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg'
                                 reviewsRating:
                                   type: number
-                                  description: "평균 별점"
+                                  description: '평균 별점'
                                   example: 4.5
                                 categoryId:
                                   type: string
-                                  description: "카테고리 고유 ID"
-                                  example: "category_fashion_outer"
+                                  description: '카테고리 고유 ID'
+                                  example: 'category_fashion_outer'
                                 createdAt:
                                   type: string
                                   format: date-time
-                                  example: "2025-01-05T08:30:00.000Z"
+                                  example: '2025-01-05T08:30:00.000Z'
                                 updatedAt:
                                   type: string
                                   format: date-time
-                                  example: "2025-01-05T08:30:00.000Z"
+                                  example: '2025-01-05T08:30:00.000Z'
                                 store:
                                   type: object
-                                  description: "스토어 정보"
+                                  description: '스토어 정보'
                                   properties:
                                     id:
                                       type: string
-                                      example: "cmjtkn0td0017p701tp5nwslg"
+                                      example: 'cmjtkn0td0017p701tp5nwslg'
                                     userId:
                                       type: string
-                                      description: "판매자 ID"
-                                      example: "cmjthper90001p7017spnm7y5"
+                                      description: '판매자 ID'
+                                      example: 'cmjthper90001p7017spnm7y5'
                                     name:
                                       type: string
-                                      example: "코디잇 패션스토어"
+                                      example: '코디잇 패션스토어'
                                     address:
                                       type: string
-                                      example: "서울시 강남구"
+                                      example: '서울시 강남구'
                                     phoneNumber:
                                       type: string
-                                      example: "010-1234-5678"
+                                      example: '010-1234-5678'
                                     content:
                                       type: string
-                                      example: "트렌디한 아이템을 합리적인 가격에 제공합니다"
+                                      example: '트렌디한 아이템을 합리적인 가격에 제공합니다'
                                     image:
                                       type: string
                                       nullable: true
-                                      example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-thumbnail-sample.jpg"
+                                      example: 'https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-thumbnail-sample.jpg'
                                     createdAt:
                                       type: string
                                       format: date-time
-                                      example: "2025-12-31T05:24:20.066Z"
+                                      example: '2025-12-31T05:24:20.066Z'
                                     updatedAt:
                                       type: string
                                       format: date-time
-                                      example: "2025-12-31T05:25:09.150Z"
+                                      example: '2025-12-31T05:25:09.150Z'
                                 stocks:
                                   type: array
-                                  description: "상품의 모든 사이즈별 재고 현황"
+                                  description: '상품의 모든 사이즈별 재고 현황'
                                   items:
                                     type: object
                                     properties:
                                       id:
                                         type: string
-                                        example: "cm5stock123abc456def"
+                                        example: 'cm5stock123abc456def'
                                       productId:
                                         type: string
-                                        example: "cm4abc123def456ghi789jkl"
+                                        example: 'cm4abc123def456ghi789jkl'
                                       sizeId:
                                         type: integer
                                         example: 3
                                       quantity:
                                         type: integer
-                                        description: "해당 사이즈 재고 수량"
+                                        description: '해당 사이즈 재고 수량'
                                         example: 45
                                       size:
                                         type: object
@@ -223,17 +223,71 @@ paths:
                                             example: 3
                                           name:
                                             type: string
-                                            description: "사이즈 영문명"
-                                            example: "M"
+                                            description: '사이즈 영문명'
+                                            example: 'M'
                                           size:
                                             type: object
                                             properties:
                                               en:
                                                 type: string
-                                                example: "M"
+                                                example: 'M'
                                               ko:
                                                 type: string
-                                                example: "M"
+                                                example: 'M'
+              examples:
+                CartExists:
+                  summary: 장바구니가 있는 경우
+                  value:
+                    id: 'cm6cart123abc456def789ghi'
+                    buyerId: 'cm2xyz789abc012def345ghi'
+                    createdAt: '2025-01-01T10:00:00.000Z'
+                    updatedAt: '2025-01-05T15:30:00.000Z'
+                    items:
+                      - id: 'cm6item456xyz789abc012def'
+                        cartId: 'cm6cart123abc456def789ghi'
+                        productId: 'cm4abc123def456ghi789jkl'
+                        sizeId: 3
+                        quantity: 2
+                        createdAt: '2025-01-03T14:20:00.000Z'
+                        updatedAt: '2025-01-03T14:20:00.000Z'
+                        product:
+                          id: 'cm4abc123def456ghi789jkl'
+                          storeId: 'cmjtkn0td0017p701tp5nwslg'
+                          name: '코디잇 오버핏 후드티'
+                          price: 89000
+                          discountPrice: 71200
+                          discountRate: 20
+                          discountStartTime: '2025-01-01T00:00:00.000Z'
+                          discountEndTime: '2025-01-31T23:59:59.999Z'
+                          image: 'https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg'
+                          reviewsRating: 4.5
+                          categoryId: 'category_fashion_outer'
+                          createdAt: '2025-01-05T08:30:00.000Z'
+                          updatedAt: '2025-01-05T08:30:00.000Z'
+                          store:
+                            id: 'cmjtkn0td0017p701tp5nwslg'
+                            userId: 'cmjthper90001p7017spnm7y5'
+                            name: '코디잇 패션스토어'
+                            address: '서울시 강남구'
+                            phoneNumber: '010-1234-5678'
+                            content: '트렌디한 아이템을 합리적인 가격에 제공합니다'
+                            image: 'https://codiit-images.s3.ap-northeast-2.amazonaws.com/store-thumbnail-sample.jpg'
+                            createdAt: '2025-12-31T05:24:20.066Z'
+                            updatedAt: '2025-12-31T05:25:09.150Z'
+                          stocks:
+                            - id: 'cm5stock123abc456def'
+                              productId: 'cm4abc123def456ghi789jkl'
+                              sizeId: 3
+                              quantity: 45
+                              size:
+                                id: 3
+                                name: 'M'
+                                size:
+                                  en: 'M'
+                                  ko: 'M'
+                CartEmpty:
+                  summary: 장바구니가 없는 경우
+                  value: []
         '401':
           description: 인증 실패
           content:
@@ -241,7 +295,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (판매자 접근 시도)
@@ -250,7 +304,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "구매자만 접근할 수 있습니다."
+                message: '구매자만 접근할 수 있습니다.'
                 details: []
 
     post:
@@ -282,20 +336,20 @@ paths:
                 properties:
                   id:
                     type: string
-                    description: "장바구니 고유 ID"
-                    example: "cm6cart123abc456def789ghi"
+                    description: '장바구니 고유 ID'
+                    example: 'cm6cart123abc456def789ghi'
                   buyerId:
                     type: string
-                    description: "구매자 고유 ID"
-                    example: "cm2xyz789abc012def345ghi"
+                    description: '구매자 고유 ID'
+                    example: 'cm2xyz789abc012def345ghi'
                   createdAt:
                     type: string
                     format: date-time
-                    example: "2025-01-05T10:00:00.000Z"
+                    example: '2025-01-05T10:00:00.000Z'
                   updatedAt:
                     type: string
                     format: date-time
-                    example: "2025-01-05T10:00:00.000Z"
+                    example: '2025-01-05T10:00:00.000Z'
         '401':
           description: 인증 실패
           content:
@@ -303,7 +357,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (판매자 접근 시도)
@@ -312,7 +366,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "구매자만 접근할 수 있습니다."
+                message: '구매자만 접근할 수 있습니다.'
                 details: []
 
     patch:
@@ -351,12 +405,12 @@ paths:
               properties:
                 productId:
                   type: string
-                  description: "상품 고유 ID"
-                  example: "cm4abc123def456ghi789jkl"
+                  description: '상품 고유 ID'
+                  example: 'cm4abc123def456ghi789jkl'
                 sizes:
                   type: array
                   minItems: 1
-                  description: "사이즈별 수량 정보 (최소 1개)"
+                  description: '사이즈별 수량 정보 (최소 1개)'
                   items:
                     type: object
                     required:
@@ -367,12 +421,12 @@ paths:
                         type: integer
                         minimum: 1
                         maximum: 6
-                        description: "사이즈 ID (1:XS, 2:S, 3:M, 4:L, 5:XL, 6:FREE)"
+                        description: '사이즈 ID (1:XS, 2:S, 3:M, 4:L, 5:XL, 6:FREE)'
                         example: 3
                       quantity:
                         type: integer
                         minimum: 1
-                        description: "수량 (1개 이상)"
+                        description: '수량 (1개 이상)'
                         example: 2
                   example:
                     - sizeId: 2
@@ -386,20 +440,20 @@ paths:
             application/json:
               schema:
                 type: array
-                description: "추가/수정된 장바구니 아이템 목록"
+                description: '추가/수정된 장바구니 아이템 목록'
                 items:
                   type: object
                   properties:
                     id:
                       type: string
-                      description: "장바구니 아이템 고유 ID"
-                      example: "cm6item456xyz789abc012def"
+                      description: '장바구니 아이템 고유 ID'
+                      example: 'cm6item456xyz789abc012def'
                     cartId:
                       type: string
-                      example: "cm6cart123abc456def789ghi"
+                      example: 'cm6cart123abc456def789ghi'
                     productId:
                       type: string
-                      example: "cm4abc123def456ghi789jkl"
+                      example: 'cm4abc123def456ghi789jkl'
                     sizeId:
                       type: integer
                       example: 3
@@ -409,26 +463,26 @@ paths:
                     createdAt:
                       type: string
                       format: date-time
-                      example: "2025-01-05T15:30:00.000Z"
+                      example: '2025-01-05T15:30:00.000Z'
                     updatedAt:
                       type: string
                       format: date-time
-                      example: "2025-01-05T15:30:00.000Z"
+                      example: '2025-01-05T15:30:00.000Z'
                 example:
-                  - id: "cm6item456xyz789abc012def"
-                    cartId: "cm6cart123abc456def789ghi"
-                    productId: "cm4abc123def456ghi789jkl"
+                  - id: 'cm6item456xyz789abc012def'
+                    cartId: 'cm6cart123abc456def789ghi'
+                    productId: 'cm4abc123def456ghi789jkl'
                     sizeId: 2
                     quantity: 1
-                    createdAt: "2025-01-05T15:30:00.000Z"
-                    updatedAt: "2025-01-05T15:30:00.000Z"
-                  - id: "cm6item789abc012def345ghi"
-                    cartId: "cm6cart123abc456def789ghi"
-                    productId: "cm4abc123def456ghi789jkl"
+                    createdAt: '2025-01-05T15:30:00.000Z'
+                    updatedAt: '2025-01-05T15:30:00.000Z'
+                  - id: 'cm6item789abc012def345ghi'
+                    cartId: 'cm6cart123abc456def789ghi'
+                    productId: 'cm4abc123def456ghi789jkl'
                     sizeId: 3
                     quantity: 2
-                    createdAt: "2025-01-05T15:30:00.000Z"
-                    updatedAt: "2025-01-05T15:30:00.000Z"
+                    createdAt: '2025-01-05T15:30:00.000Z'
+                    updatedAt: '2025-01-05T15:30:00.000Z'
         '400':
           description: 유효성 검증 실패
           content:
@@ -438,22 +492,22 @@ paths:
               examples:
                 noSizes:
                   value:
-                    message: "유효성 검증에 실패했습니다."
+                    message: '유효성 검증에 실패했습니다.'
                     details:
-                      - field: "sizes"
-                        message: "최소 하나의 옵션을 선택해야 합니다."
+                      - field: 'sizes'
+                        message: '최소 하나의 옵션을 선택해야 합니다.'
                 duplicateSize:
                   value:
-                    message: "유효성 검증에 실패했습니다."
+                    message: '유효성 검증에 실패했습니다.'
                     details:
-                      - field: "sizes"
-                        message: "중복된 사이즈 옵션이 존재합니다."
+                      - field: 'sizes'
+                        message: '중복된 사이즈 옵션이 존재합니다.'
                 invalidQuantity:
                   value:
-                    message: "유효성 검증에 실패했습니다."
+                    message: '유효성 검증에 실패했습니다.'
                     details:
-                      - field: "quantity"
-                        message: "수량은 1개 이상이어야 합니다."
+                      - field: 'quantity'
+                        message: '수량은 1개 이상이어야 합니다.'
         '401':
           description: 인증 실패
           content:
@@ -461,7 +515,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (판매자 접근 시도)
@@ -470,7 +524,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "구매자만 접근할 수 있습니다."
+                message: '구매자만 접근할 수 있습니다.'
                 details: []
         '404':
           description: 상품을 찾을 수 없음
@@ -479,7 +533,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "상품을 찾을 수 없습니다."
+                message: '상품을 찾을 수 없습니다.'
                 details: []
 
   /api/cart/{cartItemId}:
@@ -510,8 +564,8 @@ paths:
           required: true
           schema:
             type: string
-          description: "장바구니 아이템 고유 ID"
-          example: "cm6item456xyz789abc012def"
+          description: '장바구니 아이템 고유 ID'
+          example: 'cm6item456xyz789abc012def'
       responses:
         '200':
           description: 장바구니 아이템 조회 성공
@@ -522,13 +576,13 @@ paths:
                 properties:
                   id:
                     type: string
-                    example: "cm6item456xyz789abc012def"
+                    example: 'cm6item456xyz789abc012def'
                   cartId:
                     type: string
-                    example: "cm6cart123abc456def789ghi"
+                    example: 'cm6cart123abc456def789ghi'
                   productId:
                     type: string
-                    example: "cm4abc123def456ghi789jkl"
+                    example: 'cm4abc123def456ghi789jkl'
                   sizeId:
                     type: integer
                     example: 3
@@ -538,24 +592,24 @@ paths:
                   createdAt:
                     type: string
                     format: date-time
-                    example: "2025-01-03T14:20:00.000Z"
+                    example: '2025-01-03T14:20:00.000Z'
                   updatedAt:
                     type: string
                     format: date-time
-                    example: "2025-01-03T14:20:00.000Z"
+                    example: '2025-01-03T14:20:00.000Z'
                   product:
                     type: object
-                    description: "상품 상세 정보 (GET /api/cart 응답의 product와 동일한 구조)"
+                    description: '상품 상세 정보 (GET /api/cart 응답의 product와 동일한 구조)'
                     properties:
                       id:
                         type: string
-                        example: "cm4abc123def456ghi789jkl"
+                        example: 'cm4abc123def456ghi789jkl'
                       storeId:
                         type: string
-                        example: "cmjtkn0td0017p701tp5nwslg"
+                        example: 'cmjtkn0td0017p701tp5nwslg'
                       name:
                         type: string
-                        example: "코디잇 오버핏 후드티"
+                        example: '코디잇 오버핏 후드티'
                       price:
                         type: integer
                         example: 89000
@@ -567,22 +621,22 @@ paths:
                         example: 20
                       image:
                         type: string
-                        example: "https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg"
+                        example: 'https://codiit-images.s3.ap-northeast-2.amazonaws.com/product-hoodie-main.jpg'
                       reviewsRating:
                         type: number
                         example: 4.5
                       categoryId:
                         type: string
-                        example: "category_fashion_outer"
+                        example: 'category_fashion_outer'
                       store:
                         type: object
                         properties:
                           id:
                             type: string
-                            example: "cmjtkn0td0017p701tp5nwslg"
+                            example: 'cmjtkn0td0017p701tp5nwslg'
                           name:
                             type: string
-                            example: "코디잇 패션스토어"
+                            example: '코디잇 패션스토어'
                       stocks:
                         type: array
                         items:
@@ -590,7 +644,7 @@ paths:
                           properties:
                             id:
                               type: string
-                              example: "cm5stock123abc456def"
+                              example: 'cm5stock123abc456def'
                             sizeId:
                               type: integer
                               example: 3
@@ -599,22 +653,22 @@ paths:
                               example: 45
                   cart:
                     type: object
-                    description: "장바구니 기본 정보"
+                    description: '장바구니 기본 정보'
                     properties:
                       id:
                         type: string
-                        example: "cm6cart123abc456def789ghi"
+                        example: 'cm6cart123abc456def789ghi'
                       buyerId:
                         type: string
-                        example: "cm2xyz789abc012def345ghi"
+                        example: 'cm2xyz789abc012def345ghi'
                       createdAt:
                         type: string
                         format: date-time
-                        example: "2025-01-01T10:00:00.000Z"
+                        example: '2025-01-01T10:00:00.000Z'
                       updatedAt:
                         type: string
                         format: date-time
-                        example: "2025-01-05T15:30:00.000Z"
+                        example: '2025-01-05T15:30:00.000Z'
         '400':
           description: 유효성 검증 실패 (잘못된 ID 형식)
           content:
@@ -622,10 +676,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "유효성 검증에 실패했습니다."
+                message: '유효성 검증에 실패했습니다.'
                 details:
-                  - field: "cartItemId"
-                    message: "유효한 아이템 ID를 입력하세요."
+                  - field: 'cartItemId'
+                    message: '유효한 아이템 ID를 입력하세요.'
         '401':
           description: 인증 실패
           content:
@@ -633,7 +687,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (본인의 장바구니 아이템이 아님 또는 판매자)
@@ -644,11 +698,11 @@ paths:
               examples:
                 notBuyer:
                   value:
-                    message: "구매자만 접근할 수 있습니다."
+                    message: '구매자만 접근할 수 있습니다.'
                     details: []
                 notOwner:
                   value:
-                    message: "본인의 장바구니 아이템만 조회할 수 있습니다."
+                    message: '본인의 장바구니 아이템만 조회할 수 있습니다.'
                     details: []
         '404':
           description: 장바구니 아이템을 찾을 수 없음
@@ -657,7 +711,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "장바구니 아이템을 찾을 수 없습니다."
+                message: '장바구니 아이템을 찾을 수 없습니다.'
                 details: []
 
     delete:
@@ -684,8 +738,8 @@ paths:
           required: true
           schema:
             type: string
-          description: "장바구니 아이템 고유 ID"
-          example: "cm6item456xyz789abc012def"
+          description: '장바구니 아이템 고유 ID'
+          example: 'cm6item456xyz789abc012def'
       responses:
         '204':
           description: 장바구니 아이템 삭제 성공 (응답 본문 없음)
@@ -696,10 +750,10 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "유효성 검증에 실패했습니다."
+                message: '유효성 검증에 실패했습니다.'
                 details:
-                  - field: "cartItemId"
-                    message: "유효한 아이템 ID를 입력하세요."
+                  - field: 'cartItemId'
+                    message: '유효한 아이템 ID를 입력하세요.'
         '401':
           description: 인증 실패
           content:
@@ -707,7 +761,7 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "인증이 필요합니다."
+                message: '인증이 필요합니다.'
                 details: []
         '403':
           description: 권한 없음 (본인의 장바구니 아이템이 아님 또는 판매자)
@@ -718,11 +772,11 @@ paths:
               examples:
                 notBuyer:
                   value:
-                    message: "구매자만 접근할 수 있습니다."
+                    message: '구매자만 접근할 수 있습니다.'
                     details: []
                 notOwner:
                   value:
-                    message: "본인의 장바구니 아이템만 삭제할 수 있습니다."
+                    message: '본인의 장바구니 아이템만 삭제할 수 있습니다.'
                     details: []
         '404':
           description: 장바구니 아이템을 찾을 수 없음
@@ -731,5 +785,5 @@ paths:
               schema:
                 $ref: '#/components/schemas/Error'
               example:
-                message: "장바구니 아이템을 찾을 수 없습니다."
+                message: '장바구니 아이템을 찾을 수 없습니다.'
                 details: []
