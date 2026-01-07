@@ -1,10 +1,15 @@
 import path from 'path';
 import { fileURLToPath } from 'url';
 import { describe, it, expect, beforeEach, afterEach, jest } from '@jest/globals';
-import { S3Client } from '@aws-sdk/client-s3';
 import { testClient, authRequest } from '../helpers/testClient.js';
 import { createTestContext, type TestContext } from '../helpers/dataFactory.js';
 import { generateBuyerToken, generateSellerToken } from '../helpers/authHelper.js';
+import { uploadFile } from '@/common/utils/s3.util.js';
+
+jest.mock('@/common/utils/s3.util.js', () => ({
+  __esModule: true,
+  uploadFile: jest.fn(),
+}));
 
 // ESM 환경에서 __dirname을 사용하기 위한 설정
 const __filename = fileURLToPath(import.meta.url);
@@ -14,35 +19,32 @@ describe('S3 API Integration Test (with Mocking)', () => {
   let ctx: TestContext;
   let buyerToken: string;
   let sellerToken: string;
-  // spy를 저장할 변수. 타입은 타입스크립트가 추론하도록 합니다.
-  let s3SendSpy;
+
+  const mockedUploadFile = uploadFile as jest.MockedFunction<typeof uploadFile>;
 
   beforeEach(async () => {
     ctx = await createTestContext();
     buyerToken = generateBuyerToken(ctx.buyer.id);
     sellerToken = generateSellerToken(ctx.seller.id);
 
-    // S3Client.prototype.send 메소드를 감시하고, 모의 구현을 제공합니다.
-    s3SendSpy = jest
-      .spyOn(S3Client.prototype, 'send')
-      .mockImplementation(() => Promise.resolve({}));
+    mockedUploadFile.mockResolvedValue({
+      url: 'https://mock-bucket.s3.ap-northeast-2.amazonaws.com/mock-key.png',
+      key: 'mock-key.png',
+    });
   });
 
   afterEach(() => {
-    // 각 테스트 후에 모든 모의(mock)를 복원합니다.
-    jest.restoreAllMocks();
+    mockedUploadFile.mockClear();
   });
 
   // ===== POST /api/s3/upload - 이미지 업로드 =====
   describe('POST /api/s3/upload', () => {
-    // attach에 사용하기 위해, 현재 파일 위치를 기준으로 이미지 파일의 절대 경로 계산
     const imagePath = path.resolve(__dirname, '../mocks/test-image.png');
 
     it('401: 인증 없이 업로드 시도 시 실패해야 합니다.', async () => {
       const response = await testClient.post('/api/s3/upload').attach('image', imagePath);
       expect(response.status).toBe(401);
-      // 실제 send가 호출되지 않아야 합니다.
-      expect(s3SendSpy).not.toHaveBeenCalled();
+      expect(mockedUploadFile).not.toHaveBeenCalled();
     });
 
     it('400: 파일 없이 업로드 시도 시 실패해야 합니다.', async () => {
@@ -50,7 +52,7 @@ describe('S3 API Integration Test (with Mocking)', () => {
 
       expect(response.status).toBe(400);
       expect(response.body.message).toBe('파일이 제공되지 않았습니다.');
-      expect(s3SendSpy).not.toHaveBeenCalled();
+      expect(mockedUploadFile).not.toHaveBeenCalled();
     });
 
     it('201: 구매자가 이미지 업로드 성공 시 URL과 key를 반환해야 합니다.', async () => {
@@ -59,15 +61,12 @@ describe('S3 API Integration Test (with Mocking)', () => {
         .attach('image', imagePath);
 
       expect(response.status).toBe(201);
-      // S3 Client의 send가 한 번 호출되었는지 확인
-      expect(s3SendSpy).toHaveBeenCalledTimes(1);
+      expect(mockedUploadFile).toHaveBeenCalledTimes(1);
 
-      // URL과 key가 특정 값이 아닌, 올바른 형식의 문자열인지 검증
-      expect(response.body.url).toEqual(expect.any(String));
-      expect(response.body.key).toEqual(expect.any(String));
-
-      // 모킹을 사용하므로, 실제 URL 검증 대신 key가 .png로 끝나는지만 확인
-      expect(response.body.key.endsWith('.png')).toBe(true);
+      expect(response.body.url).toBe(
+        'https://mock-bucket.s3.ap-northeast-2.amazonaws.com/mock-key.png',
+      );
+      expect(response.body.key).toBe('mock-key.png');
     });
 
     it('201: 판매자가 이미지 업로드 성공 시 URL과 key를 반환해야 합니다.', async () => {
@@ -76,10 +75,12 @@ describe('S3 API Integration Test (with Mocking)', () => {
         .attach('image', imagePath);
 
       expect(response.status).toBe(201);
-      expect(s3SendSpy).toHaveBeenCalledTimes(1);
+      expect(mockedUploadFile).toHaveBeenCalledTimes(1);
 
-      expect(response.body.url).toEqual(expect.any(String));
-      expect(response.body.key).toEqual(expect.any(String));
+      expect(response.body.url).toBe(
+        'https://mock-bucket.s3.ap-northeast-2.amazonaws.com/mock-key.png',
+      );
+      expect(response.body.key).toBe('mock-key.png');
     });
   });
 });
