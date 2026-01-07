@@ -96,9 +96,28 @@ export class AuthService {
       throw new UnauthorizedError('사용자를 찾을 수 없습니다.');
     }
 
-    // 5. 새 액세스 토큰 발급
+    // 5. 해당 유저의 모든 토큰 삭제 (동시 요청으로 쌓인 토큰도 정리)
+    await this.authRepository.deleteAllByUserId(user.id);
+
+    // 6. 새 액세스 토큰 + 새 리프레시 토큰 발급
     const newAccessToken = generateAccessToken(user.id, user.type);
-    return { accessToken: newAccessToken };
+    const newRefreshToken = generateRefreshToken(user.id, user.type);
+
+    // 7. 새 리프레시 토큰을 DB에 저장
+    const newHashedToken = hashToken(newRefreshToken);
+    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_MS);
+
+    await this.authRepository.createRefreshToken({
+      token: newHashedToken,
+      userId: user.id,
+      expiresAt,
+    });
+
+    // 8. 새 리프레시 토큰도 함께 반환
+    return {
+      accessToken: newAccessToken,
+      refreshToken: newRefreshToken, // ← 추가!
+    };
   }
 
   async logout(refreshToken: string) {
