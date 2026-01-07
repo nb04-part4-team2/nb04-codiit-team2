@@ -13,6 +13,8 @@ import {
 } from '@prisma/client';
 import { GetOrderRawData } from '@/domains/order/order.dto.js';
 import { createGetOrderMock } from '../mocks/order.mock.js';
+import { GetCartRawData } from '@/domains/cart/cart.dto.js';
+import { createCartMock } from '../mocks/cart.mock.js';
 
 // ============================================
 // 상수
@@ -323,6 +325,68 @@ export const createTestOrder = async (overrides: Partial<CreateOrderTestOptions>
     include: {
       orderItems: true,
       payments: true,
+    },
+  });
+};
+// ============================================
+// Cart
+// ============================================
+/**
+ * [통합 테스트용] 카트 생성 팩토리
+ * - 기존 유닛 테스트용 Mock 데이터를 기반으로 실제 DB에 데이터를 생성합니다.
+ * - Buyer, Product, Size는 미리 DB에 존재해야 합니다.
+ * - Cart는 유저당 1개, 이미 카트가 있는 유저라면 에러
+ */
+export const createTestCart = async (overrides: Partial<GetCartRawData> = {}) => {
+  // 1. 기존 Mock 데이터를 생성 (기본값 + 오버라이드)
+  const mockData = createCartMock(overrides);
+
+  // 2. DB 저장용 데이터로 분리
+  const { id: _id, createdAt: _createdAt, buyerId, items, ...scalarFields } = mockData;
+
+  // 3. 실제 DB에 저장 (Nested Writes 활용)
+  return await prisma.cart.create({
+    data: {
+      ...scalarFields,
+
+      // [Buyer 관계 처리]
+      // 카트는 반드시 유저와 연결되어야 함
+      buyer: {
+        connect: {
+          id: buyerId,
+        },
+      },
+
+      // [CartItem 관계 처리]
+      // 카트 생성 시 아이템도 같이 생성
+      items: {
+        create: items?.map((item) => ({
+          quantity: item.quantity,
+
+          // Product 연결 (미리 존재해야 함)
+          product: { connect: { id: item.productId } },
+
+          // Size 연결 (미리 존재해야 함)
+          size: { connect: { id: item.sizeId } },
+        })),
+      },
+    },
+    // 생성된 데이터 반환 시 아이템과 내부 정보 포함
+    include: {
+      items: {
+        include: {
+          product: {
+            include: {
+              store: true,
+              stocks: {
+                include: {
+                  size: true,
+                },
+              },
+            },
+          },
+        },
+      },
     },
   });
 };
