@@ -1,3 +1,4 @@
+import crypto from 'crypto';
 import type { UserType } from '@prisma/client';
 import jwt, { type SignOptions, type Secret } from 'jsonwebtoken';
 import { env } from '@/config/constants.js';
@@ -22,7 +23,7 @@ export const generateAccessToken = (userId: string, type: UserType): string => {
 
 export const generateRefreshToken = (userId: string, type: UserType): string => {
   return jwt.sign(
-    { userId, type },
+    { userId, type, jti: crypto.randomUUID() }, // jti 추가로 동시 생성 시에도 고유한 토큰 보장
     env.REFRESH_TOKEN_SECRET as Secret,
     { expiresIn: env.REFRESH_TOKEN_EXPIRES_IN } as SignOptions,
   );
