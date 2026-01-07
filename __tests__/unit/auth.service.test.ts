@@ -4,6 +4,7 @@ import { createUserWithGradeMock } from '../mocks/user.mock.js';
 import { createLoginInputMock } from '../mocks/auth.mock.js';
 import { UnauthorizedError } from '@/common/utils/errors.js';
 import type { UserRepository } from '@/domains/user/user.repository.js';
+import type { AuthRepository } from '@/domains/auth/auth.repository.js';
 
 // JWT util mock
 const mockGenerateAccessToken = jest.fn().mockReturnValue('mock-access-token');
@@ -30,18 +31,37 @@ const { AuthService } = await import('@/domains/auth/auth.service.js');
 describe('AuthService 유닛 테스트', () => {
   let authService: InstanceType<typeof AuthService>;
   let userRepository: DeepMockProxy<UserRepository>;
+  let authRepository: DeepMockProxy<AuthRepository>;
 
   const userId = 'user-id-1';
 
   beforeEach(() => {
     // 의존성 주입
     userRepository = mockDeep<UserRepository>();
-    authService = new AuthService(userRepository);
+    authRepository = mockDeep<AuthRepository>();
+    authService = new AuthService(userRepository, authRepository);
 
     // 기본 mock 설정
     mockCompare.mockResolvedValue(true);
     mockGenerateAccessToken.mockReturnValue('mock-access-token');
     mockGenerateRefreshToken.mockReturnValue('mock-refresh-token');
+
+    // AuthRepository 기본 mock 설정
+    authRepository.createRefreshToken.mockResolvedValue({
+      id: 'token-id',
+      token: 'hashed-token',
+      userId,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+    });
+    authRepository.findByToken.mockResolvedValue({
+      id: 'token-id',
+      token: 'hashed-token',
+      userId,
+      expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      createdAt: new Date(),
+    });
+    authRepository.deleteByToken.mockResolvedValue({ count: 1 });
   });
 
   afterEach(() => {
@@ -145,10 +165,14 @@ describe('AuthService 유닛 테스트', () => {
   // 로그아웃
   describe('logout', () => {
     it('로그아웃 성공', async () => {
+      // --- 준비 (Arrange) ---
+      const refreshToken = 'valid-refresh-token';
+
       // --- 실행 (Act) ---
-      const result = await authService.logout();
+      const result = await authService.logout(refreshToken);
 
       // --- 검증 (Assert) ---
+      expect(authRepository.deleteByToken).toHaveBeenCalled();
       expect(result.message).toBe('로그아웃 되었습니다.');
     });
   });
