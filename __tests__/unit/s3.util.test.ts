@@ -1,143 +1,158 @@
-import { jest, describe, it, expect, afterEach } from '@jest/globals';
+import { jest, describe, it, expect, beforeEach } from '@jest/globals';
 import { InternalServerError } from '../../src/common/utils/errors.js';
+import { createFileMock, createTestEnvMock } from '../mocks/s3.mock.js';
 
-// --- Mocks ---
-
-// crypto.randomUUID 모킹
-const mockRandomUUID = jest.fn(() => 'mock-random-uuid');
-jest.unstable_mockModule('crypto', () => ({
-  randomUUID: mockRandomUUID,
-}));
-
-// @aws-sdk/client-s3 모킹
-const mockSend: jest.Mock<(...args: unknown[]) => Promise<unknown>> = jest.fn();
-jest.unstable_mockModule('@aws-sdk/client-s3', () => ({
-  S3Client: jest.fn().mockImplementation(() => ({
-    send: mockSend,
-  })),
-  PutObjectCommand: jest.fn().mockImplementation((args: unknown) => ({
-    constructor: { name: 'PutObjectCommand' },
-    ...(args as object),
-  })),
-  DeleteObjectCommand: jest.fn().mockImplementation((args: unknown) => ({
-    constructor: { name: 'DeleteObjectCommand' },
-    ...(args as object),
-  })),
-}));
-
-// 환경 변수 설정
-// s3.util.ts의 getS3Client 함수가 에러를 던지지 않도록 미리 설정합니다.
-process.env.AWS_S3_BUCKET = 'mock-bucket';
-process.env.AWS_REGION = 'mock-region';
-process.env.AWS_ACCESS_KEY_ID = 'mock-access-key';
-process.env.AWS_SECRET_ACCESS_KEY = 'mock-secret-key';
-
-// --- 테스트 대상 동적 import ---
-// 모킹 설정이 완료된 후, 테스트할 모듈을 동적으로 가져옵니다.
-const { uploadFile, deleteFile } = await import('../../src/common/utils/s3.util.js');
-
-// sentCommand의 타입을 위한 인터페이스
 interface MockCommand {
-  constructor: { name: string };
   Bucket: string;
   Key: string;
   Body?: Buffer;
   ContentType?: string;
+  constructor: { name: string };
 }
 
-// --- 테스트 스위트 ---
-describe('s3.util.ts 유닛 테스트', () => {
-  afterEach(() => {
-    // 각 테스트가 끝난 후 mock 함수의 호출 기록을 초기화합니다.
+type MockSendFn = jest.MockedFunction<(command: MockCommand) => Promise<unknown>>;
+
+const mockEnv = createTestEnvMock();
+
+// env 객체 모킹
+jest.unstable_mockModule('@/config/constants.js', () => ({
+  env: mockEnv,
+}));
+
+// UUID를 고정값으로 모킹하여 테스트 예측 가능하게 함
+jest.unstable_mockModule('crypto', () => ({
+  randomUUID: jest.fn(() => 'mock-random-uuid'),
+}));
+
+const mockSend = jest.fn() as MockSendFn;
+
+// S3 Client 모킹
+jest.unstable_mockModule('@aws-sdk/client-s3', () => ({
+  S3Client: jest.fn().mockImplementation(() => ({
+    send: mockSend,
+  })),
+  PutObjectCommand: jest.fn().mockImplementation((input: unknown) => ({
+    ...(input as object),
+    constructor: { name: 'PutObjectCommand' },
+  })),
+  DeleteObjectCommand: jest.fn().mockImplementation((input: unknown) => ({
+    ...(input as object),
+    constructor: { name: 'DeleteObjectCommand' },
+  })),
+}));
+
+// Mock 설정 후 동적 import
+const { uploadFile, deleteFile } = await import('../../src/common/utils/s3.util.js');
+
+describe('S3 Util 유닛 테스트', () => {
+  // 각 테스트가 실행되기 전에 매번 실행
+  beforeEach(() => {
     jest.clearAllMocks();
   });
 
+  // uploadFile 함수 테스트
   describe('uploadFile', () => {
-    const file = {
-      buffer: Buffer.from('test file content'),
-      originalname: 'test-image.png',
-      mimetype: 'image/png',
-    };
-
     it('파일 업로드 성공 시 URL과 key를 반환해야 합니다.', async () => {
       // --- 준비 (Arrange) ---
-      // S3 send가 성공적으로 완료된 것처럼 설정
-      mockSend.mockResolvedValue({});
+      const file = createFileMock();
+      mockSend.mockResolvedValueOnce({});
       const expectedKey = 'mock-random-uuid.png';
-      const expectedUrl = `https://${process.env.AWS_S3_BUCKET}.s3.${process.env.AWS_REGION}.amazonaws.com/${expectedKey}`;
+      const expectedUrl = `https://mock-bucket.s3.mock-region.amazonaws.com/${expectedKey}`;
 
       // --- 실행 (Act) ---
       const result = await uploadFile(file);
 
       // --- 검증 (Assert) ---
-      // 1. send 함수가 한 번 호출되었는지 확인
       expect(mockSend).toHaveBeenCalledTimes(1);
-
-      // 2. PutObjectCommand와 함께 올바른 인자로 호출되었는지 확인
       const sentCommand = mockSend.mock.calls[0][0] as MockCommand;
       expect(sentCommand.constructor.name).toBe('PutObjectCommand');
-      expect(sentCommand.Bucket).toBe(process.env.AWS_S3_BUCKET);
+      expect(sentCommand.Bucket).toBe('mock-bucket');
       expect(sentCommand.Key).toBe(expectedKey);
       expect(sentCommand.Body).toEqual(file.buffer);
       expect(sentCommand.ContentType).toBe(file.mimetype);
-
-      // 3. 반환값이 예상과 일치하는지 확인
       expect(result).toEqual({ url: expectedUrl, key: expectedKey });
     });
 
     it('S3 client.send 실패 시 InternalServerError를 던져야 합니다.', async () => {
       // --- 준비 (Arrange) ---
-      const errorMessage = 'S3 is down';
-      mockSend.mockRejectedValue(new Error(errorMessage));
-
-      // console.error 출력을 일시적으로 막습니다.
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      const file = createFileMock();
+      mockSend.mockRejectedValue(new Error('S3 is down'));
 
       // --- 실행 및 검증 (Act & Assert) ---
       await expect(uploadFile(file)).rejects.toThrow(InternalServerError);
+      await expect(uploadFile(file)).rejects.toThrow(/파일 업로드에 실패했습니다/);
+    });
 
-      // 스파이를 복원합니다.
-      consoleErrorSpy.mockRestore();
+    it('파일 확장자가 없는 경우에도 동작해야 합니다.', async () => {
+      // --- 준비 (Arrange) ---
+      const fileWithoutExt = createFileMock({
+        originalname: 'noextension',
+        mimetype: 'application/octet-stream',
+      });
+      mockSend.mockResolvedValueOnce({});
+
+      // --- 실행 (Act) ---
+      const result = await uploadFile(fileWithoutExt);
+
+      // --- 검증 (Assert) ---
+      expect(result.key).toBe('mock-random-uuid');
+      expect(result.url).toBe('https://mock-bucket.s3.mock-region.amazonaws.com/mock-random-uuid');
+    });
+
+    it('특수문자가 포함된 파일명도 처리해야 합니다.', async () => {
+      // --- 준비 (Arrange) ---
+      const fileWithSpecialChars = createFileMock({
+        originalname: '한글 파일명 !@#$%.png',
+      });
+      mockSend.mockResolvedValueOnce({});
+
+      // --- 실행 (Act) ---
+      const result = await uploadFile(fileWithSpecialChars);
+
+      // --- 검증 (Assert) ---
+      expect(result.key).toBe('mock-random-uuid.png');
     });
   });
 
+  // deleteFile 함수 테스트
   describe('deleteFile', () => {
     const fileKey = 'mock-random-uuid.png';
 
     it('파일 삭제 성공 시 success: true와 fileKey를 반환해야 합니다.', async () => {
       // --- 준비 (Arrange) ---
-      mockSend.mockResolvedValue({});
+      mockSend.mockResolvedValueOnce({});
 
       // --- 실행 (Act) ---
       const result = await deleteFile(fileKey);
 
       // --- 검증 (Assert) ---
-      // 1. send 함수가 한 번 호출되었는지 확인
       expect(mockSend).toHaveBeenCalledTimes(1);
-
-      // 2. DeleteObjectCommand와 함께 올바른 인자로 호출되었는지 확인
       const sentCommand = mockSend.mock.calls[0][0] as MockCommand;
       expect(sentCommand.constructor.name).toBe('DeleteObjectCommand');
-      expect(sentCommand.Bucket).toBe(process.env.AWS_S3_BUCKET);
+      expect(sentCommand.Bucket).toBe('mock-bucket');
       expect(sentCommand.Key).toBe(fileKey);
-
-      // 3. 반환값이 예상과 일치하는지 확인
       expect(result).toEqual({ success: true, fileKey });
     });
 
     it('S3 client.send 실패 시 InternalServerError를 던져야 합니다.', async () => {
       // --- 준비 (Arrange) ---
-      const errorMessage = 'S3 is down';
-      mockSend.mockRejectedValue(new Error(errorMessage));
-
-      // console.error 출력을 일시적으로 막습니다.
-      const consoleErrorSpy = jest.spyOn(console, 'error').mockImplementation(() => {});
+      mockSend.mockRejectedValue(new Error('S3 is down'));
 
       // --- 실행 및 검증 (Act & Assert) ---
       await expect(deleteFile(fileKey)).rejects.toThrow(InternalServerError);
+      await expect(deleteFile(fileKey)).rejects.toThrow(/파일 삭제에 실패했습니다/);
+    });
 
-      // 스파이를 복원합니다.
-      consoleErrorSpy.mockRestore();
+    it('존재하지 않는 파일 삭제 시도해도 성공해야 합니다.', async () => {
+      // --- 준비 (Arrange) ---
+      mockSend.mockResolvedValueOnce({});
+
+      // --- 실행 (Act) ---
+      const result = await deleteFile('non-existent-file.png');
+
+      // --- 검증 (Assert) ---
+      expect(result.success).toBe(true);
+      expect(result.fileKey).toBe('non-existent-file.png');
     });
   });
 });
