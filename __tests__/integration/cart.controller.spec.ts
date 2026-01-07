@@ -208,7 +208,7 @@ describe('Cart API Integration Test', () => {
     it('400: 장바구니가 없는 경우 수정 할 수 없다.', async () => {
       // 현재 프론트에서는 장바구니 수정 전 무조건 생성부터 호출함
       // 일반적인 에러 케이스 테스트
-      // when
+      // given
       const input = {
         productId,
         sizes: [
