@@ -18,7 +18,7 @@ describe('Auth API Integration Test', () => {
       };
 
       const response = await testClient.post('/api/auth/login').send(loginData);
-
+      console.log('Login response:', response.status, JSON.stringify(response.body));
       expect(response.status).toBe(201);
       expect(response.body.accessToken).toBeDefined();
       expect(response.body.user).toBeDefined();

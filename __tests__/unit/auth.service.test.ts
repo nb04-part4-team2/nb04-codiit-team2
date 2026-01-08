@@ -45,11 +45,13 @@ describe('AuthService 유닛 테스트', () => {
     mockCompare.mockResolvedValue(true);
     mockGenerateAccessToken.mockReturnValue('mock-access-token');
     mockGenerateRefreshToken.mockReturnValue('mock-refresh-token');
+    mockVerifyRefreshToken.mockReturnValue({ userId, type: 'BUYER', jti: 'mock-jti-uuid' });
 
     // AuthRepository 기본 mock 설정
     authRepository.createRefreshToken.mockResolvedValue({
       id: 'token-id',
       token: 'hashed-token',
+      jti: 'mock-jti-uuid',
       userId,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
@@ -57,6 +59,7 @@ describe('AuthService 유닛 테스트', () => {
     authRepository.findByToken.mockResolvedValue({
       id: 'token-id',
       token: 'hashed-token',
+      jti: 'mock-jti-uuid',
       userId,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
       createdAt: new Date(),
