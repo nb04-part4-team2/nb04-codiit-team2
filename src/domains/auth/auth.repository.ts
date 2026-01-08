@@ -48,14 +48,6 @@ export class AuthRepository {
     return result.count;
   }
 
-  /**
-   * 리프레쉬 토큰 Rotation (원자적 교체)
-   *
-   * 동작 순서:
-   * 1. Advisory Lock으로 동일 userId의 동시 요청 직렬화
-   * 2. 기존 토큰 전체 삭제
-   * 3. 새 토큰 생성
-   */
   async rotateRefreshToken(userId: string, data: CreateRefreshTokenData) {
     return prisma.$transaction(async (tx) => {
       // 1. Advisory Lock: 동일 userId의 요청 직렬화
