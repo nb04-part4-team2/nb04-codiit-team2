@@ -28,6 +28,9 @@ const envSchema = z.object({
   AWS_ACCESS_KEY_ID: z.string(),
   AWS_SECRET_ACCESS_KEY: z.string(),
   AWS_S3_BUCKET: z.string(),
+
+  // Logging
+  SLOW_QUERY_THRESHOLD_MS: z.coerce.number().min(1).default(1000),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

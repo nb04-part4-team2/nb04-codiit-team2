@@ -3,6 +3,7 @@ import type { CreateStoreBody, UpdateStoreBody, StoreProductQuery } from './stor
 import type { ProductWithStock } from './store.mapper.js';
 import { ConflictError, NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
 import { logger } from '@/config/logger.js';
+import { env } from '@/config/constants.js';
 import { SecurityEventType } from '@/common/types/security-events.type.js';
 import { sanitizePhoneNumber, measureDuration } from '@/common/utils/logger-helpers.js';
 
@@ -102,7 +103,7 @@ export class StoreService {
       `My store detail retrieved in ${durationMs}ms`,
     );
 
-    if (durationMs > 1000) {
+    if (durationMs > env.SLOW_QUERY_THRESHOLD_MS) {
       logger.warn(
         {
           event: SecurityEventType.SLOW_QUERY,
@@ -181,7 +182,7 @@ export class StoreService {
       `Store products retrieved (page ${page})`,
     );
 
-    if (durationMs > 1000) {
+    if (durationMs > env.SLOW_QUERY_THRESHOLD_MS) {
       logger.warn(
         {
           event: SecurityEventType.SLOW_QUERY,
