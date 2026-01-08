@@ -27,7 +27,7 @@ const options: Options = {
       },
     ],
     tags: [
-      { name: 'Auth', description: '인증 (로그인, 토큰 갱신)' },
+      { name: 'Auth', description: '인증 (로그인, 로그아웃, 토큰 갱신)' },
       { name: 'User', description: '사용자 (회원가입, 프로필, 주소, 등급)' },
       { name: 'Store', description: '스토어 관리 (등록, 수정, 조회, 찜하기)' },
       { name: 'Product', description: '상품 관리 (등록, 수정, 조회, 카테고리)' },
