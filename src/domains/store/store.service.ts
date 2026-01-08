@@ -4,7 +4,7 @@ import type { ProductWithStock } from './store.mapper.js';
 import { ConflictError, NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
 import { logger } from '@/config/logger.js';
 import { SecurityEventType } from '@/common/types/security-events.type.js';
-import { sanitizePhoneNumber } from '@/common/utils/logger-helpers.js';
+import { sanitizePhoneNumber, measureDuration } from '@/common/utils/logger-helpers.js';
 
 export class StoreService {
   constructor(private storeRepository: StoreRepository) {}
@@ -49,6 +49,14 @@ export class StoreService {
   async getStoreDetail(storeId: string) {
     const store = await this.storeRepository.findById(storeId);
     if (!store) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          storeId,
+          resource: 'store',
+        },
+        'Store not found',
+      );
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
 
@@ -61,8 +69,18 @@ export class StoreService {
   async getMyStoreDetail(userId: string) {
     const store = await this.storeRepository.findByUserId(userId);
     if (!store) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          userId,
+          resource: 'store',
+        },
+        'Store not found for user',
+      );
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
+
+    const startTime = Date.now();
 
     const [productCount, favoriteCount, monthFavoriteCount, totalSoldCount] = await Promise.all([
       this.storeRepository.countProducts(store.id),
@@ -70,6 +88,31 @@ export class StoreService {
       this.storeRepository.countMonthFavorites(store.id),
       this.storeRepository.getTotalSoldCount(store.id),
     ]);
+
+    const durationMs = measureDuration(startTime);
+
+    logger.info(
+      {
+        event: 'MY_STORE_DETAIL_FETCHED',
+        userId,
+        storeId: store.id,
+        durationMs,
+        queryCount: 4,
+      },
+      `My store detail retrieved in ${durationMs}ms`,
+    );
+
+    if (durationMs > 1000) {
+      logger.warn(
+        {
+          event: SecurityEventType.SLOW_QUERY,
+          userId,
+          storeId: store.id,
+          durationMs,
+        },
+        'Slow query detected in getMyStoreDetail',
+      );
+    }
 
     return {
       store,
@@ -81,6 +124,14 @@ export class StoreService {
   async getMyStoreProducts(userId: string, query: StoreProductQuery) {
     const store = await this.storeRepository.findByUserId(userId);
     if (!store) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          userId,
+          resource: 'store',
+        },
+        'Store not found for user',
+      );
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
 
@@ -88,10 +139,14 @@ export class StoreService {
     const pageSize = query.pageSize ?? 10;
     const skip = (page - 1) * pageSize;
 
+    const startTime = Date.now();
+
     const [products, totalCount] = await Promise.all([
       this.storeRepository.findProductsWithStock(store.id, skip, pageSize),
       this.storeRepository.countProducts(store.id),
     ]);
+
+    const durationMs = measureDuration(startTime);
 
     // 재고 합계 계산 + isDiscount 판정
     const now = new Date();
@@ -113,6 +168,31 @@ export class StoreService {
       };
     });
 
+    logger.info(
+      {
+        event: 'MY_STORE_PRODUCTS_FETCHED',
+        userId,
+        storeId: store.id,
+        page,
+        pageSize,
+        totalCount,
+        durationMs,
+      },
+      `Store products retrieved (page ${page})`,
+    );
+
+    if (durationMs > 1000) {
+      logger.warn(
+        {
+          event: SecurityEventType.SLOW_QUERY,
+          userId,
+          storeId: store.id,
+          durationMs,
+        },
+        'Slow query detected in getMyStoreProducts',
+      );
+    }
+
     return { products: productsWithStock, totalCount };
   }
 
@@ -121,16 +201,45 @@ export class StoreService {
     // 스토어 존재 확인
     const store = await this.storeRepository.findById(storeId);
     if (!store) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          storeId,
+          userId,
+          resource: 'store',
+        },
+        'Store not found',
+      );
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
 
     // 본인 스토어인지 확인
     if (store.userId !== userId) {
+      logger.warn(
+        {
+          event: SecurityEventType.FORBIDDEN_ACCESS,
+          userId,
+          storeId,
+          ownerId: store.userId,
+          attemptedAction: 'update',
+        },
+        "User attempted to update another user's store",
+      );
       throw new ForbiddenError('본인 스토어만 수정할 수 있습니다.');
     }
 
     // 스토어 수정
     const updatedStore = await this.storeRepository.update(storeId, data);
+
+    logger.info(
+      {
+        event: 'STORE_UPDATED',
+        userId,
+        storeId,
+        updatedFields: Object.keys(data),
+      },
+      'Store updated successfully',
+    );
 
     return updatedStore;
   }
@@ -140,17 +249,44 @@ export class StoreService {
     // 스토어 존재 확인
     const store = await this.storeRepository.findById(storeId);
     if (!store) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          storeId,
+          userId,
+          resource: 'store',
+        },
+        'Store not found',
+      );
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
 
     // 이미 등록 여부 확인
     const existingFavorite = await this.storeRepository.findFavorite(userId, storeId);
     if (existingFavorite) {
+      logger.warn(
+        {
+          event: SecurityEventType.DUPLICATE_RESOURCE,
+          userId,
+          storeId,
+          resource: 'storeLike',
+        },
+        'Duplicate favorite registration',
+      );
       throw new ConflictError('이미 관심 스토어로 등록되어 있습니다.');
     }
 
     // 관심 등록
     await this.storeRepository.createFavorite(userId, storeId);
+
+    logger.info(
+      {
+        event: 'STORE_FAVORITE_REGISTERED',
+        userId,
+        storeId,
+      },
+      'Store favorite registered',
+    );
 
     return store;
   }
@@ -160,17 +296,44 @@ export class StoreService {
     // 스토어 존재 확인
     const store = await this.storeRepository.findById(storeId);
     if (!store) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          storeId,
+          userId,
+          resource: 'store',
+        },
+        'Store not found',
+      );
       throw new NotFoundError('스토어를 찾을 수 없습니다.');
     }
 
     // 등록 여부 확인
     const existingFavorite = await this.storeRepository.findFavorite(userId, storeId);
     if (!existingFavorite) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          userId,
+          storeId,
+          resource: 'storeLike',
+        },
+        'Favorite not found',
+      );
       throw new NotFoundError('관심 스토어로 등록되어 있지 않습니다.');
     }
 
     // 관심 해제
     await this.storeRepository.deleteFavorite(userId, storeId);
+
+    logger.info(
+      {
+        event: 'STORE_FAVORITE_UNREGISTERED',
+        userId,
+        storeId,
+      },
+      'Store favorite unregistered',
+    );
 
     return store;
   }
