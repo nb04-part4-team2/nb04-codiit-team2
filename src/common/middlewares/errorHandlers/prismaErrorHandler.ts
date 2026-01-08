@@ -1,15 +1,36 @@
 import type { Request, Response, NextFunction } from 'express';
 import { Prisma } from '@prisma/client';
 import { NotFoundError, ConflictError, BadRequestError } from '@/common/utils/errors.js';
+import { logger } from '@/config/logger.js';
 
-export function prismaErrorHandler(err: Error, _req: Request, _res: Response, next: NextFunction) {
+export function prismaErrorHandler(err: Error, req: Request, _res: Response, next: NextFunction) {
   if (err instanceof Prisma.PrismaClientValidationError) {
-    console.error(err);
+    logger.error(
+      {
+        err,
+        errorType: 'PrismaClientValidationError',
+        url: req.originalUrl,
+        method: req.method,
+        userId: req.user?.id,
+      },
+      'Prisma validation error',
+    );
     return next(new BadRequestError('Prisma 쿼리 데이터가 유효하지 않습니다.'));
   }
 
   if (err instanceof Prisma.PrismaClientKnownRequestError) {
-    console.error(err);
+    logger.error(
+      {
+        err,
+        errorType: 'PrismaClientKnownRequestError',
+        prismaCode: err.code,
+        meta: err.meta,
+        url: req.originalUrl,
+        method: req.method,
+        userId: req.user?.id,
+      },
+      `Prisma error: ${err.code}`,
+    );
     switch (err.code) {
       case 'P2025':
         return next(new NotFoundError('요청한 데이터를 찾을 수 없습니다.'));
