@@ -9,14 +9,12 @@ import { UnauthorizedError } from '@/common/utils/errors.js';
 import { loginSchema } from './auth.schema.js';
 import { UserRepository } from '@/domains/user/user.repository.js';
 import { AuthRepository } from './auth.repository.js';
+import { env } from '@/config/constants.js';
 
 // 토큰 해싱 함수
 function hashToken(token: string): string {
   return crypto.createHash('sha256').update(token).digest('hex');
 }
-
-// 7일을 밀리초로 변환
-const REFRESH_TOKEN_EXPIRES_MS = 7 * 24 * 60 * 60 * 1000;
 
 export class AuthService {
   constructor(
@@ -44,10 +42,14 @@ export class AuthService {
 
     // 리프레시 토큰을 해시하여 DB에 저장
     const hashedToken = hashToken(refreshToken);
-    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_MS);
+    const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_EXPIRES_MS);
+
+    // jti 추출
+    const payload = verifyRefreshToken(refreshToken);
 
     await this.authRepository.createRefreshToken({
       token: hashedToken,
+      jti: payload.jti!,
       userId: user.id,
       expiresAt,
     });
@@ -96,19 +98,19 @@ export class AuthService {
       throw new UnauthorizedError('사용자를 찾을 수 없습니다.');
     }
 
-    // 5. 해당 유저의 모든 토큰 삭제 (동시 요청으로 쌓인 토큰도 정리)
-    await this.authRepository.deleteAllByUserId(user.id);
-
-    // 6. 새 액세스 토큰 + 새 리프레시 토큰 발급
+    // 5. 새 액세스 토큰 + 새 리프레시 토큰 발급
     const newAccessToken = generateAccessToken(user.id, user.type);
     const newRefreshToken = generateRefreshToken(user.id, user.type);
 
-    // 7. 새 리프레시 토큰을 DB에 저장
+    // 6. 새 토큰의 jti 추출
+    const newPayload = verifyRefreshToken(newRefreshToken);
     const newHashedToken = hashToken(newRefreshToken);
-    const expiresAt = new Date(Date.now() + REFRESH_TOKEN_EXPIRES_MS);
+    const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_EXPIRES_MS);
 
-    await this.authRepository.createRefreshToken({
+    // 7. Rotation: 기존 토큰 삭제 + 새 토큰 저장 (원자적)
+    await this.authRepository.rotateRefreshToken(user.id, {
       token: newHashedToken,
+      jti: newPayload.jti!,
       userId: user.id,
       expiresAt,
     });
@@ -116,7 +118,7 @@ export class AuthService {
     // 8. 새 리프레시 토큰도 함께 반환
     return {
       accessToken: newAccessToken,
-      refreshToken: newRefreshToken, // ← 추가!
+      refreshToken: newRefreshToken,
     };
   }
 

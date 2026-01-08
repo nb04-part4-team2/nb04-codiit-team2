@@ -97,11 +97,14 @@ model User {
 model RefreshToken {
   id        String   @id @default(cuid())
   token     String   @unique
+  jti       String   @unique
   userId    String
   user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  expiresAt DateTime // 만료 시간
+  expiresAt DateTime
   createdAt DateTime @default(now())
 
+  @@index([userId])
+  @@index([jti])
   @@map("refresh_tokens")
 }
 

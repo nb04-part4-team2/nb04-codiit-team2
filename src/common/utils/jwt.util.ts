@@ -6,6 +6,7 @@ import { env } from '@/config/constants.js';
 export interface JwtPayload {
   userId: string;
   type: UserType;
+  jti?: string; // refreshToken에만 포함
 }
 
 export interface AuthUser {
