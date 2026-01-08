@@ -2,6 +2,9 @@ import type { StoreRepository } from './store.repository.js';
 import type { CreateStoreBody, UpdateStoreBody, StoreProductQuery } from './store.schema.js';
 import type { ProductWithStock } from './store.mapper.js';
 import { ConflictError, NotFoundError, ForbiddenError } from '@/common/utils/errors.js';
+import { logger } from '@/config/logger.js';
+import { SecurityEventType } from '@/common/types/security-events.type.js';
+import { sanitizePhoneNumber } from '@/common/utils/logger-helpers.js';
 
 export class StoreService {
   constructor(private storeRepository: StoreRepository) {}
@@ -11,6 +14,14 @@ export class StoreService {
     // 이미 스토어가 있는지 확인
     const existingStore = await this.storeRepository.findByUserId(userId);
     if (existingStore) {
+      logger.warn(
+        {
+          event: SecurityEventType.DUPLICATE_RESOURCE,
+          userId,
+          storeName: data.name,
+        },
+        'Store creation failed - duplicate store',
+      );
       throw new ConflictError('이미 스토어를 보유하고 있습니다.');
     }
 
@@ -19,6 +30,17 @@ export class StoreService {
       ...data,
       user: { connect: { id: userId } },
     });
+
+    logger.info(
+      {
+        event: 'STORE_CREATED',
+        userId,
+        storeId: store.id,
+        storeName: store.name,
+        phoneNumber: sanitizePhoneNumber(store.phoneNumber),
+      },
+      'Store created successfully',
+    );
 
     return store;
   }
