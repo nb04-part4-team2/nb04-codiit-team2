@@ -27,8 +27,8 @@ const options: Options = {
       },
     ],
     tags: [
-      { name: 'Auth', description: '인증 (회원가입, 로그인, 토큰 갱신)' },
-      { name: 'User', description: '사용자 (프로필, 주소, 등급)' },
+      { name: 'Auth', description: '인증 (로그인, 토큰 갱신)' },
+      { name: 'User', description: '사용자 (회원가입, 프로필, 주소, 등급)' },
       { name: 'Store', description: '스토어 관리 (등록, 수정, 조회, 찜하기)' },
       { name: 'Product', description: '상품 관리 (등록, 수정, 조회, 카테고리)' },
       { name: 'Cart', description: '장바구니 (추가, 수정, 삭제, 조회)' },
