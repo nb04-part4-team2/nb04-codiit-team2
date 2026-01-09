@@ -24,4 +24,14 @@ export const logger = pino({
   formatters: {
     level: (label) => ({ level: label }),
   },
+
+  // pino serializer (err, req, res 자동 직렬화)
+  serializers: {
+    err: pino.stdSerializers.err,
+    req: pino.stdSerializers.req,
+    res: pino.stdSerializers.res,
+  },
+
+  // 프로덕션 환경에서 stack trace 제거 (보안)
+  redact: env.NODE_ENV === 'production' ? ['err.stack'] : [],
 });

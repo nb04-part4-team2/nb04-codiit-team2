@@ -1,21 +1,23 @@
 import type { Request, Response, NextFunction } from 'express';
 import { AppError } from '@/common/utils/appError.js';
 import jwt from 'jsonwebtoken';
+import { logger } from '@/config/logger.js';
 
 export function businessErrorHandler(err: Error, req: Request, res: Response, next: NextFunction) {
   // AppError의 인스턴스인지 확인
   if (err instanceof AppError) {
-    console.error(
-      `===== 비즈니스 로직 에러 발생 =====`,
-      `에러 이름: ${err.name}`, // 예: BadRequestError
-      `에러 코드: ${err.statusCode}`,
-      `에러 메시지: ${err.message}`, // 위에서 설정한 구체적인 메시지
-      `요청 URL:  ${req.originalUrl}`,
-      `요청 메서드: ${req.method}`,
-      `요청 헤더 (Authorization): ${req.headers.authorization}`, // 토큰 관련 문제 확인
-      `요청 쿼리: ${JSON.stringify(req.query)}`, // 쿼리 관련 문제 확인
-      `에러 스택: ${err.stack}`, // 에러가 발생한 코드 위치 추적
-      `===================`,
+    logger.warn(
+      {
+        err,
+        errorType: err.name,
+        statusCode: err.statusCode,
+        url: req.originalUrl,
+        method: req.method,
+        userId: req.user?.id,
+        query: req.query,
+        details: err.details,
+      },
+      `Business error: ${err.message}`,
     );
 
     return res.status(err.statusCode).json({
@@ -23,11 +25,31 @@ export function businessErrorHandler(err: Error, req: Request, res: Response, ne
       details: err.details ?? [], // details가 undefined이면 빈 배열
     });
   } else if (err instanceof jwt.TokenExpiredError) {
+    logger.warn(
+      {
+        err,
+        errorType: 'TokenExpiredError',
+        url: req.originalUrl,
+        method: req.method,
+      },
+      'JWT token expired',
+    );
+
     return res.status(401).json({
       name: err.name,
       message: err.message,
     });
   } else if (err instanceof jwt.JsonWebTokenError) {
+    logger.warn(
+      {
+        err,
+        errorType: 'JsonWebTokenError',
+        url: req.originalUrl,
+        method: req.method,
+      },
+      'JWT token invalid',
+    );
+
     return res.status(401).json({
       name: err.name,
       message: '유효하지 않은 토큰입니다.',
