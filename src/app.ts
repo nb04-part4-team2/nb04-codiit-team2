@@ -11,6 +11,7 @@ import { catchAllErrorHandler } from '@/common/middlewares/errorHandlers/catchAl
 import { businessErrorHandler } from '@/common/middlewares/errorHandlers/businessErrorHandler.js';
 import { uploadErrorHandler } from '@/common/middlewares/errorHandlers/uploadErrorHandler.js';
 import { env } from '@/config/constants.js';
+import { globalRateLimiter } from '@/common/middlewares/rateLimit.middleware.js';
 
 // 라우터 import
 import authRouter from '@/domains/auth/auth.router.js';
@@ -31,6 +32,9 @@ import swaggerUi from 'swagger-ui-express';
 import { specs } from '@/documentation/swagger.config.js';
 
 const app = express();
+
+// trust proxy
+app.set('trust proxy', 2);
 
 // 보안 미들웨어
 app.use(helmet());
@@ -69,7 +73,7 @@ app.use(
 app.use(express.json());
 app.use(cookieParser());
 
-// Health check
+// Health check (Rate limit 제외)
 app.get('/api/health', (req: Request, res: Response) => {
   res.status(200).json({
     status: 'ok',
@@ -78,6 +82,9 @@ app.get('/api/health', (req: Request, res: Response) => {
     environment: env.NODE_ENV,
   });
 });
+
+// Global Rate Limiting
+app.use('/api', globalRateLimiter);
 
 // 라우터 등록
 app.use('/api/auth', authRouter);
