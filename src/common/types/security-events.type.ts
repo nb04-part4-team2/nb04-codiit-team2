@@ -45,4 +45,40 @@ export enum SecurityEventType {
    * 성능 모니터링 및 최적화 대상
    */
   SLOW_QUERY = 'SLOW_QUERY',
+
+  /**
+   * 로그인 성공
+   * 예: 사용자가 올바른 이메일/비밀번호로 로그인
+   */
+  AUTHENTICATION_SUCCESS = 'AUTHENTICATION_SUCCESS',
+
+  /**
+   * 로그인 실패
+   * 예: 존재하지 않는 이메일, 잘못된 비밀번호
+   */
+  AUTHENTICATION_FAILURE = 'AUTHENTICATION_FAILURE',
+
+  /**
+   * 토큰 갱신 성공
+   * 예: Refresh Token을 사용한 Access Token 갱신
+   */
+  TOKEN_REFRESH_SUCCESS = 'TOKEN_REFRESH_SUCCESS',
+
+  /**
+   * 유효하지 않은 토큰
+   * 예: 존재하지 않거나 이미 무효화된 토큰
+   */
+  TOKEN_INVALID = 'TOKEN_INVALID',
+
+  /**
+   * 만료된 토큰
+   * 예: 유효 기간이 지난 Refresh Token
+   */
+  TOKEN_EXPIRED = 'TOKEN_EXPIRED',
+
+  /**
+   * 로그아웃 성공
+   * 예: 사용자가 명시적으로 로그아웃
+   */
+  LOGOUT_SUCCESS = 'LOGOUT_SUCCESS',
 }
