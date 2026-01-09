@@ -11,8 +11,8 @@ import { UserRepository } from '@/domains/user/user.repository.js';
 import { AuthRepository } from './auth.repository.js';
 import { env } from '@/config/constants.js';
 import { logger } from '@/config/logger.js';
-import { SecurityEventType } from '@/common/types/security-events.type.js';
-import { measureDuration } from '@/common/utils/logger-helpers.js';
+import { SecurityEventType } from '@/common/types/securityEvents.type.js';
+import { measureDuration } from '@/common/utils/loggerHelpers.js';
 
 // 토큰 해싱 함수
 function hashToken(token: string): string {

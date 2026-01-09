@@ -11,7 +11,7 @@ import {
   NotFoundError,
 } from '@/common/utils/errors.js';
 import { logger } from '@/config/logger.js';
-import { SecurityEventType } from '@/common/types/security-events.type.js';
+import { SecurityEventType } from '@/common/types/securityEvents.type.js';
 
 export class UserService {
   constructor(private userRepository: UserRepository) {}
