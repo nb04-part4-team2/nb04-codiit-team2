@@ -10,6 +10,9 @@ import { loginSchema } from './auth.schema.js';
 import { UserRepository } from '@/domains/user/user.repository.js';
 import { AuthRepository } from './auth.repository.js';
 import { env } from '@/config/constants.js';
+import { logger } from '@/config/logger.js';
+import { SecurityEventType } from '@/common/types/security-events.type.js';
+import { measureDuration } from '@/common/utils/logger-helpers.js';
 
 // 토큰 해싱 함수
 function hashToken(token: string): string {
@@ -28,12 +31,29 @@ export class AuthService {
     const user = await this.userRepository.findByEmail(email);
 
     if (!user) {
+      logger.warn(
+        {
+          event: SecurityEventType.AUTHENTICATION_FAILURE,
+          email,
+          reason: 'user_not_found',
+        },
+        'Login failed - user not found',
+      );
       throw new UnauthorizedError('이메일 또는 비밀번호가 일치하지 않습니다.');
     }
 
     const isPasswordValid = await bcrypt.compare(password, user.password);
 
     if (!isPasswordValid) {
+      logger.warn(
+        {
+          event: SecurityEventType.AUTHENTICATION_FAILURE,
+          userId: user.id,
+          email: user.email,
+          reason: 'invalid_password',
+        },
+        'Login failed - invalid password',
+      );
       throw new UnauthorizedError('이메일 또는 비밀번호가 일치하지 않습니다.');
     }
 
@@ -53,6 +73,16 @@ export class AuthService {
       userId: user.id,
       expiresAt,
     });
+
+    logger.info(
+      {
+        event: SecurityEventType.AUTHENTICATION_SUCCESS,
+        userId: user.id,
+        email: user.email,
+        userType: user.type,
+      },
+      'User logged in successfully',
+    );
 
     return {
       accessToken,
@@ -81,12 +111,26 @@ export class AuthService {
 
     // 2. 토큰이 없으면 에러 (무효화된 토큰)
     if (!storedToken) {
+      logger.warn(
+        {
+          event: SecurityEventType.TOKEN_INVALID,
+          resource: 'refreshToken',
+        },
+        'Refresh token not found or invalid',
+      );
       throw new UnauthorizedError('유효하지 않은 토큰입니다.');
     }
 
     // 3. 만료 시간 확인
     if (storedToken.expiresAt < new Date()) {
       await this.authRepository.deleteByToken(hashedToken);
+      logger.warn(
+        {
+          event: SecurityEventType.TOKEN_EXPIRED,
+          userId: storedToken.userId,
+        },
+        'Refresh token has expired',
+      );
       throw new UnauthorizedError('토큰이 만료되었습니다.');
     }
 
@@ -95,6 +139,14 @@ export class AuthService {
     const user = await this.userRepository.findById(payload.userId);
 
     if (!user) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          userId: payload.userId,
+          resource: 'user',
+        },
+        'User not found after token validation',
+      );
       throw new UnauthorizedError('사용자를 찾을 수 없습니다.');
     }
 
@@ -108,12 +160,25 @@ export class AuthService {
     const expiresAt = new Date(Date.now() + env.REFRESH_TOKEN_EXPIRES_MS);
 
     // 7. Rotation: 기존 토큰 삭제 + 새 토큰 저장 (원자적)
+    const startTime = Date.now();
+
     await this.authRepository.rotateRefreshToken(user.id, {
       token: newHashedToken,
       jti: newPayload.jti!,
       userId: user.id,
       expiresAt,
     });
+
+    const durationMs = measureDuration(startTime);
+
+    logger.info(
+      {
+        event: SecurityEventType.TOKEN_REFRESH_SUCCESS,
+        userId: user.id,
+        durationMs,
+      },
+      `Refresh token rotated successfully in ${durationMs}ms`,
+    );
 
     // 8. 새 리프레시 토큰도 함께 반환
     return {
@@ -122,10 +187,18 @@ export class AuthService {
     };
   }
 
-  async logout(refreshToken: string) {
+  async logout(refreshToken: string, userId: string) {
     // DB에서 해당 토큰 삭제
     const hashedToken = hashToken(refreshToken);
     await this.authRepository.deleteByToken(hashedToken);
+
+    logger.info(
+      {
+        event: SecurityEventType.LOGOUT_SUCCESS,
+        userId,
+      },
+      'User logged out successfully',
+    );
 
     return { message: '로그아웃 되었습니다.' };
   }

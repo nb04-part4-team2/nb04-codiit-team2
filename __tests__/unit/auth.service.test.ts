@@ -170,9 +170,10 @@ describe('AuthService 유닛 테스트', () => {
     it('로그아웃 성공', async () => {
       // --- 준비 (Arrange) ---
       const refreshToken = 'valid-refresh-token';
+      const userId = 'test-user-id';
 
       // --- 실행 (Act) ---
-      const result = await authService.logout(refreshToken);
+      const result = await authService.logout(refreshToken, userId);
 
       // --- 검증 (Assert) ---
       expect(authRepository.deleteByToken).toHaveBeenCalled();

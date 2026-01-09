@@ -53,7 +53,7 @@ export class AuthController {
 
     // 토큰이 있으면 DB에서 삭제
     if (refreshToken) {
-      await this.authService.logout(refreshToken);
+      await this.authService.logout(refreshToken, req.user!.id);
     }
 
     res.clearCookie('refreshToken');
