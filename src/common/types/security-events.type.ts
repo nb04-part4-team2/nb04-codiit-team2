@@ -81,4 +81,40 @@ export enum SecurityEventType {
    * 예: 사용자가 명시적으로 로그아웃
    */
   LOGOUT_SUCCESS = 'LOGOUT_SUCCESS',
+
+  /**
+   * 사용자 회원가입 성공
+   * 예: 새로운 사용자가 가입 완료
+   */
+  USER_CREATED = 'USER_CREATED',
+
+  /**
+   * 사용자 프로필 수정 성공
+   * 예: 이름, 이미지 변경
+   */
+  USER_PROFILE_UPDATED = 'USER_PROFILE_UPDATED',
+
+  /**
+   * 사용자 비밀번호 변경
+   * 예: 비밀번호 변경 완료 (보안 이벤트)
+   */
+  USER_PASSWORD_CHANGED = 'USER_PASSWORD_CHANGED',
+
+  /**
+   * 사용자 회원 탈퇴
+   * 예: 계정 삭제 완료 (중요 이벤트)
+   */
+  USER_DELETED = 'USER_DELETED',
+
+  /**
+   * 사용자 등급 업그레이드
+   * 예: 누적 구매액 증가로 VIP 등급 상향
+   */
+  USER_GRADE_UPGRADED = 'USER_GRADE_UPGRADED',
+
+  /**
+   * 사용자 등급 다운그레이드
+   * 예: 시간 경과로 등급 하향 (미래 기능)
+   */
+  USER_GRADE_DOWNGRADED = 'USER_GRADE_DOWNGRADED',
 }
