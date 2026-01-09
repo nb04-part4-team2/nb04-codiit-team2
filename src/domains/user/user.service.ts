@@ -10,6 +10,8 @@ import {
   ForbiddenError,
   NotFoundError,
 } from '@/common/utils/errors.js';
+import { logger } from '@/config/logger.js';
+import { SecurityEventType } from '@/common/types/security-events.type.js';
 
 export class UserService {
   constructor(private userRepository: UserRepository) {}
@@ -19,6 +21,14 @@ export class UserService {
 
     const existingUser = await this.userRepository.findByEmail(email);
     if (existingUser) {
+      logger.warn(
+        {
+          event: SecurityEventType.DUPLICATE_RESOURCE,
+          email,
+          resource: 'user',
+        },
+        'User creation failed - email already exists',
+      );
       throw new ConflictError('이미 존재하는 이메일입니다.');
     }
 
@@ -32,6 +42,16 @@ export class UserService {
       gradeId: 'grade_green',
     });
 
+    logger.info(
+      {
+        event: SecurityEventType.USER_CREATED,
+        userId: user.id,
+        email: user.email,
+        userType: user.type,
+      },
+      'User registered successfully',
+    );
+
     return toUserResponse(user);
   }
 
@@ -39,6 +59,14 @@ export class UserService {
     const user = await this.userRepository.findById(userId);
 
     if (!user) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          userId,
+          resource: 'user',
+        },
+        'User not found',
+      );
       throw new NotFoundError('유저를 찾을 수 없습니다.');
     }
 
@@ -61,6 +89,15 @@ export class UserService {
     const isPasswordValid = await bcrypt.compare(currentPassword, user.password);
 
     if (!isPasswordValid) {
+      logger.warn(
+        {
+          event: SecurityEventType.FORBIDDEN_ACCESS,
+          userId,
+          attemptedAction: 'update_password',
+          reason: 'current_password_mismatch',
+        },
+        'Password update failed - incorrect current password',
+      );
       throw new ForbiddenError('현재 비밀번호가 일치하지 않습니다.');
     }
 
@@ -80,6 +117,30 @@ export class UserService {
 
     const updatedUser = await this.userRepository.update(userId, updateData);
 
+    if (password) {
+      logger.info(
+        {
+          event: SecurityEventType.USER_PASSWORD_CHANGED,
+          userId,
+        },
+        'User password changed successfully',
+      );
+    }
+
+    const updatedFields = Object.keys(dto).filter(
+      (k) =>
+        k !== 'password' && k !== 'currentPassword' && dto[k as keyof UpdateUserDto] !== undefined,
+    );
+
+    logger.info(
+      {
+        event: SecurityEventType.USER_PROFILE_UPDATED,
+        userId,
+        updatedFields,
+      },
+      'User profile updated successfully',
+    );
+
     return toUserResponse(updatedUser);
   }
 
@@ -87,6 +148,14 @@ export class UserService {
     const user = await this.userRepository.findById(userId);
 
     if (!user) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          userId,
+          resource: 'user',
+        },
+        'User not found for getLikedStores',
+      );
       throw new NotFoundError('유저를 찾을 수 없습니다.');
     }
 
@@ -103,6 +172,14 @@ export class UserService {
     }
 
     await this.userRepository.delete(userId);
+
+    logger.info(
+      {
+        event: SecurityEventType.USER_DELETED,
+        userId,
+      },
+      'User account deleted successfully',
+    );
   }
 
   /**
@@ -116,6 +193,15 @@ export class UserService {
     const grade = await this.userRepository.findGradeByAmount(totalAmount);
 
     if (!grade) {
+      logger.warn(
+        {
+          event: SecurityEventType.RESOURCE_NOT_FOUND,
+          userId,
+          resource: 'grade',
+          totalPurchaseAmount: totalAmount,
+        },
+        'No matching grade found for purchase amount',
+      );
       return;
     }
 
@@ -123,7 +209,19 @@ export class UserService {
     const user = await this.userRepository.findById(userId);
 
     if (user && user.gradeId !== grade.id) {
+      const previousGradeId = user.gradeId;
       await this.userRepository.updateGrade(userId, grade.id);
+
+      logger.info(
+        {
+          event: SecurityEventType.USER_GRADE_UPGRADED,
+          userId,
+          previousGradeId,
+          newGradeId: grade.id,
+          totalPurchaseAmount: totalAmount,
+        },
+        'User grade upgraded',
+      );
     }
   }
 }
