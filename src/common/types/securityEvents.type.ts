@@ -1,120 +1,138 @@
 /**
- * 보안 및 비즈니스 이벤트 타입
- * 로깅 시 event 필드로 사용
+ * Security and business event types
+ * Used as event field in structured logging
  *
  * @example
  * logger.warn({
  *   event: SecurityEventType.FORBIDDEN_ACCESS,
  *   userId: 'user123',
  *   storeId: 'store456',
- * }, 'Forbidden access attempt');
+ * }, 'Forbidden access attempt due to insufficient permissions');
  */
 export enum SecurityEventType {
   /**
-   * 인증 없이 보호된 리소스 접근 시도
-   * 예: 로그인 없이 API 요청
+   * Unauthorized access attempt to protected resource
+   * Triggered when: User attempts to access protected API without authentication
    */
   UNAUTHORIZED_ACCESS = 'UNAUTHORIZED_ACCESS',
 
   /**
-   * 권한 부족으로 접근 거부
-   * 예: 다른 사용자의 스토어 수정 시도
+   * Forbidden access attempt due to insufficient permissions
+   * Triggered when: User attempts to access resource without proper authorization
    */
   FORBIDDEN_ACCESS = 'FORBIDDEN_ACCESS',
 
   /**
-   * 중복 리소스 생성 시도
-   * 예: 이미 스토어가 있는데 추가 생성 시도, 중복 관심 등록
+   * Duplicate resource creation attempt
+   * Triggered when: User attempts to create resource that already exists
    */
   DUPLICATE_RESOURCE = 'DUPLICATE_RESOURCE',
 
   /**
-   * 존재하지 않는 리소스 접근
-   * 예: 삭제된 스토어 조회 시도
+   * Resource not found
+   * Triggered when: User attempts to access non-existent resource
    */
   RESOURCE_NOT_FOUND = 'RESOURCE_NOT_FOUND',
 
   /**
-   * 비즈니스 규칙 위반
-   * 예: 재고 부족 상태에서 주문 시도
+   * Business rule violation
+   * Triggered when: User action violates business logic constraints
    */
   INVALID_BUSINESS_LOGIC = 'INVALID_BUSINESS_LOGIC',
 
   /**
-   * 느린 쿼리 감지 (1초 이상)
-   * 성능 모니터링 및 최적화 대상
+   * Slow database query detected
+   * Triggered when: Query execution time exceeds threshold (default: 1000ms)
    */
   SLOW_QUERY = 'SLOW_QUERY',
 
   /**
-   * 로그인 성공
-   * 예: 사용자가 올바른 이메일/비밀번호로 로그인
+   * User authenticated successfully
+   * Triggered when: User logs in with valid credentials
    */
   AUTHENTICATION_SUCCESS = 'AUTHENTICATION_SUCCESS',
 
   /**
-   * 로그인 실패
-   * 예: 존재하지 않는 이메일, 잘못된 비밀번호
+   * Authentication failed due to invalid credentials
+   * Triggered when: User provides incorrect email or password
    */
   AUTHENTICATION_FAILURE = 'AUTHENTICATION_FAILURE',
 
   /**
-   * 토큰 갱신 성공
-   * 예: Refresh Token을 사용한 Access Token 갱신
+   * Access token refreshed successfully
+   * Triggered when: Refresh token is used to obtain new access token
    */
   TOKEN_REFRESH_SUCCESS = 'TOKEN_REFRESH_SUCCESS',
 
   /**
-   * 유효하지 않은 토큰
-   * 예: 존재하지 않거나 이미 무효화된 토큰
+   * Invalid authentication token provided
+   * Triggered when: Token is malformed, revoked, or doesn't exist
    */
   TOKEN_INVALID = 'TOKEN_INVALID',
 
   /**
-   * 만료된 토큰
-   * 예: 유효 기간이 지난 Refresh Token
+   * Authentication token has expired
+   * Triggered when: Token validity period has elapsed
    */
   TOKEN_EXPIRED = 'TOKEN_EXPIRED',
 
   /**
-   * 로그아웃 성공
-   * 예: 사용자가 명시적으로 로그아웃
+   * User logged out successfully
+   * Triggered when: User explicitly logs out
    */
   LOGOUT_SUCCESS = 'LOGOUT_SUCCESS',
 
   /**
-   * 사용자 회원가입 성공
-   * 예: 새로운 사용자가 가입 완료
+   * New user account created successfully
+   * Triggered when: User completes registration process
    */
   USER_CREATED = 'USER_CREATED',
 
   /**
-   * 사용자 프로필 수정 성공
-   * 예: 이름, 이미지 변경
+   * User profile updated
+   * Triggered when: User modifies profile information (name, image, etc.)
    */
   USER_PROFILE_UPDATED = 'USER_PROFILE_UPDATED',
 
   /**
-   * 사용자 비밀번호 변경
-   * 예: 비밀번호 변경 완료 (보안 이벤트)
+   * User password changed successfully
+   * Triggered when: User updates password (security event)
    */
   USER_PASSWORD_CHANGED = 'USER_PASSWORD_CHANGED',
 
   /**
-   * 사용자 회원 탈퇴
-   * 예: 계정 삭제 완료 (중요 이벤트)
+   * User account deleted
+   * Triggered when: User completes account deletion process
    */
   USER_DELETED = 'USER_DELETED',
 
   /**
-   * 사용자 등급 업그레이드
-   * 예: 누적 구매액 증가로 VIP 등급 상향
+   * User grade upgraded
+   * Triggered when: User cumulative purchase amount reaches upgrade threshold
    */
   USER_GRADE_UPGRADED = 'USER_GRADE_UPGRADED',
 
   /**
-   * 사용자 등급 다운그레이드
-   * 예: 시간 경과로 등급 하향 (미래 기능)
+   * User grade downgraded
+   * Triggered when: User grade expires or downgrade criteria met
    */
   USER_GRADE_DOWNGRADED = 'USER_GRADE_DOWNGRADED',
+
+  /**
+   * Global rate limit exceeded
+   * Triggered when: IP exceeds global API request limit
+   */
+  RATE_LIMIT_EXCEEDED = 'RATE_LIMIT_EXCEEDED',
+
+  /**
+   * Login rate limit exceeded (possible brute-force attempt)
+   * Triggered when: IP exceeds failed login attempt limit
+   */
+  RATE_LIMIT_LOGIN_EXCEEDED = 'RATE_LIMIT_LOGIN_EXCEEDED',
+
+  /**
+   * Refresh token rate limit exceeded (possible infinite refresh loop)
+   * Triggered when: IP exceeds refresh token request limit
+   */
+  RATE_LIMIT_REFRESH_EXCEEDED = 'RATE_LIMIT_REFRESH_EXCEEDED',
 }
