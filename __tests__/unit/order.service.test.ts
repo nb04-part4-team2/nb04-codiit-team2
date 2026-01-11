@@ -4,10 +4,13 @@ import { OrderStatus, PointHistoryType, Prisma, PrismaClient } from '@prisma/cli
 import { OrderRepository } from '@/domains/order/order.repository.js';
 import { OrderService } from '@/domains/order/order.service.js';
 import {
+  createExpiredOrderRawDataMock,
   createGetOrderMock,
   createGetPointHistoryMock,
   createGetProductsInfoMock,
   createGetUserInfoMock,
+  createOrderFromPaymentMock,
+  createOrderItemMock,
   createOrderServiceInputMock,
   createPaymentMock,
   createPointHistoryInputMock,
@@ -24,18 +27,19 @@ import {
   expectBuyerNotificationSend,
   expectCreateBuyerNotification,
   expectCreateSellerNotification,
-  expectDecreaseStock,
   expectFinalPrice,
   expectPointEarn,
   expectPointHistory,
   expectPointUsed,
   expectSellerNotificationSend,
-  expectUpdateUserGrade,
-  setupCreateOrderScenario,
-  setUpCreateOrderMockRepos,
   setupDeleteOrderScenario,
   expectBaseOrderDeleted,
   setUpDeleteOrderMockRepos,
+  setupOnlyCreateOrderScenario,
+  setUpCreateOnlyOrderMockRepos,
+  setupOrderTxScenario,
+  setUpOrderTxMockRepos,
+  expectBaseOrderTx,
 } from '../mocks/order.helper.js';
 import { SseManager } from '@/common/utils/sse.manager.js';
 import {
@@ -44,6 +48,7 @@ import {
   InternalServerError,
   NotFoundError,
 } from '@/common/utils/errors.js';
+import { createSizeMock } from '../mocks/cart.mock.js';
 
 describe('OrderService', () => {
   const buyerId = 'buyer-id-1';
@@ -83,6 +88,7 @@ describe('OrderService', () => {
       // given
       const getOrderOutput = createGetOrderMock({
         buyerId: userId,
+        payments: [createPaymentMock()],
       });
       mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
 
@@ -105,6 +111,7 @@ describe('OrderService', () => {
       // given
       const getOrderOutput = createGetOrderMock({
         buyerId: otherId,
+        payments: [createPaymentMock()],
       });
       mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
 
@@ -126,7 +133,7 @@ describe('OrderService', () => {
         skip: (input.page - 1) * input.limit,
         take: input.limit,
       };
-      const getOrderOutput = createGetOrderMock();
+      const getOrderOutput = createGetOrderMock({ payments: [createPaymentMock()] });
       const getOrdersOutput = [getOrderOutput];
 
       mockOrderRepo.findMany.mockResolvedValue(getOrdersOutput);
@@ -143,21 +150,25 @@ describe('OrderService', () => {
   });
   // 목 데이터들을 각 테스트 마다 너무 많이 만들어줘야하는 상황
   // object mother 패턴 적용 (학습 필요)
-  describe('주문 생성', () => {
-    it('주문 성공 (단일 상품, 포인트 사용 x, 알림 발송 x, 할인 x)', async () => {
+  describe('주문 생성 (주문, 주문 아이템만 생성)', () => {
+    it('주문 성공 (할인 x)', async () => {
       // given
-      const scenario = setupCreateOrderScenario({
+      const scenario = setupOnlyCreateOrderScenario({
         orderItems: [
+          createScenarioItem({
+            stockQuantity: 10,
+            itemPrice: 10000,
+          }),
           createScenarioItem({
             stockQuantity: 10,
             itemPrice: 10000,
           }),
         ],
       });
-      const { input, mocks } = scenario;
-      // mockRepo
-      // 기본 mockRepo 세팅
-      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
+      const { input, mocks, verify } = scenario;
+
+      // mock Repo
+      setUpCreateOnlyOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -170,174 +181,20 @@ describe('OrderService', () => {
         mockPrisma,
         scenario,
       });
-      // 포인트 적립 검증
-      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 히스토리 검증
-      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
-      // 재고 감소 검증
-      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
-      // 유저 등급 업데이트 검증
-      expectUpdateUserGrade({ mockUserService });
       // 상품 최종 가격 검증
-      expectFinalPrice(scenario, 10000);
+      expect(verify.finalPrice).toBe(20000);
     });
-    it('주문 성공 (다중 상품, 포인트 사용 x, 알림 발송 x, 할인 x)', async () => {
-      // given
-      const scenario = setupCreateOrderScenario({
-        orderItems: [
-          createScenarioItem({
-            stockQuantity: 10,
-            itemPrice: 10000,
-          }),
-          createScenarioItem({
-            productId: 'product-id-2',
-            sizeId: 2,
-            quantity: 2,
-            stockQuantity: 10,
-            itemPrice: 10000,
-          }),
-        ],
-      });
-      const { input, mocks } = scenario;
-      // mockRepo
-      // 기본 mockRepo 세팅
-      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
-
-      // when
-      const result = await mockOrderService.createOrder(input);
-
-      // then
-      // 기본 주문 완료 검증
-      expectBaseOrderCreated({
-        result,
-        mockOrderRepo,
-        mockPrisma,
-        scenario,
-      });
-      // 포인트 적립 검증
-      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 히스토리 검증
-      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
-      // 재고 감소 검증
-      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
-      // 유저 등급 업데이트 검증
-      expectUpdateUserGrade({ mockUserService });
-      // 상품 최종 가격 검증
-      expectFinalPrice(scenario, 30000);
-    });
-    it('주문 성공 (다중 상품, 포인트 사용 O, 알림 발송 x, 할인 x)', async () => {
-      // given
-      const scenario = setupCreateOrderScenario({
-        usePoint: 1000,
-        orderItems: [
-          createScenarioItem({
-            stockQuantity: 10,
-            itemPrice: 10000,
-          }),
-          createScenarioItem({
-            productId: 'product-id-2',
-            sizeId: 2,
-            quantity: 2,
-            stockQuantity: 10,
-            itemPrice: 10000,
-          }),
-        ],
-      });
-      const { input, mocks } = scenario;
-      // mockRepo
-      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
-
-      // when
-      const result = await mockOrderService.createOrder(input);
-
-      // then
-      // 기본 주문 완료 검증
-      expectBaseOrderCreated({
-        result,
-        mockOrderRepo,
-        mockPrisma,
-        scenario,
-      });
-      // 포인트 사용 검증
-      expectPointUsed({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 적립 검증
-      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 히스토리 검증
-      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
-      // 재고 감소 검증
-      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
-      // 유저 등급 업데이트 검증
-      expectUpdateUserGrade({ mockUserService });
-      // 상품 최종 가격 검증
-      expectFinalPrice(scenario, 29000);
-    });
-    it('주문 성공 (다중 상품, 포인트 사용 O, 알림 발송 O, 할인 x)', async () => {
-      // given
-      const scenario = setupCreateOrderScenario({
-        usePoint: 1000,
-        orderItems: [
-          createScenarioItem({
-            stockQuantity: 1, // 1개 사면 품절되는 상황 발생 -> 알림 발송
-            itemPrice: 10000,
-          }),
-          createScenarioItem({
-            productId: 'product-id-2',
-            sizeId: 2,
-            quantity: 2,
-            stockQuantity: 10,
-            itemPrice: 10000,
-          }),
-        ],
-      });
-      const { input, mocks } = scenario;
-      // mockRepo
-      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
-
-      // when
-      const result = await mockOrderService.createOrder(input);
-
-      // then
-      // 시나리오 생성하는 시점에 비즈니스 로직 흐름에 맞게 데이터를 고정해둬서 검증 순서는 상관 없음
-      // 기본 주문 완료 검증
-      expectBaseOrderCreated({
-        result,
-        mockOrderRepo,
-        mockPrisma,
-        scenario,
-      });
-      // 포인트 사용 검증
-      expectPointUsed({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 적립 검증
-      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 히스토리 검증
-      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
-      // 재고 감소 검증
-      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
-      // 판매자 알림 생성 검증
-      expectCreateSellerNotification({ mockNotificationService, mockPrisma, scenario });
-      // 장바구니 유저 알림 생성 검증
-      expectCreateBuyerNotification({ mockNotificationService, mockPrisma, scenario });
-      // 판매자 알림 발송 검증
-      expectSellerNotificationSend({ mockSseManager, scenario });
-      // 장바구니 유저 알림 발송 검증
-      expectBuyerNotificationSend({ mockSseManager, scenario });
-      // 유저 등급 업데이트 검증
-      expectUpdateUserGrade({ mockUserService });
-      // 상품 최종 가격 검증
-      expectFinalPrice(scenario, 29000);
-    });
-    it('주문 성공 (다중 상품, 포인트 사용 O, 알림 발송 O, 할인(기간 할인) O)', async () => {
+    it('주문 성공 (할인(기간 할인) O)', async () => {
       // given
       const now = new Date();
       const yesterday = new Date(now);
       yesterday.setDate(now.getDate() - 1);
       const tomorrow = new Date(now);
       tomorrow.setDate(now.getDate() + 1);
-      const scenario = setupCreateOrderScenario({
-        usePoint: 1000,
+      const scenario = setupOnlyCreateOrderScenario({
         orderItems: [
           createScenarioItem({
-            stockQuantity: 1, // 1개 사면 품절되는 상황 발생 -> 알림 발송
+            stockQuantity: 10,
             itemPrice: 10000,
           }),
           createScenarioItem({
@@ -352,15 +209,15 @@ describe('OrderService', () => {
           }),
         ],
       });
-      const { input, mocks } = scenario;
-      // mockRepo
-      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
+      const { input, mocks, verify } = scenario;
+
+      // mock Repo
+      setUpCreateOnlyOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
 
       // then
-      // 시나리오 생성하는 시점에 비즈니스 로직 흐름에 맞게 데이터를 고정해둬서 검증 순서는 상관 없음
       // 기본 주문 완료 검증
       expectBaseOrderCreated({
         result,
@@ -368,34 +225,15 @@ describe('OrderService', () => {
         mockPrisma,
         scenario,
       });
-      // 포인트 사용 검증
-      expectPointUsed({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 적립 검증
-      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 히스토리 검증
-      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
-      // 재고 감소 검증
-      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
-      // 판매자 알림 생성 검증
-      expectCreateSellerNotification({ mockNotificationService, mockPrisma, scenario });
-      // 장바구니 유저 알림 생성 검증
-      expectCreateBuyerNotification({ mockNotificationService, mockPrisma, scenario });
-      // 판매자 알림 발송 검증
-      expectSellerNotificationSend({ mockSseManager, scenario });
-      // 장바구니 유저 알림 발송 검증
-      expectBuyerNotificationSend({ mockSseManager, scenario });
-      // 유저 등급 업데이트 검증
-      expectUpdateUserGrade({ mockUserService });
       // 상품 최종 가격 검증
-      expectFinalPrice(scenario, 27000); // 포인트 사용, 할인 적용된 최종 값 검증
+      expect(verify.finalPrice).toBe(28000);
     });
-    it('주문 성공 (다중 상품, 포인트 사용 O, 알림 발송 O, 할인(상시 할인) O)', async () => {
+    it('주문 성공 (할인(상시 할인) O)', async () => {
       // given
-      const scenario = setupCreateOrderScenario({
-        usePoint: 1000,
+      const scenario = setupOnlyCreateOrderScenario({
         orderItems: [
           createScenarioItem({
-            stockQuantity: 1, // 1개 사면 품절되는 상황 발생 -> 알림 발송
+            stockQuantity: 10,
             itemPrice: 10000,
           }),
           createScenarioItem({
@@ -404,19 +242,19 @@ describe('OrderService', () => {
             quantity: 2,
             stockQuantity: 10,
             itemPrice: 10000,
-            discountRate: 20, // 20% 할인
+            discountRate: 10,
           }),
         ],
       });
-      const { input, mocks } = scenario;
-      // mockRepo
-      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
+      const { input, mocks, verify } = scenario;
+
+      // mock Repo
+      setUpCreateOnlyOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
 
       // then
-      // 시나리오 생성하는 시점에 비즈니스 로직 흐름에 맞게 데이터를 고정해둬서 검증 순서는 상관 없음
       // 기본 주문 완료 검증
       expectBaseOrderCreated({
         result,
@@ -424,26 +262,8 @@ describe('OrderService', () => {
         mockPrisma,
         scenario,
       });
-      // 포인트 사용 검증
-      expectPointUsed({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 적립 검증
-      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 히스토리 검증
-      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
-      // 재고 감소 검증
-      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
-      // 판매자 알림 생성 검증
-      expectCreateSellerNotification({ mockNotificationService, mockPrisma, scenario });
-      // 장바구니 유저 알림 생성 검증
-      expectCreateBuyerNotification({ mockNotificationService, mockPrisma, scenario });
-      // 판매자 알림 발송 검증
-      expectSellerNotificationSend({ mockSseManager, scenario });
-      // 장바구니 유저 알림 발송 검증
-      expectBuyerNotificationSend({ mockSseManager, scenario });
-      // 유저 등급 업데이트 검증
-      expectUpdateUserGrade({ mockUserService });
       // 상품 최종 가격 검증
-      expectFinalPrice(scenario, 25000);
+      expect(verify.finalPrice).toBe(28000);
     });
     it('주문 성공 (할인 기간이 지난 상품은 원가로 계산된다.)', async () => {
       // 1. 기간이 지난 날짜 생성
@@ -456,7 +276,7 @@ describe('OrderService', () => {
       pastEnd.setDate(now.getDate() - 1);
 
       // 2. 시나리오 생성
-      const scenario = setupCreateOrderScenario({
+      const scenario = setupOnlyCreateOrderScenario({
         orderItems: [
           createScenarioItem({
             itemPrice: 10000,
@@ -467,9 +287,9 @@ describe('OrderService', () => {
         ],
       });
 
-      const { input, mocks } = scenario;
+      const { input, mocks, verify } = scenario;
       // mockRepo
-      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
+      setUpCreateOnlyOrderMockRepos({ mockOrderRepo, mockData: mocks });
 
       // when
       const result = await mockOrderService.createOrder(input);
@@ -483,51 +303,8 @@ describe('OrderService', () => {
         mockPrisma,
         scenario,
       });
-      // 포인트 적립 검증
-      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
-      // 포인트 히스토리 검증
-      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
-      // 재고 감소 검증
-      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
-      // 유저 등급 업데이트 검증
-      expectUpdateUserGrade({ mockUserService });
       // 상품 최종 가격 검증
-      expectFinalPrice(scenario, 10000);
-    });
-    it('주문 성공 (최종 결제 금액이 0원이면 포인트도 0원 적립된다.)', async () => {
-      const scenario = setupCreateOrderScenario({
-        usePoint: 5000,
-        orderItems: [
-          createScenarioItem({
-            itemPrice: 10000,
-            discountRate: 50, // 50% 할인 설정
-          }),
-        ],
-      }); // 50% 할인에 남은 금액 전부 포인트 차감 처리 하는 상황 가정
-      const { input, mocks } = scenario;
-      // mockRepo
-      setUpCreateOrderMockRepos({ mockOrderRepo, mockData: mocks });
-
-      // when
-      const result = await mockOrderService.createOrder(input);
-
-      // then
-      // 시나리오 생성하는 시점에 비즈니스 로직 흐름에 맞게 데이터를 고정해둬서 검증 순서는 상관 없음
-      // 기본 주문 완료 검증
-      expectBaseOrderCreated({
-        result,
-        mockOrderRepo,
-        mockPrisma,
-        scenario,
-      });
-      // 포인트가 의도적으로 적립되지 않는 상황 검증
-      expect(mockOrderRepo.increasePoint).toHaveBeenCalledTimes(0);
-      // 재고 감소 검증
-      expectDecreaseStock({ mockOrderRepo, mockPrisma, scenario });
-      // 유저 등급 업데이트 검증
-      expectUpdateUserGrade({ mockUserService });
-      // 상품 최종 가격 검증
-      expectFinalPrice(scenario, 0);
+      expect(verify.finalPrice).toBe(10000);
     });
     it('주문 실패 (유저가 보유한 포인트보다 사용하려는 포인트가 많은 경우 BadRequestError 발생)', async () => {
       // given
@@ -538,46 +315,6 @@ describe('OrderService', () => {
       });
       const errorUser = createGetUserInfoMock({ point: 1000 });
       mockOrderRepo.findUserInfo.mockResolvedValue(errorUser);
-      // when
-      // then
-      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
-    });
-    it('주문 실패 (상품 총액 보다 사용하려는 포인트가 많을 경우 BadRequestError 발생)', async () => {
-      // given
-      // 성공 시나리오대로 생성한 후 실패 유도
-      const { input, mocks } = setupCreateOrderScenario({
-        itemsPrice: 5000,
-        usePoint: 0,
-      });
-      input.usePoint = 100000; // 실패 상황 설정
-      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
-      mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
-
-      // when
-      // then
-      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
-    });
-    it('주문 실패 (재고보다 주문 수량이 많은 경우 BadRequestError 발생)', async () => {
-      // given
-      // 성공 시나리오대로 생성한 후 실패 유도
-      const { input, mocks } = setupCreateOrderScenario();
-      input.orderItems[0].quantity = 50;
-      // mockRepo
-      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
-      mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
-
-      // when
-      // then
-      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
-    });
-    it('주문 실패 (존재하지 않는 사이즈로 주문한 경우 BadRequestError 발생)', async () => {
-      // given
-      const { input, mocks } = setupCreateOrderScenario();
-      input.orderItems[0].sizeId = 9999;
-
-      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
-      mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
-
       // when
       // then
       await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
@@ -599,20 +336,444 @@ describe('OrderService', () => {
       // then
       await expect(mockOrderService.createOrder(input)).rejects.toThrow(NotFoundError);
     });
-    it('주문 실패 (트랜잭션 실패시 알림 미발송)', async () => {
+    it('주문 실패 (재고보다 주문 수량이 많은 경우 BadRequestError 발생)', async () => {
       // given
-      const { input, mocks } = setupCreateOrderScenario();
-
+      // 성공 시나리오대로 생성한 후 실패 유도
+      const { input, mocks } = setupOnlyCreateOrderScenario();
+      input.orderItems[0].quantity = 50;
+      // mockRepo
       mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
       mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
-      mockOrderRepo.createOrder.mockRejectedValue(new BadRequestError('주문 실패'));
+      mockOrderRepo.reserveStock.mockResolvedValue(0);
 
       // when
       // then
       await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
-      expect(mockSseManager.sendMessage).not.toHaveBeenCalled();
+    });
+    it('주문 실패 (상품 총액 보다 사용하려는 포인트가 많을 경우 BadRequestError 발생)', async () => {
+      // given
+      // 성공 시나리오대로 생성한 후 실패 유도
+      const { input, mocks } = setupOnlyCreateOrderScenario({
+        itemsPrice: 5000,
+        usePoint: 0,
+      });
+      input.usePoint = 100000; // 실패 상황 설정
+      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
+      mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
+
+      // when
+      // then
+      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
+    });
+    it('주문 실패 (존재하지 않는 사이즈로 주문한 경우 BadRequestError 발생)', async () => {
+      // given
+      const { input, mocks } = setupOnlyCreateOrderScenario();
+      input.orderItems[0].sizeId = 9999;
+
+      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
+      mockOrderRepo.findManyProducts.mockResolvedValue(mocks.productsInfoOutput);
+
+      // when
+      // then
+      await expect(mockOrderService.createOrder(input)).rejects.toThrow(BadRequestError);
     });
   });
+  describe('주문 확정 (주문 트랜잭션 처리)', () => {
+    let paymentId: string;
+    beforeEach(() => {
+      paymentId = 'payment-id-1';
+    });
+    it('주문 성공 (단일 상품, 포인트 사용 x, 알림 발송 x)', async () => {
+      // given
+      const scenario = setupOrderTxScenario({
+        order: createOrderFromPaymentMock({
+          orderItems: [
+            createOrderItemMock({
+              quantity: 1,
+              price: 10000,
+            }),
+          ],
+        }),
+      });
+      const { mocks } = scenario;
+      // mockRepo
+      // 기본 mockRepo 세팅
+      setUpOrderTxMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      const result = await mockOrderService.confirmPayment(paymentId);
+
+      // then
+      // 기본 검증
+      expectBaseOrderTx({
+        mockNotificationService,
+        mockSseManager,
+        mockOrderRepo,
+        mockPrisma,
+        mockUserService,
+        scenario,
+        result,
+        paymentId,
+      });
+      // 포인트 적립 검증
+      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
+      // 포인트 히스토리 검증
+      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
+      // 상품 최종 가격 검증
+      expectFinalPrice(scenario, 10000);
+    });
+    it('주문 성공 (다중 상품, 포인트 사용 x, 알림 발송 x)', async () => {
+      // given
+      const scenario = setupOrderTxScenario({
+        order: createOrderFromPaymentMock({
+          orderItems: [
+            createOrderItemMock({
+              quantity: 1,
+              price: 10000,
+            }),
+            createOrderItemMock({
+              price: 10000,
+              productId: 'product-id-2',
+              size: createSizeMock({ id: 2 }),
+              quantity: 2,
+            }),
+          ],
+        }),
+      });
+      const { mocks } = scenario;
+      // mockRepo
+      // 기본 mockRepo 세팅
+      setUpOrderTxMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      const result = await mockOrderService.confirmPayment(paymentId);
+
+      // then
+      expectBaseOrderTx({
+        mockNotificationService,
+        mockSseManager,
+        mockOrderRepo,
+        mockPrisma,
+        mockUserService,
+        scenario,
+        result,
+        paymentId,
+      });
+      // 포인트 적립 검증
+      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
+      // 포인트 히스토리 검증
+      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
+      // 상품 최종 가격 검증
+      expectFinalPrice(scenario, 30000);
+    });
+    it('주문 성공 (다중 상품, 포인트 사용 O, 알림 발송 x)', async () => {
+      // given
+      const scenario = setupOrderTxScenario({
+        order: createOrderFromPaymentMock({
+          usePoint: 1000,
+          orderItems: [
+            createOrderItemMock({
+              quantity: 1,
+              price: 10000,
+            }),
+            createOrderItemMock({
+              price: 10000,
+              productId: 'product-id-2',
+              size: createSizeMock({ id: 2 }),
+              quantity: 2,
+            }),
+          ],
+        }),
+      });
+      const { mocks } = scenario;
+      // mockRepo
+      // 기본 mockRepo 세팅
+      setUpOrderTxMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      const result = await mockOrderService.confirmPayment(paymentId);
+
+      // then
+      expectBaseOrderTx({
+        mockNotificationService,
+        mockSseManager,
+        mockOrderRepo,
+        mockPrisma,
+        mockUserService,
+        scenario,
+        result,
+        paymentId,
+      });
+      // 포인트 사용 검증
+      expectPointUsed({ mockOrderRepo, mockPrisma, scenario });
+      // 포인트 적립 검증
+      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
+      // 포인트 히스토리 검증
+      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
+      // 상품 최종 가격 검증
+      expectFinalPrice(scenario, 29000);
+    });
+    it('주문 성공 (다중 상품, 포인트 사용 O, 알림 발송 O)', async () => {
+      // given
+      const scenario = setupOrderTxScenario({
+        stockQuantity: 1,
+        order: createOrderFromPaymentMock({
+          usePoint: 1000,
+          orderItems: [
+            createOrderItemMock({
+              // 1개 사면 품절되는 상황 발생 -> 알림 발송
+              price: 10000,
+            }),
+            createOrderItemMock({
+              productId: 'product-id-2',
+              size: createSizeMock({ id: 2 }),
+              quantity: 1,
+              price: 10000,
+            }),
+          ],
+        }),
+      });
+      const { mocks } = scenario;
+      // mockRepo
+      // 기본 mockRepo 세팅
+      setUpOrderTxMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      const result = await mockOrderService.confirmPayment(paymentId);
+
+      // then
+      expectBaseOrderTx({
+        mockNotificationService,
+        mockSseManager,
+        mockOrderRepo,
+        mockPrisma,
+        mockUserService,
+        scenario,
+        result,
+        paymentId,
+      });
+      // 포인트 사용 검증
+      expectPointUsed({ mockOrderRepo, mockPrisma, scenario });
+      // 포인트 적립 검증
+      expectPointEarn({ mockOrderRepo, mockPrisma, scenario });
+      // 포인트 히스토리 검증
+      expectPointHistory({ mockOrderRepo, mockPrisma, scenario });
+      // 판매자 알림 생성 검증
+      expectCreateSellerNotification({ mockNotificationService, mockPrisma, scenario });
+      // 장바구니에 담은 유저 알림 생성 검증
+      expectCreateBuyerNotification({ mockNotificationService, mockPrisma, scenario });
+      // 판매자 알림 발송 검증
+      expectSellerNotificationSend({ mockSseManager, scenario });
+      // 장바구니 유저 알림 발송 검증
+      expectBuyerNotificationSend({ mockSseManager, scenario });
+      // 상품 최종 가격 검증
+      expectFinalPrice(scenario, 19000);
+    });
+    it('주문 성공 (최종 결제 금액이 0원이면 포인트도 0원 적립된다.)', async () => {
+      const scenario = setupOrderTxScenario({
+        userPoint: 10000,
+        order: createOrderFromPaymentMock({
+          usePoint: 5000,
+          orderItems: [
+            createOrderItemMock({
+              price: 5000, // 이 시점에는 이미 할인이 적용된 가격이 있어야함
+            }),
+          ],
+        }),
+      });
+      scenario.verify.decreasePointHistoryRepoInput!.amount = 5000;
+
+      const { mocks } = scenario;
+      // mockRepo
+      // 기본 mockRepo 세팅
+      setUpOrderTxMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      const result = await mockOrderService.confirmPayment(paymentId);
+
+      // then
+      expectBaseOrderTx({
+        mockNotificationService,
+        mockSseManager,
+        mockOrderRepo,
+        mockPrisma,
+        mockUserService,
+        scenario,
+        result,
+        paymentId,
+      });
+      // 적립 자체가 안되어야함
+      expect(mockOrderRepo.increasePoint).not.toHaveBeenCalled();
+      // 포인트 사용 검증
+      expectPointUsed({ mockOrderRepo, mockPrisma, scenario });
+      // 포인트 히스토리 검증 (사용 내역만)
+      expect(mockOrderRepo.createPointHistory).toHaveBeenCalledTimes(1);
+      expect(mockOrderRepo.createPointHistory).toHaveBeenCalledWith(
+        scenario.verify.decreasePointHistoryRepoInput,
+        mockPrisma,
+      );
+      // 상품 최종 가격 검증
+      expectFinalPrice(scenario, 0);
+    });
+    it('주문 실패 (유저가 보유한 포인트보다 사용하려는 포인트가 많은 경우 BadRequestError 발생)', async () => {
+      // given
+      const scenario = setupOrderTxScenario({
+        userPoint: 1000,
+        order: createOrderFromPaymentMock({
+          usePoint: 5000,
+          orderItems: [
+            createOrderItemMock({
+              price: 100000,
+            }),
+          ],
+        }),
+      });
+      const { mocks } = scenario;
+
+      mockOrderRepo.findPaymentWithOrder.mockResolvedValue(mocks.orderFromPaymentOutput);
+
+      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
+
+      // when
+      // then
+      await expect(mockOrderService.confirmPayment(paymentId)).rejects.toThrow(BadRequestError);
+    });
+    it('주문 실패 (재고보다 주문 수량이 많은 경우 BadRequestError 발생)', async () => {
+      // given
+      const scenario = setupOrderTxScenario({
+        userPoint: 0,
+        order: createOrderFromPaymentMock({
+          orderItems: [
+            createOrderItemMock({
+              quantity: 100,
+            }),
+          ],
+        }),
+      });
+      const { mocks } = scenario;
+
+      mockOrderRepo.findPaymentWithOrder.mockResolvedValue(mocks.orderFromPaymentOutput);
+      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
+      mockOrderRepo.findStatusById.mockResolvedValue(mocks.orderStatus);
+      mockOrderRepo.findPaymentStatusById.mockResolvedValue(mocks.paymentStatus);
+      mockOrderRepo.decreaseStock.mockResolvedValue(0);
+
+      // when
+      // then
+      await expect(mockOrderService.confirmPayment(paymentId)).rejects.toThrow(BadRequestError);
+    });
+    it('주문 실패 (트랜잭션 실패시 알림 미발송)', async () => {
+      // given
+      const scenario = setupOrderTxScenario({
+        order: createOrderFromPaymentMock({
+          orderItems: [
+            createOrderItemMock({
+              productId: 'error-product',
+            }),
+          ],
+        }),
+      });
+      const { mocks } = scenario;
+
+      mockOrderRepo.findPaymentWithOrder.mockResolvedValue(mocks.orderFromPaymentOutput);
+      mockOrderRepo.findUserInfo.mockResolvedValue(mocks.userInfoOutput);
+      mockOrderRepo.findStatusById.mockResolvedValue(mocks.orderStatus);
+      mockOrderRepo.findPaymentStatusById.mockRejectedValue(new BadRequestError());
+
+      // when
+      // then
+      await expect(mockOrderService.confirmPayment(paymentId)).rejects.toThrow(BadRequestError);
+      expect(mockSseManager.sendMessage).not.toHaveBeenCalled();
+    });
+    it('중복 호출 방어 (이미 결제 완료된 주문인 경우 추가 로직 수행없이 종료)', async () => {
+      // given
+      const { mocks } = setupOrderTxScenario({
+        orderStatus: { status: OrderStatus.CompletedPayment },
+      });
+      setUpOrderTxMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      const result = await mockOrderService.confirmPayment(paymentId);
+
+      // then
+      expect(result).toBeUndefined();
+      expect(mockOrderRepo.decreasePoint).not.toHaveBeenCalled();
+      expect(mockOrderRepo.decreaseStock).not.toHaveBeenCalled();
+      expect(mockOrderRepo.increasePoint).not.toHaveBeenCalled();
+    });
+    it('동시성 제어 (이미 취소된 주문인 경우 추가 로직 수행 없이 종료)', async () => {
+      // given
+      const { mocks } = setupOrderTxScenario({
+        orderStatus: { status: OrderStatus.Cancelled },
+      });
+      setUpOrderTxMockRepos({ mockOrderRepo, mockData: mocks });
+
+      // when
+      const result = await mockOrderService.confirmPayment(paymentId);
+
+      // then
+      expect(result).toBeUndefined();
+      expect(mockOrderRepo.decreasePoint).not.toHaveBeenCalled();
+      expect(mockOrderRepo.decreaseStock).not.toHaveBeenCalled();
+      expect(mockOrderRepo.increasePoint).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('주문 만료', () => {
+    it('주문 만료 처리 성공', async () => {
+      // given
+      const expiredOrder = createExpiredOrderRawDataMock({
+        id: 'expired-order-1',
+        orderItems: [
+          { productId: 'product-1', sizeId: 1, quantity: 2 },
+          { productId: 'product-2', sizeId: 2, quantity: 1 },
+        ],
+      });
+      mockOrderRepo.findExpiredWaitingOrders.mockResolvedValue([expiredOrder]);
+
+      // when
+      await mockOrderService.expireWaitingOrder();
+
+      // then
+      expect(mockOrderRepo.findExpiredWaitingOrders).toHaveBeenCalledTimes(1);
+      expect(mockOrderRepo.restoreReservedStock).toHaveBeenCalledTimes(2);
+      expect(mockOrderRepo.restoreReservedStock).toHaveBeenCalledWith(
+        {
+          productId: 'product-1',
+          sizeId: 1,
+          quantity: 2,
+        },
+        mockPrisma,
+      );
+      expect(mockOrderRepo.restoreReservedStock).toHaveBeenCalledWith(
+        {
+          productId: 'product-2',
+          sizeId: 2,
+          quantity: 1,
+        },
+        mockPrisma,
+      );
+      expect(mockOrderRepo.updateStatus).toHaveBeenCalledWith(
+        'expired-order-1',
+        OrderStatus.Cancelled,
+        mockPrisma,
+      );
+    });
+
+    it('만료된 주문이 없는 경우 로직 수행 없이 종료', async () => {
+      // given
+      mockOrderRepo.findExpiredWaitingOrders.mockResolvedValue([]);
+
+      // when
+      await mockOrderService.expireWaitingOrder();
+
+      // then
+      expect(mockOrderRepo.findExpiredWaitingOrders).toHaveBeenCalledTimes(1);
+      expect(mockOrderRepo.restoreReservedStock).not.toHaveBeenCalled();
+      expect(mockOrderRepo.updateStatus).not.toHaveBeenCalled();
+    });
+  });
+
   describe('주문 수정', () => {
     it('주문 수정 성공', async () => {
       // given
@@ -624,6 +785,7 @@ describe('OrderService', () => {
         phoneNumber: input.phone,
         address: input.address,
         name: input.name,
+        payments: [createPaymentMock()],
       });
       const { userId: _userId, ...repoInput } = input;
 
@@ -700,7 +862,7 @@ describe('OrderService', () => {
     });
   });
   describe('주문 삭제', () => {
-    it('주문 취소 (사용한 포인트 x, 포인트 적립 x)', async () => {
+    it('주문 취소 성공 (사용한 포인트 x, 포인트 적립 x)', async () => {
       // given
       const { mocks, verify } = setupDeleteOrderScenario();
 
@@ -713,7 +875,7 @@ describe('OrderService', () => {
       // 기본 주문 취소 로직 검증
       expectBaseOrderDeleted({ mockOrderRepo, mockPrisma, mockUserService, mocks, verify });
     });
-    it('주문 취소 (사용한 포인트 x, 포인트 적립 O)', async () => {
+    it('주문 취소 성공 (사용한 포인트 x, 포인트 적립 O)', async () => {
       // given
       const { mocks, verify } = setupDeleteOrderScenario({
         userId,
@@ -751,7 +913,7 @@ describe('OrderService', () => {
         mockPrisma,
       );
     });
-    it('주문 취소 (사용한 포인트 O, 포인트 적립 O)', async () => {
+    it('주문 취소 성공 (사용한 포인트 O, 포인트 적립 O)', async () => {
       // 기본 시나리오 + 주문 시 사용한 포인트 환불 + 적립 됐던 포인트 적립 취소
       // given
       const { mocks, verify } = setupDeleteOrderScenario({
@@ -807,6 +969,30 @@ describe('OrderService', () => {
         mockPrisma,
       );
     });
+    it('주문 취소 성공 (결제 전 취소인 경우 주문 만료 로직 호출)', async () => {
+      // given
+      const { mocks } = setupDeleteOrderScenario({
+        userId,
+        orderId,
+        usePoint: 1000,
+        orderStatus: { status: OrderStatus.WaitingPayment },
+      });
+      // 만료 로직이 호출되었는지만 판단
+      // 만료 로직 테스트는 별도로 진행
+      const expireSpy = jest
+        .spyOn(mockOrderService, 'expireWaitingOrder')
+        .mockResolvedValue(undefined);
+
+      mockOrderRepo.findById.mockResolvedValue(mocks.getOrderOutput);
+      mockOrderRepo.findStatusById.mockResolvedValue(mocks.orderStatus);
+
+      // when
+      await mockOrderService.deleteOrder(userId, orderId);
+
+      // then
+      expect(expireSpy).toHaveBeenCalledTimes(1);
+      expect(mockOrderRepo.increaseStock).not.toHaveBeenCalled();
+    });
     it('주문 취소 실패 (주문 정보 조회 결과가 없는 경우 NotFoundError 발생)', async () => {
       // given
       mockOrderRepo.findById.mockResolvedValue(null);
@@ -819,6 +1005,7 @@ describe('OrderService', () => {
       const getOrderOutput = createGetOrderMock({
         id: orderId,
         buyerId: otherId,
+        payments: [createPaymentMock({ status: 'completed' })],
       });
       mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
       // when
@@ -830,6 +1017,7 @@ describe('OrderService', () => {
       const getOrderOutput = createGetOrderMock({
         id: orderId,
         buyerId: userId,
+        payments: [createPaymentMock({ status: 'completed' })],
       });
       mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
       mockOrderRepo.findStatusById.mockResolvedValue(null);
@@ -839,29 +1027,28 @@ describe('OrderService', () => {
         InternalServerError,
       );
     });
-    it('주문 취소 실패 (결제 정보가 없는 경우 InternalServerError 발생)', async () => {
+    it('주문 취소 실패 (결제 정보가 없는 경우 BadRequestError 발생)', async () => {
       // given
       const getOrderOutput = createGetOrderMock({
         id: orderId,
         buyerId: userId,
+        payments: [createPaymentMock({ status: 'pending' })],
       });
-      const orderStatus = { status: OrderStatus.WaitingPayment };
+      const orderStatus = { status: OrderStatus.CompletedPayment };
       mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
       mockOrderRepo.findStatusById.mockResolvedValue(orderStatus);
       // when
       // then
-      await expect(mockOrderService.deleteOrder(userId, orderId)).rejects.toThrow(
-        InternalServerError,
-      );
+      await expect(mockOrderService.deleteOrder(userId, orderId)).rejects.toThrow(BadRequestError);
     });
     it('주문 취소 실패 (유저 정보 조회가 실패한 경우 InternalServerError 발생)', async () => {
       // given
       const getOrderOutput = createGetOrderMock({
         id: orderId,
         buyerId: userId,
-        payments: createPaymentMock(),
+        payments: [createPaymentMock({ status: 'completed' })],
       });
-      const orderStatus = { status: OrderStatus.WaitingPayment };
+      const orderStatus = { status: OrderStatus.CompletedPayment };
       mockOrderRepo.findById.mockResolvedValue(getOrderOutput);
       mockOrderRepo.findStatusById.mockResolvedValue(orderStatus);
       mockOrderRepo.findUserInfo.mockResolvedValue(null);
@@ -881,9 +1068,9 @@ describe('OrderService', () => {
       const getOrderOutput = createGetOrderMock({
         id: orderId,
         buyerId: userId,
-        payments: createPaymentMock(),
+        payments: [createPaymentMock({ status: 'completed' })],
       });
-      const orderStatus = { status: OrderStatus.WaitingPayment };
+      const orderStatus = { status: OrderStatus.CompletedPayment };
       const userInfoOutput = createGetUserInfoMock({
         point: 0,
       });
