@@ -40,6 +40,7 @@ export const createProductDetailMock = (
         productId: 'product-id-1',
         sizeId: 1,
         quantity: 10,
+        reservedQuantity: 0, // stock 도메인에 reservedQuantity 추가됨
         size: { id: 1, en: 'L', ko: '라지' },
       },
     ],
