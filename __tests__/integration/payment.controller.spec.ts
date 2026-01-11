@@ -12,6 +12,7 @@ const mockAxiosGet = jest.fn<(config?: unknown) => Promise<unknown>>();
 jest.unstable_mockModule('axios', () => ({
   __esModule: true,
   default: { post: mockAxiosPost, get: mockAxiosGet },
+  isAxiosError: jest.fn(),
 }));
 
 type TestClientModule = typeof import('../helpers/testClient.js');

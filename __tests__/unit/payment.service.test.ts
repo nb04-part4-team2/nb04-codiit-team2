@@ -19,6 +19,7 @@ const mockAxiosGet = jest.fn<(config?: unknown) => Promise<unknown>>();
 jest.unstable_mockModule('axios', () => ({
   __esModule: true,
   default: { post: mockAxiosPost, get: mockAxiosGet },
+  isAxiosError: jest.fn(),
 }));
 
 describe('PaymentService', () => {
@@ -180,7 +181,7 @@ describe('PaymentService', () => {
       expect(mockPaymentRepo.updatePayment).not.toHaveBeenCalled();
       expect(mockOrderService.confirmPayment).not.toHaveBeenCalled();
     });
-    it('결제 검증 에러 (결제 id가 불일치한 경우 BadRequestError 발생)', async () => {
+    it('결제 검증 에러 (결제 id가 불일치한 경우 즉시 종료)', async () => {
       mockAxiosGet.mockResolvedValue({
         data: {
           response: createGetPortonePaymentInfoMock({
@@ -189,16 +190,15 @@ describe('PaymentService', () => {
         },
       });
       // when
+      await mockPaymentService.paymentCallback(imp_uid, merchant_uid);
+
       // then
-      await expect(mockPaymentService.paymentCallback(imp_uid, merchant_uid)).rejects.toThrow(
-        BadRequestError,
-      );
       expect(mockPaymentRepo.updateFailed).toHaveBeenCalled();
       expect(mockPaymentRepo.getPaymentPrice).not.toHaveBeenCalled();
       expect(mockPaymentRepo.updatePayment).not.toHaveBeenCalled();
       expect(mockOrderService.confirmPayment).not.toHaveBeenCalled();
     });
-    it('결제 검증 에러 (결제 금액이 불일치한 경우 BadRequestError 발생)', async () => {
+    it('결제 검증 에러 (결제 금액이 불일치한 경우 즉시 종료)', async () => {
       mockAxiosGet.mockResolvedValue({
         data: {
           response: createGetPortonePaymentInfoMock({
@@ -210,10 +210,9 @@ describe('PaymentService', () => {
         price: 10000,
       });
       // when
+      await mockPaymentService.paymentCallback(imp_uid, merchant_uid);
+
       // then
-      await expect(mockPaymentService.paymentCallback(imp_uid, merchant_uid)).rejects.toThrow(
-        BadRequestError,
-      );
       expect(mockPaymentRepo.updateFailed).toHaveBeenCalled();
       expect(mockPaymentRepo.getPaymentPrice).toHaveBeenCalled();
       expect(mockPaymentRepo.getPaymentPrice).toHaveBeenCalledWith(merchant_uid);
