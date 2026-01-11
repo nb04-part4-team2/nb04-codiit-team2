@@ -26,6 +26,7 @@ import { notificationRouter } from '@/domains/notification/notification.router.j
 import dashboardRouter from '@/domains/dashboard/dashboard.router.js';
 import metadataRouter from '@/domains/metadata/metadata.router.js';
 import s3Router from '@/domains/s3/s3.router.js';
+import paymentRouter from '@/domains/payment/payment.router.js';
 
 // Swagger
 import swaggerUi from 'swagger-ui-express';
@@ -99,6 +100,7 @@ app.use('/api/notifications', notificationRouter);
 app.use('/api/dashboard', dashboardRouter);
 app.use('/api/metadata', metadataRouter);
 app.use('/api/s3', s3Router);
+app.use('/api/payment', paymentRouter);
 
 // Swagger UI
 app.use(
