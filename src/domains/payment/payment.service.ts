@@ -1,10 +1,11 @@
 import axios from 'axios';
-import { PaymentRepository } from '@/domains/payment/payment.repository..js';
 import { env } from '@/config/constants.js';
 import { BadRequestError, InternalServerError, NotFoundError } from '@/common/utils/errors.js';
 import { OrderStatus, PaymentMethod, PaymentProvider, PaymentStatus } from '@prisma/client';
 import { OrderService } from '@/domains/order/order.service.js';
 import { CreatePaymentServiceInput } from '@/domains/payment/payment.dto.js';
+import { PaymentRepository } from '@/domains/payment/payment.repository.js';
+import { logger } from '@/config/logger.js';
 
 export class PaymentService {
   constructor(
@@ -42,35 +43,28 @@ export class PaymentService {
     /**
      * STEP 1. 포트원 토큰 발급
      */
-    console.log('[WEBHOOK] 토큰 발급');
+    logger.info('[WEBHOOK] 토큰 발급');
     const token = await this.getPortoneToken();
 
     /**
      * STEP 2. 결제 단건 조회
      */
-    console.log('[WEBHOOK] 결제 단건 조회');
+    logger.info('[WEBHOOK] 결제 단건 조회');
     const { data } = await axios.get(`${this.PORTONE_BASE_URL}/payments/${imp_uid}`, {
       headers: { Authorization: token },
     });
 
     const payment = data.response;
 
-    console.log('[WEBHOOK] 결제 정보', {
-      imp_uid: payment.imp_uid,
-      merchant_uid: payment.merchant_uid,
-      status: payment.status,
-      amount: payment.amount,
-    });
-
     /**
      * STEP 3. 결제 상태 검증
      */
     if (payment.status === 'ready') {
-      console.log('[WEBHOOK] 결제 미완료 상태 → 무시');
+      logger.info('[WEBHOOK] 결제 미완료 상태 → 무시');
       return { message: '결제 대기 중' };
     }
     if (payment.status === 'failed') {
-      console.log('[WEBHOOK] 결제 실패');
+      logger.info('[WEBHOOK] 결제 실패');
       const failedInfo = {
         errorCode: '400',
         errorMessage: payment.fail_reason,
@@ -80,7 +74,7 @@ export class PaymentService {
       return { message: '결제에 실패했습니다' };
     }
     if (payment.status !== 'paid') {
-      console.log('[WEBHOOK] 비정상적 결제 상태 수신');
+      logger.info('[WEBHOOK] 비정상적 결제 상태 수신');
       return { message: '결제 완료 상태가 아닙니다.' };
     }
 
@@ -88,7 +82,7 @@ export class PaymentService {
      * STEP 4. 결제 id검증
      */
     if (payment.merchant_uid !== merchant_uid) {
-      console.error('[WEBHOOK ERROR] 결제 id 불일치');
+      logger.error('[WEBHOOK ERROR] 결제 id 불일치');
       // 결제 실패라는 데이터를 남김
       const failedInfo = {
         errorCode: '400',
@@ -104,9 +98,7 @@ export class PaymentService {
      */
     const expectedAmount = await this.getExpectedPrice(merchant_uid);
     if (payment.amount !== expectedAmount) {
-      console.error(
-        `[WEBHOOK ERROR] 금액 불일치! 주문: ${expectedAmount}, 결제: ${payment.amount}`,
-      );
+      logger.error(`[WEBHOOK ERROR] 금액 불일치! 주문: ${expectedAmount}, 결제: ${payment.amount}`);
       const failedInfo = {
         errorCode: '400',
         errorMessage: '결제 금액이 불일치 합니다.',
@@ -138,6 +130,6 @@ export class PaymentService {
      * STEP 7. 결제 확정 처리 (DB 저장)
      */
     await this.orderService.confirmPayment(merchant_uid);
-    console.log('[WEBHOOK] 결제 확정 처리 완료 ✅');
+    logger.info('[WEBHOOK] 결제 확정 처리 완료 ✅');
   }
 }

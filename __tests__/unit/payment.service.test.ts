@@ -1,6 +1,6 @@
 import { beforeEach, describe, it, jest } from '@jest/globals';
 import { mockDeep, DeepMockProxy } from 'jest-mock-extended';
-import { PaymentRepository } from '@/domains/payment/payment.repository..js';
+import { PaymentRepository } from '@/domains/payment/payment.repository.js';
 import { OrderService } from '@/domains/order/order.service.js';
 import {
   createFailedInfoMock,
