@@ -1,7 +1,7 @@
 # ========================================
 # Order API Swagger Documentation
 # ========================================
-# 작성일: 2025-01-05
+# 작성일: 2026-01-11
 # 도메인: Order - 주문 관리
 # 총 5개 엔드포인트
 #
@@ -14,7 +14,7 @@
 #
 # 특징:
 # - BUYER 전용 (구매자만 접근 가능)
-# - 주문 상태별 필터링 (결제대기, 결제완료, 취소, 배송완료)
+# - 주문 상태별 필터링 (WaitingPayment, CompletedPayment, Cancelled, Delivered)
 # - 포인트 사용 및 적립
 # - 재고 관리 자동 처리
 # - 주문 취소 시 재고 복구 및 포인트 환불
@@ -123,11 +123,21 @@ paths:
                         usePoint:
                           type: integer
                           description: '사용한 포인트'
-                          example: 0 # 기본 유저는 포인트 없어서 0으로 설정
+                          example: 0
                         createdAt:
                           type: string
                           format: date-time
                           example: '2025-01-05T10:30:00.000Z'
+                        paymentStatus:
+                          type: string
+                          enum:
+                            - WaitingPayment
+                            - CompletedPayment
+                            - Cancelled
+                            - PartiallyRefunded
+                            - Refunded
+                          description: '결제 상태'
+                          example: 'CompletedPayment'
                         orderItems:
                           type: array
                           description: '주문 상품 목록'
@@ -197,41 +207,43 @@ paths:
                                 description: '리뷰 작성 여부'
                                 example: true
                         payments:
-                          type: object
-                          description: '결제 정보'
-                          properties:
-                            id:
-                              type: string
-                              example: 'cm7payment789xyz012abc'
-                            orderId:
-                              type: string
-                              example: 'cm7order123abc456def789'
-                            price:
-                              type: integer
-                              description: '최종 결제 금액 (포인트 차감 후)'
-                              example: 145000
-                            status:
-                              type: string
-                              enum:
-                                - Pending
-                                - CompletedPayment
-                                - Failed
-                                - Cancelled
-                              description: |
-                                결제 상태
-                                `Pending`: 결제 대기
-                                `CompletedPayment`: 결제 완료
-                                `Failed`: 결제 실패
-                                `Cancelled`: 결제 취소
-                              example: 'CompletedPayment'
-                            createdAt:
-                              type: string
-                              format: date-time
-                              example: '2025-01-05T10:30:00.000Z'
-                            updatedAt:
-                              type: string
-                              format: date-time
-                              example: '2025-01-05T10:30:00.000Z'
+                          type: array
+                          description: '결제 정보 목록'
+                          items:
+                            type: object
+                            properties:
+                              id:
+                                type: string
+                                example: 'cm7payment789xyz012abc'
+                              orderId:
+                                type: string
+                                example: 'cm7order123abc456def789'
+                              price:
+                                type: integer
+                                description: '최종 결제 금액 (포인트 차감 후)'
+                                example: 145000
+                              status:
+                                type: string
+                                enum:
+                                  - Pending
+                                  - CompletedPayment
+                                  - Failed
+                                  - Cancelled
+                                description: |
+                                  결제 상태
+                                  `Pending`: 결제 대기
+                                  `CompletedPayment`: 결제 완료
+                                  `Failed`: 결제 실패
+                                  `Cancelled`: 결제 취소
+                                example: 'CompletedPayment'
+                              createdAt:
+                                type: string
+                                format: date-time
+                                example: '2025-01-05T10:30:00.000Z'
+                              updatedAt:
+                                type: string
+                                format: date-time
+                                example: '2025-01-05T10:30:00.000Z'
                   meta:
                     type: object
                     description: '페이지네이션 정보'
@@ -416,6 +428,16 @@ paths:
                     type: string
                     format: date-time
                     example: '2025-01-05T10:30:00.000Z'
+                  paymentStatus:
+                    type: string
+                    enum:
+                      - WaitingPayment
+                      - CompletedPayment
+                      - Cancelled
+                      - PartiallyRefunded
+                      - Refunded
+                    description: '결제 상태'
+                    example: 'WaitingPayment'
                   orderItems:
                     type: array
                     items:
@@ -467,29 +489,32 @@ paths:
                           description: '신규 주문이므로 false'
                           example: false
                   payments:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        example: 'cm7payment789xyz012abc'
-                      orderId:
-                        type: string
-                        example: 'cm7order123abc456def789'
-                      price:
-                        type: integer
-                        description: '최종 결제 금액 (subtotal - usePoint)'
-                        example: 145000
-                      status:
-                        type: string
-                        example: 'Pending'
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: '2025-01-05T10:30:00.000Z'
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: '2025-01-05T10:30:00.000Z'
+                    type: array
+                    description: '결제 정보 목록'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: 'cm7payment789xyz012abc'
+                        orderId:
+                          type: string
+                          example: 'cm7order123abc456def789'
+                        price:
+                          type: integer
+                          description: '최종 결제 금액 (subtotal - usePoint)'
+                          example: 145000
+                        status:
+                          type: string
+                          example: 'Pending'
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: '2025-01-05T10:30:00.000Z'
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: '2025-01-05T10:30:00.000Z'
         '400':
           description: 유효성 검증 실패 또는 재고 부족
           content:
@@ -603,6 +628,16 @@ paths:
                     type: string
                     format: date-time
                     example: '2025-01-05T10:30:00.000Z'
+                  paymentStatus:
+                    type: string
+                    enum:
+                      - WaitingPayment
+                      - CompletedPayment
+                      - Cancelled
+                      - PartiallyRefunded
+                      - Refunded
+                    description: '결제 상태'
+                    example: 'CompletedPayment'
                   orderItems:
                     type: array
                     items:
@@ -654,29 +689,32 @@ paths:
                           description: '신규 주문이므로 false'
                           example: false
                   payments:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        example: 'cm7payment789xyz012abc'
-                      orderId:
-                        type: string
-                        example: 'cm7order123abc456def789'
-                      price:
-                        type: integer
-                        description: '최종 결제 금액 (subtotal - usePoint)'
-                        example: 145000
-                      status:
-                        type: string
-                        example: 'Pending'
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: '2025-01-05T10:30:00.000Z'
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: '2025-01-05T10:30:00.000Z'
+                    type: array
+                    description: '결제 정보 목록'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: 'cm7payment789xyz012abc'
+                        orderId:
+                          type: string
+                          example: 'cm7order123abc456def789'
+                        price:
+                          type: integer
+                          description: '최종 결제 금액 (subtotal - usePoint)'
+                          example: 145000
+                        status:
+                          type: string
+                          example: 'Pending'
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: '2025-01-05T10:30:00.000Z'
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: '2025-01-05T10:30:00.000Z'
         '400':
           description: 유효성 검증 실패 (잘못된 ID 형식)
           content:
@@ -813,6 +851,14 @@ paths:
                     type: string
                     format: date-time
                     example: '2025-01-05T10:30:00.000Z'
+                  paymentStatus:
+                    type: string
+                    enum:
+                      - WaitingPayment
+                      - CompletedPayment
+                      - Cancelled
+                    description: '결제 상태'
+                    example: 'CompletedPayment'
                   orderItems:
                     type: array
                     items:
@@ -864,29 +910,32 @@ paths:
                           description: '신규 주문이므로 false'
                           example: false
                   payments:
-                    type: object
-                    properties:
-                      id:
-                        type: string
-                        example: 'cm7payment789xyz012abc'
-                      orderId:
-                        type: string
-                        example: 'cm7order123abc456def789'
-                      price:
-                        type: integer
-                        description: '최종 결제 금액 (subtotal - usePoint)'
-                        example: 145000
-                      status:
-                        type: string
-                        example: 'Pending'
-                      createdAt:
-                        type: string
-                        format: date-time
-                        example: '2025-01-05T10:30:00.000Z'
-                      updatedAt:
-                        type: string
-                        format: date-time
-                        example: '2025-01-05T10:30:00.000Z'
+                    type: array
+                    description: '결제 정보 목록'
+                    items:
+                      type: object
+                      properties:
+                        id:
+                          type: string
+                          example: 'cm7payment789xyz012abc'
+                        orderId:
+                          type: string
+                          example: 'cm7order123abc456def789'
+                        price:
+                          type: integer
+                          description: '최종 결제 금액 (subtotal - usePoint)'
+                          example: 145000
+                        status:
+                          type: string
+                          example: 'Pending'
+                        createdAt:
+                          type: string
+                          format: date-time
+                          example: '2025-01-05T10:30:00.000Z'
+                        updatedAt:
+                          type: string
+                          format: date-time
+                          example: '2025-01-05T10:30:00.000Z'
         '400':
           description: 유효성 검증 실패
           content:
