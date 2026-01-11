@@ -27,6 +27,8 @@ env:
   SUBNET_ID: ${{ secrets.SUBNET_ID }}
   IAM_INSTANCE_PROFILE: ${{ secrets.IAM_INSTANCE_PROFILE }}
   KEY_NAME: ${{ secrets.KEY_NAME }}
+  PORTONE_API_KEY: ${{ secrets.PORTONE_API_KEY }}
+  PORTONE_API_SECRET: ${{ secrets.PORTONE_API_SECRET }}
 
 jobs:
   deploy:
