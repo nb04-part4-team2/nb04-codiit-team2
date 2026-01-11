@@ -50,11 +50,13 @@ jobs:
       REFRESH_TOKEN_SECRET: dummy-refresh-secret
       ACCESS_TOKEN_EXPIRES_IN: 15m
       REFRESH_TOKEN_EXPIRES_IN: 7d
-      BCRYPT_ROUNDS: "10"
+      BCRYPT_ROUNDS: '10'
       AWS_REGION: dummy-region
       AWS_S3_BUCKET: dummy-bucket
       AWS_ACCESS_KEY_ID: dummy-access-key
       AWS_SECRET_ACCESS_KEY: dummy-secret-key
+      PORTONE_API_KEY: dummy-access-key
+      PORTONE_API_SECRET: dummy-secret-key
 
     steps:
       - name: Checkout code
