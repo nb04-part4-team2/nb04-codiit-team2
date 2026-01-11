@@ -10,7 +10,7 @@ import { sseManager } from '@/common/utils/sse.manager.js';
 const orderRepository = new OrderRepository(prisma);
 const userRepository = new UserRepository();
 const userService = new UserService(userRepository);
-const orderService = new OrderService(
+export const orderService = new OrderService(
   orderRepository,
   notificationService,
   prisma,

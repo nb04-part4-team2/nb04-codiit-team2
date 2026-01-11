@@ -1,5 +1,5 @@
 import { CreateOrderServiceInput, ProductInfoRawData } from '@/domains/order/order.dto.js';
-import { CreateOrderItemInputWithPrice } from '@/domains/order/order.type.js';
+import { CreateOrderItemInputWithPrice, PaymentRawData } from '@/domains/order/order.type.js';
 import { BadRequestError, NotFoundError } from '@/common/utils/errors.js';
 
 export function buildOrderData(
@@ -49,4 +49,20 @@ export function buildOrderData(
     },
     { subtotal: 0, totalQuantity: 0, matchedOrderItems: [] as CreateOrderItemInputWithPrice[] },
   );
+}
+
+export function buildPaymentStatus(payments: PaymentRawData[]) {
+  if (payments.some((p) => p.status === 'completed')) {
+    return 'completed';
+  }
+
+  if (payments.some((p) => p.status === 'pending')) {
+    return 'pending';
+  }
+
+  if (payments.some((p) => p.status === 'cancelled')) {
+    return 'cancelled'; // 추후 결제 취소(주문 취소) 구현시 사용
+  }
+
+  return 'failed';
 }

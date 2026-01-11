@@ -7,11 +7,13 @@ import {
 } from '@/domains/order/order.schema.js';
 import {
   CreateOrderItemInputWithPrice,
+  ExpiredOrderItem,
   GetOrderItemRawData,
   GetOrderItemResponseData,
   GradeBase,
   MetaResponse,
   OrderBase,
+  OrderFromPayment,
   PaymentRawData,
   PaymentResponse,
   PointHistoryBase,
@@ -35,6 +37,7 @@ export interface CreateOrderRepoInput extends Omit<CreateOrderBody, 'orderItems'
   userId: string;
   subtotal: number;
   totalQuantity: number;
+  expiresAt: Date | null;
 }
 // 주문 수정 repo input dto
 export interface UpdateOrderRepoInput extends UpdateOrderBody {
@@ -70,7 +73,8 @@ export interface GetPointHistoryRepoInput extends PointHistoryBase {
 }
 // 재고 repo input dto
 export type UpdateStockRepoInput = CreateOrderItemBody;
-
+// 재고 조회 repo input dto
+export type GetStockRepoInput = Omit<UpdateStockRepoInput, 'quantity'>;
 // ============================================
 // repo output
 // ============================================
@@ -78,7 +82,7 @@ export type UpdateStockRepoInput = CreateOrderItemBody;
 export interface GetOrderRawData extends OrderBase<Date> {
   buyerId: string;
   orderItems: GetOrderItemRawData[];
-  payments: PaymentRawData | null;
+  payments: PaymentRawData[];
 }
 // 주문 목록 조회 repo output dto
 export type GetOrdersRawData = GetOrderRawData[];
@@ -117,12 +121,23 @@ export interface DecreaseStockRawData extends StockBase {
   product: StockProductRawData;
   size: StockSizeRawData;
 }
-// 포인트 히스토리 repo output dto
-export interface GetPointHistoryRepoOutput extends PointHistoryBase {
+// 만료된 주문 조회 repo output dto
+export interface ExpiredOrderRawData {
   id: string;
-  amount: number;
-  userId: string;
-  createdAt: Date;
+  orderItems: ExpiredOrderItem[];
+}
+
+// 결제 테이블을 통해 주문 정보 조회 repo output dto
+export interface GetOrderFromPaymentRawData {
+  order: OrderFromPayment;
+}
+// 결제 상태 조회
+export interface GetPaymentStatusRawData {
+  status: PaymentStatus;
+}
+// 결제 금액 조회
+export interface GetPaymentPriceRawData {
+  price: number;
 }
 
 // ============================================
@@ -147,8 +162,9 @@ export interface GetOrdersServiceInput extends OrderQuery {
 // ============================================
 // 주문 조회 response
 export interface GetOrderResponseData extends OrderBase<string> {
+  paymentStatus: PaymentStatus;
   orderItems: GetOrderItemResponseData[];
-  payments: PaymentResponse;
+  payments: PaymentResponse[];
 }
 // 주문 목록조회 response
 export interface GetOrdersResponseData {
