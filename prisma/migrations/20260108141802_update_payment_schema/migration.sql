@@ -31,9 +31,9 @@ ADD COLUMN     "errorCode" TEXT,
 ADD COLUMN     "errorMessage" TEXT,
 ADD COLUMN     "failedAt" TIMESTAMP(3),
 ADD COLUMN     "impUid" TEXT,
-ADD COLUMN     "method" "PaymentMethod" NOT NULL,
+ADD COLUMN     "method" "PaymentMethod" DEFAULT 'card' NOT NULL,
 ADD COLUMN     "pgTid" TEXT,
-ADD COLUMN     "provider" "PaymentProvider" NOT NULL;
+ADD COLUMN     "provider" "PaymentProvider" DEFAULT 'kakaopay' NOT NULL;
 
 -- CreateIndex
 CREATE UNIQUE INDEX "payments_impUid_key" ON "payments"("impUid");
