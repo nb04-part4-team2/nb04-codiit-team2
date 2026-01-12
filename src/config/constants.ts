@@ -39,6 +39,11 @@ const envSchema = z.object({
   RATE_LIMIT_AUTH_LOGIN_MAX: z.coerce.number().default(5),
   RATE_LIMIT_AUTH_REFRESH_WINDOW: z.string().default('1m'),
   RATE_LIMIT_AUTH_REFRESH_MAX: z.coerce.number().default(30),
+
+  // Portone
+  PORTONE_API_URL: z.string().default('https://api.iamport.kr'),
+  PORTONE_API_KEY: z.string(),
+  PORTONE_API_SECRET: z.string(),
 });
 
 const parsedEnv = envSchema.safeParse(process.env);

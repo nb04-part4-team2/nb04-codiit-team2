@@ -8,28 +8,28 @@ import {
   createOrderMock,
   createOrderRepoInputMock,
   createOrderServiceInputMock,
-  createPaymentInputMock,
   createPaymentMock,
   createPointHistoryInputMock,
   createPointInputMock,
   createProductInfoMock,
   createProductMock,
+  createStockOutputMock,
+  createOrderItemsRepoInputMock,
+  createGetOrderFromPaymentMock,
+  createOrderFromPaymentMock,
+  createStockInputMock,
+  createStockDataMock,
+  createStockProductMock,
+  createStockStoreMock,
   createStockCartItemMock,
   createStockCartMock,
-  createStockDataMock,
-  createStockInputMock,
-  createStockOutputMock,
-  createStockProductMock,
   createStockSizeMock,
-  createStockStoreMock,
-  createOrderItemsRepoInputMock,
 } from './order.mock.js';
-import { OrderStatus, PointHistoryType } from '@prisma/client';
+import { OrderStatus, PaymentStatus, PointHistoryType } from '@prisma/client';
 import { buildOrderData } from '@/domains/order/order.utils.js';
 import { CreateOrderItemBody } from '@/domains/order/order.schema.js';
 import {
   ExpectNotificationInput,
-  ExpectOrderCreateInput,
   ExpectPointInput,
   ExpectSendNotificationInput,
   ExpectStockInput,
@@ -39,9 +39,21 @@ import {
   CreateOrderScenarioOptions,
   DeleteOrderScenarioOptions,
   DeleteScenarioResult,
-  SetupCreateOrderMockReposInput,
   SetupDeleteOrderMockReposInput,
   ExpectDeleteBaseInput,
+  SetupCreateOnlyOrderMockReposInput,
+  SetupOrderTxMockReposInput,
+  ExpectOnlyOrderCreateInput,
+  OrderTxResult,
+  ExpectUpdateStatusInput,
+  ExpectOrderInput,
+  ExpectUserInfo,
+  OrderTxScenarioOptions,
+  ExpectPaymentStatus,
+  ExpectUpdatePaymentStatus,
+  ExpectOrderStatus,
+  ExpectResult,
+  ExpectOrderTxInput,
 } from '@/domains/order/order.type.js';
 import {
   DecreaseStockRawData,
@@ -69,10 +81,9 @@ const SIZE_MAP: Record<number, { en: string; ko: string }> = {
 /**
  * [시나리오] 주문 생성 테스트를 위한 데이터 세트 조립 (Object Mother)
  */
-export const setupCreateOrderScenario = (
+export const setupOnlyCreateOrderScenario = (
   options: CreateOrderScenarioOptions = {},
 ): CreateScenarioResult => {
-  // 0. 옵션 및 기본값 설정
   const {
     userId = 'buyer-id-1',
     usePoint = 0,
@@ -99,17 +110,8 @@ export const setupCreateOrderScenario = (
   const mockOrderItemsInput: CreateOrderItemBody[] = [];
   // 상품 정보 조회시 각 상품별 재고 설정을 위한 해시맵
   const productInfoMap: Record<string, ProductInfoRawData> = {};
-  // 주문한 상품들 재고 감소 정보 배열
-  const decreaseStockRepoInput: UpdateStockRepoInput[] = [];
-  // 재고 감소 반영 후 재고 및 연관 데이터 반환 값
-  const updatedStockOutput: DecreaseStockRawData[] = [];
   // 정보를 조회할 상품들의 id
   const productIds: string[] = [];
-  // 판매자 품절 알림 input 배열
-  const notificationSellerInput: CreateNotificationBody[] = [];
-  // 장바구니에 아이템을 넣어둔 유저에게 해당 사이즈 품절 알림 발송 input 배열
-  // 상품별 유저목록이라 이중배열
-  const notificationBuyerInput: CreateNotificationBody[][] = [];
 
   // 주문 로직에 필요한 객체들 생성
   orderItems.forEach((item, index) => {
@@ -123,8 +125,6 @@ export const setupCreateOrderScenario = (
     const itemStockQuantity = item.stockQuantity ?? stockQuantity;
     // 주문할 아이템의 가격
     const itemPrice = item.itemPrice ?? itemsPrice;
-    // 사이즈 정보
-    const sizeInfo = SIZE_MAP[sizeId];
     // 할인율 정보
     const discountRate = item.discountRate;
     // 할인 시작 시간
@@ -144,22 +144,6 @@ export const setupCreateOrderScenario = (
     );
 
     // 2. 상품 정보 조회 output mock 생성
-    // 상품마다 사이즈별 재고 배열이 나와야 함
-    // product: {
-    //   id: productId,
-    //   price: 10000,
-    //   stocks: [
-    //     {
-    //       sizeId: 1,
-    //       quantity: 5,
-    //     },
-    //     {
-    //       sizeId: 2,
-    //       quantity: 7,
-    //     }
-    //   ]
-    // }
-    // 위와 같은 형태
     if (!productInfoMap[productId]) {
       // 상품이 처음 나오면 기본 틀 생성
       productInfoMap[productId] = createProductInfoMock({
@@ -186,30 +170,6 @@ export const setupCreateOrderScenario = (
         `Invalid success scenario: stock(${itemStockQuantity}) < order(${orderQuantity})`,
       );
     }
-
-    // 3. 재고 감소 mock 생성
-    // 상품별 주문 수량 배열
-    decreaseStockRepoInput.push(
-      createStockInputMock({ productId, sizeId, quantity: orderQuantity }),
-    );
-    // 재고 감소 후 반환 객체 (알림 발송을 위해 연관 도메인도 조회)
-    updatedStockOutput.push(
-      createStockDataMock({
-        productId,
-        sizeId,
-        quantity: itemStockQuantity - orderQuantity, // 상단에서 양수 보장
-        product: createStockProductMock({
-          store: createStockStoreMock({ userId: sellerId }),
-          cartItems: [
-            createStockCartItemMock({
-              sizeId,
-              cart: createStockCartMock({ buyerId: otherBuyerId }),
-            }),
-          ],
-        }),
-        size: createStockSizeMock({ id: sizeId, en: sizeInfo.en, ko: sizeInfo.ko }),
-      }),
-    );
   });
 
   // 2. Mock Data 생성 (부품 조립)
@@ -226,94 +186,21 @@ export const setupCreateOrderScenario = (
     orderItems: mockOrderItemsInput,
   });
 
-  // 2-4. 예상되는 계산 결과
-  // 비즈니스 로직에서 실제로 계산하는 유틸 함수 그대로 사용
-  // 테스트의 의미가 좀 퇴색될 수 있음
-  // 하지만 주문 생성 시나리오에서는 계산 로직이 신뢰 가능한지 테스트 하는 것도 중요하지만
-  // 여러 도메인들의 트랜잭션도 중요함
-  // 계산 로직을 신뢰하고 트랜잭션 검증에 집중
   const builtData = buildOrderData(productsInfoOutput, orderServiceInput.orderItems);
   const subtotal = builtData.subtotal;
   const totalQuantity = builtData.totalQuantity;
-  const finalPrice = subtotal - usePoint; // 사용 포인트를 뺀 실제 결제 금액
-  if (finalPrice < 0 || userInfoOutput.grade.rate < 0) {
-    // 성공 시나리오에서는 상품 금액 총 합보다 포인트를 더 많이 사용할 수 없음
-    // 그리고 적립률 또한 음수를 넣으면 안됨
-    // 사용자가 테스트 데이터를 잘못 설정한 경우 에러
-    throw new Error(`Invalid success scenario: finalPrice < 0`);
-  }
-  // 유저 등급에 따른 적립 포인트 계산
-  const earnedPoint = Math.floor(finalPrice * userInfoOutput.grade.rate);
 
   // 2-5. Repository 입력값 세팅 (Repo Input)
   // 2-5-1. 주문 생성 Repo Input
   const orderRepoInput = createOrderRepoInputMock({
     subtotal,
     totalQuantity,
+    expiresAt: new Date(Date.now() + 10 * 60 * 1000),
     ...orderServiceInput, // 팩토리에서 orderItems는 자동으로 걸러짐
   });
 
   // 2-5-2. 주문 아이템 생성 Repo Input
   const orderItemsRepoInput = createOrderItemsRepoInputMock(builtData.matchedOrderItems);
-
-  // 2-5-3. 포인트 차감 Repo Input
-  const decreasePointRepoInput = createPointInputMock({
-    userId,
-    amount: usePoint,
-  });
-  // 2-5-3-1. 포인트 차감 히스토리 Repo input
-  const decreasePointHistoryRepoInput = createPointHistoryInputMock();
-
-  // 2-5-4. 결제 정보 생성 Repo Input
-  const paymentRepoInput = createPaymentInputMock({
-    price: finalPrice,
-  });
-
-  // 2-5-5. 재고 감소 Repo Input
-  builtData.matchedOrderItems.map((item, index) => {
-    // 실제 비즈니스 로직 형태로 진행
-    if (updatedStockOutput[index].quantity === 0) {
-      // 2-5-6. 품절 알림 생성 Repo Input
-      const productName = updatedStockOutput[index].product.name;
-      const sizeName = updatedStockOutput[index].size.en;
-      const cartItems = updatedStockOutput[index].product.cartItems;
-      const updatedSizeId = updatedStockOutput[index].sizeId;
-
-      // 2-5-6-1. 판매자 알림 생성
-      notificationSellerInput.push(
-        createNotificationInputMock({
-          userId: sellerId,
-          content: `${productName}의 ${sizeName} 사이즈가 품절되었습니다.`,
-        }),
-      );
-
-      // 2-5-6-2. 장바구니에 해당 아이템을 담은 유저들 알림 생성
-      const cartUserIds = [
-        ...new Set(
-          cartItems
-            .filter((item) => item.sizeId === updatedSizeId && item.cart.buyerId !== userId)
-            .map((item) => item.cart.buyerId),
-        ),
-      ];
-      if (cartUserIds.length > 0) {
-        const currentProductNotifications = cartUserIds.map((uid) =>
-          createNotificationInputMock({
-            userId: uid,
-            content: `장바구니에 담은 상품 ${productName}의 ${sizeName} 사이즈가 품절되었습니다.`,
-          }),
-        );
-        notificationBuyerInput.push(currentProductNotifications);
-      }
-    }
-  });
-
-  // 2-5-7. 포인트 적립 Repo input
-  const increasePointRepoInput = createPointInputMock({ amount: earnedPoint });
-  // 2-5-7-1. 포인트 적립 히스토리 Repo input
-  const increasePointHistoryRepoInput = createPointHistoryInputMock({
-    amount: earnedPoint,
-    type: PointHistoryType.EARN,
-  });
 
   // 2-6. Repository 반환값 예상 (Output)
   // 주문 생성 Repo output
@@ -341,7 +228,198 @@ export const setupCreateOrderScenario = (
         }),
       }),
     ),
-    payments: createPaymentMock(),
+    payments: [createPaymentMock()],
+  });
+  const finalPrice = getOrderOutput.subtotal - getOrderOutput.usePoint;
+
+  // 4. 모든 것을 묶어서 반환
+  return {
+    input: orderServiceInput, // 서비스 input
+    mocks: {
+      // 레포지토리의 리턴 값
+      userInfoOutput,
+      productsInfoOutput,
+      orderRepoOutput,
+      getOrderOutput,
+    },
+    verify: {
+      // 검증에 쓸 객체들
+      finalPrice,
+      productIds,
+      orderRepoInput,
+      orderItemsRepoInput,
+    },
+  };
+};
+
+export const setupOrderTxScenario = (options: OrderTxScenarioOptions = {}): OrderTxResult => {
+  // 0. 옵션 및 기본값 설정
+  const {
+    userPoint,
+    stockQuantity = 10,
+    paymentStatus = { status: PaymentStatus.paid },
+    orderStatus = { status: OrderStatus.WaitingPayment },
+    order = createOrderFromPaymentMock({
+      orderItems: [createOrderItemMock()],
+    }),
+  } = options;
+
+  // 주문한 상품들 재고 감소 정보 배열
+  const decreaseStockRepoInput: UpdateStockRepoInput[] = [];
+  // 재고 감소 반영 후 재고 및 연관 데이터 반환 값
+  const updatedStockOutput: DecreaseStockRawData[] = [];
+  // 판매자 품절 알림 input 배열
+  const notificationSellerInput: CreateNotificationBody[] = [];
+  // 장바구니에 아이템을 넣어둔 유저에게 해당 사이즈 품절 알림 발송 input 배열
+  // 상품별 유저목록이라 이중배열
+  const notificationBuyerInput: CreateNotificationBody[][] = [];
+
+  const orderFromPaymentOutput = createGetOrderFromPaymentMock({ order });
+
+  const { id: orderId, usePoint, buyerId, orderItems } = orderFromPaymentOutput.order;
+  const { subtotal, totalQuantity } = orderItems.reduce(
+    (acc, item) => {
+      acc.subtotal += item.price * item.quantity;
+      acc.totalQuantity += item.quantity;
+      return acc;
+    },
+    { subtotal: 0, totalQuantity: 0 },
+  );
+
+  // 2. Mock Data 생성 (부품 조립)
+  // 2-1. 유저 정보 (기본 포인트 10,000)
+  const userInfoOutput = createGetUserInfoMock({ point: userPoint }); // 사용 포인트보다 보유 포인트가 적은 상황 테스트 가능
+
+  // 2-3 포인트 차감
+  // 2-3-1 포인트 차감 Repo Input
+  const decreasePointRepoInput = createPointInputMock({
+    userId: buyerId,
+    amount: usePoint,
+  });
+  // 2-3-2. 포인트 차감 히스토리 Repo input
+  const decreasePointHistoryRepoInput = createPointHistoryInputMock();
+
+  // 2-4. 재고 감소 Repo Input
+  orderItems.map((item, index) => {
+    // 사이즈 정보
+    const sizeInfo = SIZE_MAP[item.size.id];
+
+    // 3. 재고 감소 mock 생성
+    // 상품별 주문 수량 배열
+    decreaseStockRepoInput.push(
+      createStockInputMock({
+        productId: item.productId,
+        sizeId: item.size.id,
+        quantity: item.quantity,
+      }),
+    );
+    // 재고 감소 후 반환 객체 (알림 발송을 위해 연관 도메인도 조회)
+    updatedStockOutput.push(
+      createStockDataMock({
+        productId: item.productId,
+        sizeId: item.size.id,
+        quantity: stockQuantity - item.quantity,
+        product: createStockProductMock({
+          store: createStockStoreMock({ userId: sellerId }),
+          cartItems: [
+            createStockCartItemMock({
+              sizeId: item.size.id,
+              cart: createStockCartMock({ buyerId: otherBuyerId }),
+            }),
+          ],
+        }),
+        size: createStockSizeMock({ id: item.size.id, en: sizeInfo.en, ko: sizeInfo.ko }),
+      }),
+    );
+
+    // 실제 비즈니스 로직 형태로 진행
+    if (updatedStockOutput[index].quantity === 0) {
+      // 2-4-1. 품절 알림 생성 Repo Input
+      const productName = updatedStockOutput[index].product.name;
+      const sizeName = updatedStockOutput[index].size.en;
+      const cartItems = updatedStockOutput[index].product.cartItems;
+      const updatedSizeId = updatedStockOutput[index].sizeId;
+
+      // 2-4-2. 판매자 알림 생성
+      notificationSellerInput.push(
+        createNotificationInputMock({
+          userId: sellerId,
+          content: `${productName}의 ${sizeName} 사이즈가 품절되었습니다.`,
+        }),
+      );
+
+      // 2-4-3. 장바구니에 해당 아이템을 담은 유저들 알림 생성
+      const cartUserIds = [
+        ...new Set(
+          cartItems
+            .filter((item) => item.sizeId === updatedSizeId && item.cart.buyerId !== buyerId)
+            .map((item) => item.cart.buyerId),
+        ),
+      ];
+      if (cartUserIds.length > 0) {
+        const currentProductNotifications = cartUserIds.map((uid) =>
+          createNotificationInputMock({
+            userId: uid,
+            content: `장바구니에 담은 상품 ${productName}의 ${sizeName} 사이즈가 품절되었습니다.`,
+          }),
+        );
+        notificationBuyerInput.push(currentProductNotifications);
+      }
+    }
+  });
+
+  // 2-5 결제 정보 조회
+  const paymentPrice = { price: subtotal - usePoint };
+
+  const finalPrice = paymentPrice.price; // 사용 포인트를 뺀 실제 결제 금액
+  if (finalPrice < 0 || userInfoOutput.grade.rate < 0) {
+    // 성공 시나리오에서는 상품 금액 총 합보다 포인트를 더 많이 사용할 수 없음
+    // 그리고 적립률 또한 음수를 넣으면 안됨
+    // 사용자가 테스트 데이터를 잘못 설정한 경우 에러
+    throw new Error(`Invalid success scenario: finalPrice < 0`);
+  }
+  // 유저 등급에 따른 적립 포인트 계산
+  const earnedPoint = Math.floor(finalPrice * userInfoOutput.grade.rate);
+
+  // 2-6. 포인트 적립 Repo input
+  const increasePointRepoInput = createPointInputMock({ amount: earnedPoint });
+  // 2-6-1. 포인트 적립 히스토리 Repo input
+  const increasePointHistoryRepoInput = createPointHistoryInputMock({
+    amount: earnedPoint,
+    type: PointHistoryType.EARN,
+  });
+
+  // 2-7. 주문 완료 알림 input
+  const completedOrderNotificationInput = createNotificationInputMock({
+    userId: buyerId,
+    content: `주문이 완료되었습니다. 주문번호: ${orderId}`,
+  });
+
+  // 2-6. Repository 반환값 예상 (Output)
+  // 주문 상세 조회 Repo output (주문 생성 로직의 반환 값)
+  const getOrderOutput = createGetOrderMock({
+    id: orderId,
+    buyerId,
+    subtotal,
+    totalQuantity,
+    usePoint,
+    orderItems: orderItems.map((item, index) =>
+      createOrderItemMock({
+        id: `order-item-id-${index + 1}`,
+        productId: item.productId,
+        price: item.price,
+        quantity: item.quantity,
+        product: createProductMock({
+          name: item.product.name,
+        }),
+        size: createSizeMock({
+          id: item.size.id,
+          en: SIZE_MAP[item.size.id].en,
+          ko: SIZE_MAP[item.size.id].ko,
+        }),
+      }),
+    ),
+    payments: [createPaymentMock()],
   });
 
   // 3. 성공 시나리오에 따라 필요한 데이터 분리
@@ -355,28 +433,25 @@ export const setupCreateOrderScenario = (
 
   // 4. 모든 것을 묶어서 반환
   return {
-    input: orderServiceInput, // 서비스 input
     mocks: {
       // 레포지토리의 리턴 값
+      orderFromPaymentOutput,
       userInfoOutput,
-      productsInfoOutput,
-      orderRepoOutput,
+      paymentStatus,
+      orderStatus,
       updatedStockOutput,
+      paymentPrice,
       getOrderOutput,
     },
     verify: {
       // 검증에 쓸 객체들
-      productIds,
-      finalPrice,
-      orderRepoInput,
-      orderItemsRepoInput,
       ...verifyUsePoint,
-      paymentRepoInput,
       decreaseStockRepoInput,
       notificationSellerInput,
       notificationBuyerInput,
       increasePointRepoInput,
       increasePointHistoryRepoInput,
+      completedOrderNotificationInput,
     },
   };
 };
@@ -393,7 +468,9 @@ export const setupDeleteOrderScenario = (
     orderId = 'order-id-1',
     userId = 'buyer-id-1',
     usePoint = 0,
+    orderStatus = { status: OrderStatus.CompletedPayment }, // 주문 상태 조회 output
     orderItems = [createOrderItemMock()],
+    payments = [createPaymentMock({ status: 'completed' })],
   } = options;
 
   // 1. 주문 데이터 조회 output
@@ -401,14 +478,16 @@ export const setupDeleteOrderScenario = (
     id: orderId,
     buyerId: userId,
     usePoint,
-    payments: createPaymentMock(),
+    payments,
     orderItems: orderItems.map((item) => createOrderItemMock(item)),
   });
 
-  // 2. 주문 상태 조회 output
-  const orderStatus = { status: OrderStatus.WaitingPayment };
+  const targetPayment = getOrderOutput.payments.find(
+    (payment) => payment.status === PaymentStatus.completed,
+  );
+  const targetPaymentId = targetPayment!.id;
 
-  // 3. 재고 복구 repo input
+  // 2. 재고 복구 repo input
   const restoreStockDatas = getOrderOutput.orderItems.map((item) => {
     return {
       productId: item.productId,
@@ -417,12 +496,12 @@ export const setupDeleteOrderScenario = (
     };
   });
 
-  // 4. 유저 정보 조회 Output
+  // 3. 유저 정보 조회 Output
   const userInfoOutput = createGetUserInfoMock({
     point: 10000, // 포인트 넉넉하게 기본 설정
   });
 
-  // 5. 포인트 적립내역 조회 input
+  // 4. 포인트 적립내역 조회 input
   const { amount: _amount, ...pointHistoryRepoInput } = createPointHistoryInputMock({
     type: PointHistoryType.EARN,
   });
@@ -436,6 +515,7 @@ export const setupDeleteOrderScenario = (
     verify: {
       userId,
       orderId,
+      targetPaymentId,
       restoreStockDatas,
       pointHistoryRepoInput,
     },
@@ -445,18 +525,31 @@ export const setupDeleteOrderScenario = (
 // repo output 모킹
 // ============================================
 /**
- * 공통 mock 설정 코드
+ * 기본 주문 생성 mock 설정 코드
  */
-export const setUpCreateOrderMockRepos = ({
+export const setUpCreateOnlyOrderMockRepos = ({
   mockOrderRepo,
   mockData,
-}: SetupCreateOrderMockReposInput) => {
+}: SetupCreateOnlyOrderMockReposInput) => {
   mockOrderRepo.findUserInfo.mockResolvedValue(mockData.userInfoOutput);
   mockOrderRepo.findManyProducts.mockResolvedValue(mockData.productsInfoOutput);
   mockOrderRepo.createOrder.mockResolvedValue(mockData.orderRepoOutput);
+  mockOrderRepo.findById.mockResolvedValue(mockData.getOrderOutput);
+  mockOrderRepo.reserveStock.mockResolvedValue(1); // raw query라서 성공하면 그냥 1을 반환
+};
+/**
+ * 주문 트랜잭션 mock 기본 설정 코드
+ */
+export const setUpOrderTxMockRepos = ({ mockOrderRepo, mockData }: SetupOrderTxMockReposInput) => {
+  mockOrderRepo.findPaymentWithOrder.mockResolvedValue(mockData.orderFromPaymentOutput);
+  mockOrderRepo.findUserInfo.mockResolvedValue(mockData.userInfoOutput);
+  mockOrderRepo.findPaymentStatusById.mockResolvedValue(mockData.paymentStatus);
+  mockOrderRepo.findStatusById.mockResolvedValue(mockData.orderStatus);
+  mockOrderRepo.decreaseStock.mockResolvedValue(1); // 재고 감소 성공 모킹
   mockData.updatedStockOutput.forEach((stock) => {
-    mockOrderRepo.decreaseStock.mockResolvedValueOnce(stock);
+    mockOrderRepo.getStockData.mockResolvedValueOnce(stock); // 재고 데이터 조회 모킹
   });
+  mockOrderRepo.getPaymentPrice.mockResolvedValue(mockData.paymentPrice);
   mockOrderRepo.findById.mockResolvedValue(mockData.getOrderOutput);
 };
 /**
@@ -483,7 +576,7 @@ export const expectBaseOrderCreated = ({
   mockOrderRepo,
   mockPrisma,
   scenario,
-}: ExpectOrderCreateInput) => {
+}: ExpectOnlyOrderCreateInput) => {
   const { input, mocks, verify } = scenario;
   // 1. 데이터 가공
   // 1-1. 검증 로직 호출 확인 (방어 로직)
@@ -491,10 +584,28 @@ export const expectBaseOrderCreated = ({
   expect(mockOrderRepo.findUserInfo).toHaveBeenCalledWith(input.userId);
 
   // 1-2. 주문 생성 데이터 가공을 위한 상품 목록 조회
+  verify.orderRepoInput.expiresAt = expect.any(Date);
+  // 서비스에서 지정한 시간이랑 테스트에서 지정한 시간이랑 밀리초 단위 오차가 생겨서
+  // Date타입이라는 것만 검증
   expect(mockOrderRepo.findManyProducts).toHaveBeenCalledTimes(1);
   expect(mockOrderRepo.findManyProducts).toHaveBeenCalledWith(verify.productIds);
 
   // 2. 트랜잭션 내부 로직 호출 확인
+  // 2-0. 재고 락
+  const expectedCallCount = input.orderItems.length;
+  expect(mockOrderRepo.reserveStock).toHaveBeenCalledTimes(expectedCallCount);
+  // 재고 락 수행 검증
+  input.orderItems.forEach((item) => {
+    expect(mockOrderRepo.reserveStock).toHaveBeenCalledWith(
+      {
+        productId: item.productId,
+        sizeId: item.sizeId,
+        quantity: item.quantity,
+      },
+      mockPrisma,
+    );
+  });
+
   // 2-1. 주문 생성
   expect(mockOrderRepo.createOrder).toHaveBeenCalledTimes(1);
   expect(mockOrderRepo.createOrder).toHaveBeenCalledWith(verify.orderRepoInput, mockPrisma);
@@ -505,17 +616,6 @@ export const expectBaseOrderCreated = ({
     verify.orderItemsRepoInput,
     mockPrisma,
   );
-  // 2-3. 결제 정보 생성
-  expect(mockOrderRepo.createPayment).toHaveBeenCalledTimes(1);
-  expect(mockOrderRepo.createPayment).toHaveBeenCalledWith(verify.paymentRepoInput, mockPrisma);
-
-  // 2-3.1 주문 상태 업데이트
-  expect(mockOrderRepo.updateStatus).toHaveBeenCalledTimes(1);
-  expect(mockOrderRepo.updateStatus).toHaveBeenCalledWith(
-    mocks.orderRepoOutput.id,
-    OrderStatus.CompletedPayment,
-    mockPrisma,
-  );
 
   // 3. 최종 결과 조회 호출 확인
   expect(mockOrderRepo.findById).toHaveBeenCalledWith(mocks.orderRepoOutput.id);
@@ -523,6 +623,133 @@ export const expectBaseOrderCreated = ({
   // 4. 최종 반환값 검증 (주문 생성 결과가 제대로 리턴되었는지)
   expect(result).toEqual(mocks.getOrderOutput);
 };
+/**
+ * 주문 트랜잭션 기본 검증
+ * (기본 expect)
+ */
+export const expectBaseOrderTx = ({
+  mockNotificationService,
+  mockSseManager,
+  mockUserService,
+  mockOrderRepo,
+  paymentId,
+  mockPrisma,
+  scenario,
+  result,
+}: ExpectOrderTxInput) => {
+  const { verify, mocks } = scenario;
+  // 1. 주문 정보 조회
+  expect(mockOrderRepo.findPaymentWithOrder).toHaveBeenCalledTimes(1);
+  expect(mockOrderRepo.findPaymentWithOrder).toHaveBeenCalledWith(paymentId);
+
+  // 2. 유저 정보 조회
+  expect(mockOrderRepo.findUserInfo).toHaveBeenCalledTimes(1);
+  expect(mockOrderRepo.findUserInfo).toHaveBeenCalledWith(
+    mocks.orderFromPaymentOutput.order.buyerId,
+  );
+
+  // 3. 결제 상태 조회
+  expect(mockOrderRepo.findPaymentStatusById).toHaveBeenCalledWith(paymentId, mockPrisma);
+  expect(mockOrderRepo.findPaymentStatusById).toHaveBeenCalledTimes(1);
+
+  // 4. 결제 상태 업데이트
+  expect(mockOrderRepo.updatePaymentStatus).toHaveBeenNthCalledWith(
+    1,
+    paymentId,
+    PaymentStatus.processing,
+    mockPrisma,
+  );
+  expect(mockOrderRepo.updatePaymentStatus).toHaveBeenNthCalledWith(
+    2,
+    paymentId,
+    PaymentStatus.completed,
+    mockPrisma,
+  );
+  expect(mockOrderRepo.updatePaymentStatus).toHaveBeenCalledTimes(2);
+
+  // 5. 주문 상태 조회
+  expect(mockOrderRepo.findStatusById).toHaveBeenCalledWith(
+    mocks.orderFromPaymentOutput.order.id,
+    mockPrisma,
+  );
+  expect(mockOrderRepo.findStatusById).toHaveBeenCalledTimes(1);
+
+  // 6. 재고 감소
+  expect(mockOrderRepo.decreaseStock).toHaveBeenCalledTimes(
+    mocks.orderFromPaymentOutput.order.orderItems.length,
+  );
+  verify.decreaseStockRepoInput.forEach((stockInput) => {
+    expect(mockOrderRepo.decreaseStock).toHaveBeenCalledWith(stockInput, mockPrisma);
+    expect(mockOrderRepo.getStockData).toHaveBeenCalledWith(
+      { productId: stockInput.productId, sizeId: stockInput.sizeId },
+      mockPrisma,
+    );
+  });
+
+  // 7. 결제 금액 조회
+  expect(mockOrderRepo.getPaymentPrice).toHaveBeenCalledWith(paymentId, mockPrisma);
+
+  // 8. 주문 상태 업데이트
+  expect(mockOrderRepo.updateStatus).toHaveBeenCalledTimes(1);
+  expect(mockOrderRepo.updateStatus).toHaveBeenCalledWith(
+    mocks.orderFromPaymentOutput.order.id,
+    OrderStatus.CompletedPayment,
+    mockPrisma,
+  );
+
+  // 9. 최종 결과 조회
+  // 9-1. 최종 결과 조회 호출 확인
+  expect(mockOrderRepo.findById).toHaveBeenCalledWith(mocks.orderFromPaymentOutput.order.id);
+
+  // 9-2. 최종 반환값 검증 (주문 생성 결과가 제대로 리턴되었는지)
+  expect(result).toEqual(mocks.getOrderOutput);
+
+  // 10. 주문 완료 알림 생성
+  const notification = verify.completedOrderNotificationInput;
+  expect(mockSseManager.sendMessage).toHaveBeenCalledWith(notification.userId, {
+    userId: notification.userId,
+    content: notification.content,
+  });
+
+  // 11. 주문 완료 알림 발송
+  expect(mockNotificationService.createNotification).toHaveBeenCalledWith(
+    verify.completedOrderNotificationInput,
+  );
+
+  // 12. 유저 등급 업데이트
+  expect(mockUserService.updateGradeByPurchase).toHaveBeenCalledTimes(1);
+};
+/**
+ * 유저 정보 조회 expect
+ */
+export const expectUserInfo = ({ mockOrderRepo, buyerId }: ExpectUserInfo) => {
+  expect(mockOrderRepo.findUserInfo).toHaveBeenCalledTimes(1);
+  expect(mockOrderRepo.findUserInfo).toHaveBeenCalledWith(buyerId);
+};
+/**
+ * 주문 정보 조회 expect
+ */
+export const expectGetOrderInfo = ({ mockOrderRepo, paymentId }: ExpectOrderInput) => {
+  expect(mockOrderRepo.findPaymentWithOrder).toHaveBeenCalledTimes(1);
+  expect(mockOrderRepo.findPaymentWithOrder).toHaveBeenCalledWith(paymentId);
+};
+/**
+ * 주문 상태 업데이트 expect
+ */
+export const expectUpdateStatus = ({
+  mockOrderRepo,
+  mockPrisma,
+  scenario,
+}: ExpectUpdateStatusInput) => {
+  const { mocks } = scenario;
+  expect(mockOrderRepo.updateStatus).toHaveBeenCalledTimes(1);
+  expect(mockOrderRepo.updateStatus).toHaveBeenCalledWith(
+    mocks.orderFromPaymentOutput.order.id,
+    OrderStatus.CompletedPayment,
+    mockPrisma,
+  );
+};
+
 /**
  * 포인트 적립 expect
  */
@@ -578,9 +805,11 @@ export const expectPointHistory = ({ mockOrderRepo, mockPrisma, scenario }: Expe
  * 재고 감소 expect
  */
 export const expectDecreaseStock = ({ mockOrderRepo, mockPrisma, scenario }: ExpectStockInput) => {
-  const { input, verify } = scenario;
+  const { mocks, verify } = scenario;
   // 재고 감소 (주문 아이템 개수만큼 호출되었는지)
-  expect(mockOrderRepo.decreaseStock).toHaveBeenCalledTimes(input.orderItems.length);
+  expect(mockOrderRepo.decreaseStock).toHaveBeenCalledTimes(
+    mocks.orderFromPaymentOutput.order.orderItems.length,
+  );
   verify.decreaseStockRepoInput.forEach((stockInput) => {
     expect(mockOrderRepo.decreaseStock).toHaveBeenCalledWith(stockInput, mockPrisma);
   });
@@ -615,7 +844,6 @@ export const expectCreateSellerNotification = ({
 }: ExpectNotificationInput) => {
   const { verify } = scenario;
   const notifications = verify.notificationSellerInput;
-  expect(mockNotificationService.createNotification).toHaveBeenCalledTimes(notifications.length);
   notifications.forEach((notification) => {
     expect(mockNotificationService.createNotification).toHaveBeenCalledWith(
       notification,
@@ -666,10 +894,66 @@ export const expectUpdateUserGrade = ({ mockUserService }: ExpectUserGradeInput)
 /**
  * 할인, 포인트 사용 등이 적용된 최종 결제 가격 expect
  */
-export const expectFinalPrice = (scenario: CreateScenarioResult, expectedFinalPrice: number) => {
-  const { verify } = scenario;
-  expect(verify.finalPrice).toBe(expectedFinalPrice);
+export const expectFinalPrice = (scenario: OrderTxResult, expectedFinalPrice: number) => {
+  const { mocks } = scenario;
+  expect(mocks.paymentPrice.price).toBe(expectedFinalPrice);
 };
+/**
+ * 결제 상태 조회 expect
+ */
+export const expectPaymentStatus = ({
+  mockOrderRepo,
+  paymentId,
+  mockPrisma,
+}: ExpectPaymentStatus) => {
+  expect(mockOrderRepo.findPaymentStatusById).toHaveBeenCalledWith(paymentId, mockPrisma);
+  expect(mockOrderRepo.findPaymentStatusById).toHaveBeenCalledTimes(1);
+};
+
+/**
+ * 결제 정보 업데이트 expect
+ * (결제 상태 락, 락 해제)
+ */
+export const expectUpdatePaymentStatus = ({
+  paymentId,
+  mockPrisma,
+  mockOrderRepo,
+}: ExpectUpdatePaymentStatus) => {
+  expect(mockOrderRepo.updatePaymentStatus).toHaveBeenNthCalledWith(
+    1,
+    paymentId,
+    PaymentStatus.processing,
+    mockPrisma,
+  );
+  expect(mockOrderRepo.updatePaymentStatus).toHaveBeenNthCalledWith(
+    2,
+    paymentId,
+    PaymentStatus.completed,
+    mockPrisma,
+  );
+  expect(mockOrderRepo.updatePaymentStatus).toHaveBeenCalledTimes(2);
+};
+
+/**
+ * 주문 상태 조회 expect
+ */
+export const expectOrderStatus = ({ mockOrderRepo, mockPrisma, orderId }: ExpectOrderStatus) => {
+  expect(mockOrderRepo.findStatusById).toHaveBeenCalledWith(orderId, mockPrisma);
+  expect(mockOrderRepo.findStatusById).toHaveBeenCalledTimes(1);
+};
+
+/**
+ * 최종 결과 조회 expect
+ */
+export const expectResult = ({ mockOrderRepo, scenario, result }: ExpectResult) => {
+  const { mocks } = scenario;
+  // 1. 최종 결과 조회 호출 확인
+  expect(mockOrderRepo.findById).toHaveBeenCalledWith(mocks.orderFromPaymentOutput.order.id);
+
+  // 2. 최종 반환값 검증 (주문 생성 결과가 제대로 리턴되었는지)
+  expect(result).toEqual(mocks.getOrderOutput);
+};
+
 // ============================================
 // 주문 취소 시나리오 expect
 // ============================================
@@ -689,10 +973,7 @@ export const expectBaseOrderDeleted = ({
   verify.restoreStockDatas.forEach((stockInput) => {
     expect(mockOrderRepo.increaseStock).toHaveBeenCalledWith(stockInput, mockPrisma);
   });
-  expect(mockOrderRepo.deletePayment).toHaveBeenCalledWith(
-    mocks.getOrderOutput.payments?.id,
-    mockPrisma,
-  );
+  expect(mockOrderRepo.deletePayment).toHaveBeenCalledWith(verify.targetPaymentId, mockPrisma);
   expect(mockOrderRepo.findUserInfo).toHaveBeenCalledWith(verify.userId, mockPrisma);
   expect(mockOrderRepo.findPointHistory).toHaveBeenCalledWith(
     verify.pointHistoryRepoInput,

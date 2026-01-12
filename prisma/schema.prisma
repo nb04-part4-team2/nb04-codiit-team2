@@ -22,10 +22,26 @@ enum InquiryStatus {
 }
 
 enum PaymentStatus {
-  Pending
-  CompletedPayment
-  Failed
-  Cancelled
+  processing // 주문 트랜잭션 처리중
+  pending // pg 결제 요청됨
+  paid // 결제 완료
+  failed // 결제 실패
+  cancelled // 결제 취소 / 환불
+  completed // 결제 완료 후 주문 트랜잭션 성공
+}
+
+enum PaymentProvider {
+  kakaopay
+  naverpay
+  tosspay
+}
+
+enum PaymentMethod {
+  card
+  point
+  kakaopay
+  naverpay
+  tosspay
 }
 
 enum OrderStatus {
@@ -189,13 +205,14 @@ model Category {
 }
 
 model Stock {
-  id       String @id @default(cuid())
-  quantity Int // 재고 수량
+  id               String @id @default(cuid())
+  quantity         Int // 재고 수량
+  reservedQuantity Int    @default(0) @map("reserved_quantity") // 주문된 재고 수량 (결제 전 주문만 처리됨)
 
   // FK
-  productId String
+  productId String  @map("product_id")
   product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품 삭제 시 재고 삭제
-  sizeId    Int
+  sizeId    Int     @map("size_id")
   size      Size    @relation(fields: [sizeId], references: [id])
 
   @@unique([productId, sizeId])
@@ -253,13 +270,14 @@ model Order {
   totalQuantity Int // 총 주문수량
   usePoint      Int         @default(0)
   createdAt     DateTime    @default(now())
+  expiresAt     DateTime?
 
   // 비회원 주문에 대한 내용은 추후 확장
   buyerId String
   buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 주문 내역 삭제
 
   orderItems   OrderItem[]
-  payments     Payment?
+  payments     Payment[]
   pointHistory PointHistory[]
 
   @@map("orders")
@@ -284,14 +302,22 @@ model OrderItem {
 }
 
 model Payment {
-  id        String        @id @default(cuid())
-  price     Int
-  status    PaymentStatus
-  createdAt DateTime      @default(now())
-  updatedAt DateTime      @updatedAt
+  id           String          @id @default(cuid())
+  price        Int
+  status       PaymentStatus
+  provider     PaymentProvider @default(kakaopay)
+  method       PaymentMethod   @default(card)
+  impUid       String?         @unique // 고유 결제번호
+  pgTid        String? // pg사 거래번호
+  errorCode    String?
+  errorMessage String?
+  approvedAt   DateTime?
+  failedAt     DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 
   // FK
-  orderId String @unique
+  orderId String
   order   Order  @relation(fields: [orderId], references: [id])
 
   @@map("payments")

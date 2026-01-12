@@ -1,7 +1,9 @@
 import {
   GetOrderItemRawData,
+  GetPointHistoryRepoOutput,
   GradeBase,
   OrderBase,
+  OrderFromPayment,
   PaymentRawData,
   ProductRawData,
   ReviewRawData,
@@ -21,9 +23,10 @@ import {
   CreatePaymentRepoInput,
   CreatePointHistoryRepoInput,
   DecreaseStockRawData,
+  ExpiredOrderRawData,
+  GetOrderFromPaymentRawData,
   GetOrderRawData,
   GetOrdersServiceInput,
-  GetPointHistoryRepoOutput,
   ProductInfoRawData,
   UpdateOrderServiceInput,
   UpdatePointRepoInput,
@@ -115,7 +118,7 @@ export const baseReviewMock = {
 export const basePaymentInputMock = {
   orderId: 'order-id-1',
   price: 10000,
-  status: PaymentStatus.CompletedPayment,
+  status: PaymentStatus.pending,
 };
 /**
  * [부품] 베이스 Payment mock
@@ -275,6 +278,22 @@ export const createStockSizeMock = (
   en: 'M',
   ...overrides,
 });
+// 8. 결제 테이블을 통한 주문 조회 결과 팩토리
+/**
+ * [부품] 결제 테이블을 통한 주문 조회 베이스 mock
+ */
+export const createOrderFromPaymentMock = (
+  overrides: Partial<OrderFromPayment> = {},
+): OrderFromPayment => {
+  const { orderItems, ...rest } = overrides;
+  return {
+    id: 'order-id-1',
+    usePoint: 0,
+    buyerId: 'buyer-id-1',
+    orderItems: orderItems ? orderItems.map(createOrderItemMock) : [],
+    ...rest,
+  };
+};
 
 // ============================================
 // 부품 팩토리 (input 객체용 부품들)
@@ -359,7 +378,7 @@ export const createGetOrderMock = (overrides: Partial<GetOrderRawData> = {}): Ge
     ...createOrderBaseMock(),
     buyerId: 'buyer-id-1',
     orderItems: orderItems ? orderItems.map(createOrderItemMock) : [],
-    payments: payments ? createPaymentMock(payments) : null,
+    payments: payments ? payments.map(createPaymentMock) : [],
     ...rest,
   };
 };
@@ -390,6 +409,29 @@ export const createGetPointHistoryMock = (
   orderId: 'order-id-1',
   ...overrides,
 });
+// 7. 결제, 주문 정보 조회 repo output
+/**
+ * [완성본] findPaymentWithOrderRawData 팩토리
+ */
+export const createGetOrderFromPaymentMock = (
+  overrides: Partial<GetOrderFromPaymentRawData> = {},
+): GetOrderFromPaymentRawData => ({
+  order: createOrderFromPaymentMock(overrides.order),
+});
+// 8. 만료된 주문 조회 repo output
+/**
+ * [완성본] ExpiredOrderRawData 팩토리
+ */
+export const createExpiredOrderRawDataMock = (
+  overrides: Partial<ExpiredOrderRawData> = {},
+): ExpiredOrderRawData => {
+  return {
+    id: 'order-id-1',
+    orderItems: [baseOrderItemInputMock],
+    ...overrides,
+  };
+};
+
 // ============================================
 // INPUT 객체 조립
 // ============================================
@@ -415,12 +457,13 @@ export const createOrderServiceInputMock = (
 export const createOrderRepoInputMock = (
   overrides: Partial<CreateOrderRepoInput> = {},
 ): CreateOrderRepoInput => {
-  const { subtotal, totalQuantity, ...rest } = overrides;
+  const { subtotal, totalQuantity, expiresAt, ...rest } = overrides;
   const { orderItems: _orderItems, ...restOrderData } = createOrderServiceInputMock(rest);
   return {
     ...restOrderData,
     subtotal: subtotal ?? 10000,
     totalQuantity: totalQuantity ?? 1,
+    expiresAt: expiresAt ?? null,
   };
 };
 // 3. 주문 아이템 생성 repo input

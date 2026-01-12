@@ -3,15 +3,18 @@ import {
   CreateOrderItemRepoInput,
   CreateOrderRawData,
   CreateOrderRepoInput,
-  CreatePaymentRepoInput,
   CreatePointHistoryRepoInput,
   DecreaseStockRawData,
   GetCountRepoInput,
+  GetOrderFromPaymentRawData,
   GetOrderRawData,
   GetOrdersRawData,
   GetOrdersRepoInput,
   GetOrderStatusRawData,
+  GetPaymentPriceRawData,
+  GetPaymentStatusRawData,
   GetPointHistoryRepoInput,
+  GetStockRepoInput,
   ProductInfoRawData,
   UpdateOrderRepoInput,
   UpdatePointRepoInput,
@@ -37,8 +40,12 @@ export class OrderRepository {
   /**
    * 주문 상태 조회
    */
-  async findStatusById(orderId: string): Promise<GetOrderStatusRawData | null> {
-    return await this.prisma.order.findUnique({
+  async findStatusById(
+    orderId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<GetOrderStatusRawData | null> {
+    const db = tx ?? this.prisma;
+    return await db.order.findUnique({
       where: {
         id: orderId,
       },
@@ -223,6 +230,7 @@ export class OrderRepository {
         usePoint: data.usePoint,
         subtotal: data.subtotal,
         totalQuantity: data.totalQuantity,
+        expiresAt: data.expiresAt,
       },
     });
   }
@@ -252,7 +260,131 @@ export class OrderRepository {
       },
     });
   }
+  /**
+   * 만료된 주문 체크
+   */
+  async findExpiredWaitingOrders(tx?: Prisma.TransactionClient) {
+    const db = tx ?? this.prisma;
+    return db.order.findMany({
+      where: {
+        status: OrderStatus.WaitingPayment,
+        expiresAt: {
+          lt: new Date(),
+        },
+      },
+      select: {
+        id: true,
+        orderItems: {
+          select: {
+            productId: true,
+            sizeId: true,
+            quantity: true,
+          },
+        },
+      },
+    });
+  }
+
   // 다른 도메인 쿼리들
+  /**
+   * 재고 복구
+   */
+  async restoreReservedStock(
+    { productId, sizeId, quantity }: UpdateStockRepoInput,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return db.$executeRaw`
+      UPDATE stocks
+      SET reserved_quantity = reserved_quantity - ${quantity}
+      WHERE product_id = ${productId}
+        AND size_id = ${sizeId}
+        AND reserved_quantity >= ${quantity};
+    `;
+  }
+  /**
+   * 재고 예약 (주문 시점에 재고 locking)
+   * 정합성 때문에 raw query
+   */
+  async reserveStock(
+    { productId, sizeId, quantity }: UpdateStockRepoInput,
+    tx?: Prisma.TransactionClient,
+  ) {
+    const db = tx ?? this.prisma;
+    return await db.$executeRaw`
+      UPDATE stocks
+      SET reserved_quantity = reserved_quantity + ${quantity}
+      WHERE product_id = ${productId}
+        AND size_id = ${sizeId}
+        AND quantity - reserved_quantity >= ${quantity};
+    `;
+  }
+  /**
+   * 결제 정보 조회
+   */
+  async findPaymentWithOrder(paymentId: string): Promise<GetOrderFromPaymentRawData | null> {
+    return await this.prisma.payment.findUnique({
+      where: {
+        id: paymentId,
+      },
+      select: {
+        order: {
+          select: {
+            id: true,
+            usePoint: true,
+            buyerId: true,
+            orderItems: {
+              select: {
+                id: true,
+                price: true,
+                quantity: true,
+                productId: true,
+                review: {
+                  // isReviewed, product내부 reviews 생성용
+                  select: {
+                    id: true,
+                    rating: true,
+                    content: true,
+                    createdAt: true,
+                  },
+                },
+                product: {
+                  select: {
+                    name: true,
+                    image: true,
+                  },
+                },
+                size: {
+                  select: {
+                    id: true,
+                    en: true,
+                    ko: true,
+                  },
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+  }
+  /**
+   * 결제 금액 조회
+   */
+  async getPaymentPrice(
+    paymentId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<GetPaymentPriceRawData | null> {
+    const db = tx ?? this.prisma;
+    return await db.payment.findUnique({
+      where: {
+        id: paymentId,
+      },
+      select: {
+        price: true,
+      },
+    });
+  }
   /**
    * 유저 포인트, 등급 조회
    **/
@@ -308,15 +440,6 @@ export class OrderRepository {
   async createOrderItems(data: CreateOrderItemRepoInput[], tx?: Prisma.TransactionClient) {
     const db = tx ?? this.prisma;
     return await db.orderItem.createMany({
-      data,
-    });
-  }
-  /**
-   * 결제 정보 생성
-   **/
-  async createPayment(data: CreatePaymentRepoInput, tx?: Prisma.TransactionClient) {
-    const db = tx ?? this.prisma;
-    return await db.payment.create({
       data,
     });
   }
@@ -443,20 +566,32 @@ export class OrderRepository {
   async decreaseStock(
     { productId, sizeId, quantity }: UpdateStockRepoInput,
     tx?: Prisma.TransactionClient,
-  ): Promise<DecreaseStockRawData> {
+  ) {
     const db = tx ?? this.prisma;
-    return await db.stock.update({
+    return await db.$executeRaw`
+      UPDATE stocks
+      SET
+        quantity = quantity - ${quantity},
+        reserved_quantity = reserved_quantity - ${quantity}
+      WHERE product_id = ${productId}
+        AND size_id = ${sizeId}
+        AND reserved_quantity >= ${quantity};
+    `;
+  }
+  /**
+   * 재고 연관 데이터 조회
+   */
+  async getStockData(
+    { productId, sizeId }: GetStockRepoInput,
+    tx?: Prisma.TransactionClient,
+  ): Promise<DecreaseStockRawData | null> {
+    const db = tx ?? this.prisma;
+    return db.stock.findUnique({
       where: {
         productId_sizeId: {
           productId,
           sizeId,
         },
-        quantity: {
-          gte: quantity,
-        },
-      },
-      data: {
-        quantity: { decrement: quantity },
       },
       include: {
         product: {
@@ -492,10 +627,14 @@ export class OrderRepository {
   /**
    * 결제 상태 조회
    **/
-  async findPaymentStatusById(orderId: string) {
-    return await this.prisma.payment.findUnique({
+  async findPaymentStatusById(
+    paymentId: string,
+    tx?: Prisma.TransactionClient,
+  ): Promise<GetPaymentStatusRawData | null> {
+    const db = tx ?? this.prisma;
+    return await db.payment.findUnique({
       where: {
-        orderId,
+        id: paymentId,
       },
       select: { status: true },
     });

@@ -12,11 +12,13 @@ import {
   CreateOrderRawData,
   CreateOrderRepoInput,
   CreateOrderServiceInput,
-  CreatePaymentRepoInput,
   CreatePointHistoryRepoInput,
   DecreaseStockRawData,
+  GetOrderFromPaymentRawData,
   GetOrderRawData,
   GetOrderStatusRawData,
+  GetPaymentPriceRawData,
+  GetPaymentStatusRawData,
   ProductInfoRawData,
   UpdatePointRepoInput,
   UpdateStockRepoInput,
@@ -99,6 +101,13 @@ export interface GradeBase {
 // ============================================
 // db 조회 결과 RawData
 // ============================================
+// 포인트 히스토리 repo output
+export interface GetPointHistoryRepoOutput extends PointHistoryBase {
+  id: string;
+  amount: number;
+  userId: string;
+  createdAt: Date;
+}
 // 주문 상세 조회 연관 조회용
 // 부품 1. 상품 RawData
 export type ProductRawData = ProductBase;
@@ -106,7 +115,15 @@ export type ProductRawData = ProductBase;
 export type ReviewRawData = ReviewBase<Date>;
 // 부품 3. 결제정보 RawData
 export type PaymentRawData = PaymentBase<Date>;
-// 부품 4. 주문 아이템 RawData type
+
+// 부품 4. 재고 RawData
+export interface StockRawData extends StockBase {
+  id: string;
+  reservedQuantity: number;
+  productId: string;
+}
+
+// 부품 5. 주문 아이템 RawData type
 export interface GetOrderItemRawData extends GetOrderItemBase<ProductRawData, SizeRawData> {
   review: ReviewRawData | null;
 }
@@ -126,6 +143,19 @@ export interface StockCartItemRawData extends Pick<CartItemBase<Date>, 'sizeId'>
 export type StockCartRawData = Pick<CartBase<Date>, 'buyerId'>;
 // 부품 5. 재고 연관 조회 사이즈
 export type StockSizeRawData = SizeRawData;
+
+// 결제 테이블을 통해 주문 데이터 조회 output 타입
+export interface OrderFromPayment {
+  id: string;
+  usePoint: number;
+  buyerId: string;
+  orderItems: GetOrderItemRawData[];
+}
+
+// 만료된 주문 아이템 repo output 타입
+export interface ExpiredOrderItem extends StockBase {
+  productId: string;
+}
 
 // ============================================
 // 응답 객체용 Response
@@ -172,7 +202,7 @@ export interface ScenarioItemOption extends CreateOrderItemBody {
   discountStartTime?: Date | null;
   discountEndTime?: Date | null;
 }
-// 성공 시나리오 기본 옵션
+// 주문 생성 시나리오 기본 옵션
 export interface CreateOrderScenarioOptions {
   userId?: string;
   usePoint?: number;
@@ -182,19 +212,37 @@ export interface CreateOrderScenarioOptions {
   itemsQuantity?: number;
   orderItems?: ScenarioItemOption[];
 }
+// 주문 트랜잭션 처리 옵션
+export interface OrderTxScenarioOptions {
+  userPoint?: number;
+  stockQuantity?: number;
+  paymentStatus?: GetPaymentStatusRawData;
+  orderStatus?: GetOrderStatusRawData;
+  order?: OrderFromPayment;
+}
 // 주문 삭제 시나리오 기본 옵션
 export interface DeleteOrderScenarioOptions {
   userId?: string;
   orderId?: string;
   usePoint?: number;
   orderItems?: CreateOrderItemBody[];
+  payments?: PaymentRawData[];
+  orderStatus?: GetOrderStatusRawData;
 }
 // 성공 시나리오 mock Repo output
-interface CreateOrderMockRepo {
+interface CreateOnlyOrderMockRepo {
   userInfoOutput: UserInfoRawData;
   productsInfoOutput: ProductInfoRawData[];
   orderRepoOutput: CreateOrderRawData;
+  getOrderOutput: GetOrderRawData;
+}
+interface OrderTxMockRepo {
+  orderFromPaymentOutput: GetOrderFromPaymentRawData;
+  userInfoOutput: UserInfoRawData;
+  paymentStatus: GetPaymentStatusRawData;
+  orderStatus: GetOrderStatusRawData;
   updatedStockOutput: DecreaseStockRawData[];
+  paymentPrice: GetPaymentPriceRawData;
   getOrderOutput: GetOrderRawData;
 }
 // 주문 삭제 시나리오 mock Repo output
@@ -204,24 +252,27 @@ interface DeleteOrderMockRepo {
   userInfoOutput: UserInfoRawData;
 }
 // 성공 시나리오 검증용 객체들
-interface CreateOrderVerify {
-  productIds: string[];
+interface CreateOnlyOrderVerify {
   finalPrice: number;
+  productIds: string[];
   orderRepoInput: CreateOrderRepoInput;
   orderItemsRepoInput: CreateOrderItemRepoInput[];
+}
+interface OrderTxVerify {
   decreasePointRepoInput?: UpdatePointRepoInput;
   decreasePointHistoryRepoInput?: CreatePointHistoryRepoInput;
-  paymentRepoInput: CreatePaymentRepoInput;
   decreaseStockRepoInput: UpdateStockRepoInput[];
   notificationSellerInput: CreateNotificationBody[];
   notificationBuyerInput: CreateNotificationBody[][];
   increasePointRepoInput: UpdatePointRepoInput;
   increasePointHistoryRepoInput: CreatePointHistoryRepoInput;
+  completedOrderNotificationInput: CreateNotificationBody;
 }
 // 주문 삭제 시나리오 검증용 객체들
 interface DeleteOrderVerify {
   userId: string;
   orderId: string;
+  targetPaymentId: string;
   restoreStockDatas: UpdateStockRepoInput[];
   pointHistoryRepoInput: Omit<CreatePointHistoryRepoInput, 'amount'>;
 }
@@ -229,8 +280,12 @@ interface DeleteOrderVerify {
 // 성공 시나리오 object mother 반환 타입
 export interface CreateScenarioResult {
   input: CreateOrderServiceInput;
-  mocks: CreateOrderMockRepo;
-  verify: CreateOrderVerify;
+  mocks: CreateOnlyOrderMockRepo;
+  verify: CreateOnlyOrderVerify;
+}
+export interface OrderTxResult {
+  mocks: OrderTxMockRepo;
+  verify: OrderTxVerify;
 }
 
 // 주문 삭제 시나리오 object mother 반환 타입
@@ -240,9 +295,13 @@ export interface DeleteScenarioResult {
 }
 
 // 성공 시나리오 기본 repo output 세팅
-export interface SetupCreateOrderMockReposInput {
+export interface SetupCreateOnlyOrderMockReposInput {
   mockOrderRepo: DeepMockProxy<OrderRepository>;
-  mockData: CreateOrderMockRepo;
+  mockData: CreateOnlyOrderMockRepo;
+}
+export interface SetupOrderTxMockReposInput {
+  mockOrderRepo: DeepMockProxy<OrderRepository>;
+  mockData: OrderTxMockRepo;
 }
 
 // 주문 삭제 시나리오 기본 repo output 세팅
@@ -257,6 +316,12 @@ export interface ExpectBaseInput {
   scenario: CreateScenarioResult;
 }
 
+// 주문 트랜잭션 검증 베이스 input
+export interface ExpectTxBaseInput {
+  mockPrisma: DeepMockProxy<PrismaClient>;
+  scenario: OrderTxResult;
+}
+
 // 주문 삭제 시나리오 검증 베이스 input
 export interface ExpectDeleteBaseInput {
   mockPrisma: DeepMockProxy<PrismaClient>;
@@ -267,31 +332,79 @@ export interface ExpectDeleteBaseInput {
 }
 
 // 성공 시나리오 기본 공통 검증 세팅
-export interface ExpectOrderCreateInput extends ExpectBaseInput {
+export interface ExpectOnlyOrderCreateInput extends ExpectBaseInput {
   result: GetOrderRawData;
   mockOrderRepo: DeepMockProxy<OrderRepository>;
 }
 
+export interface ExpectOrderTxInput extends ExpectTxBaseInput {
+  result: GetOrderRawData | undefined;
+  mockOrderRepo: DeepMockProxy<OrderRepository>;
+  mockNotificationService: DeepMockProxy<NotificationService>;
+  mockUserService: DeepMockProxy<UserService>;
+  mockSseManager: DeepMockProxy<SseManager>;
+  paymentId: string;
+}
+
+// 주문 트랜잭션 주문 정보 조회 검증
+export interface ExpectOrderInput {
+  mockOrderRepo: DeepMockProxy<OrderRepository>;
+  paymentId: string;
+}
+
+// 주문 트랜잭션 유저 정보 조회 검증
+export interface ExpectUserInfo {
+  mockOrderRepo: DeepMockProxy<OrderRepository>;
+  buyerId: string;
+}
+
 // 성공 시나리오 포인트 검증
-export interface ExpectPointInput extends ExpectBaseInput {
+export interface ExpectPointInput extends ExpectTxBaseInput {
   mockOrderRepo: DeepMockProxy<OrderRepository>;
 }
+
+// 주문 트랜잭션 주문 상태 업데이트 검증
+export type ExpectUpdateStatusInput = ExpectPointInput;
 
 // 성공 시나리오 재고 검증
 export type ExpectStockInput = ExpectPointInput;
 
 // 성공 시나리오 알림 검증
-export interface ExpectNotificationInput extends ExpectBaseInput {
+export interface ExpectNotificationInput extends ExpectTxBaseInput {
   mockNotificationService: DeepMockProxy<NotificationService>;
 }
 
 // 성공 시나리오 알림 발송 검증
 export interface ExpectSendNotificationInput {
   mockSseManager: DeepMockProxy<SseManager>;
-  scenario: CreateScenarioResult;
+  scenario: OrderTxResult;
 }
 
 // 성공 시나리오 유저 등급 업데이트 검증
 export interface ExpectUserGradeInput {
   mockUserService: DeepMockProxy<UserService>;
+}
+
+// 주문 트랜잭션 결제 상태 조회 expect
+export interface ExpectPaymentStatus {
+  mockPrisma: DeepMockProxy<PrismaClient>;
+  mockOrderRepo: DeepMockProxy<OrderRepository>;
+  paymentId: string;
+}
+
+// 주문 트랜잭션 결제 상태 업데이트 expect
+export type ExpectUpdatePaymentStatus = ExpectPaymentStatus;
+
+// 주문 트랜잭션 주문 상태 조회 expect
+export interface ExpectOrderStatus {
+  mockPrisma: DeepMockProxy<PrismaClient>;
+  mockOrderRepo: DeepMockProxy<OrderRepository>;
+  orderId: string;
+}
+
+// 주문 트랜잭션 최종 결과 조회 expect
+export interface ExpectResult {
+  mockOrderRepo: DeepMockProxy<OrderRepository>;
+  scenario: OrderTxResult;
+  result: GetOrderRawData | undefined; // 주문 트랜잭션에서는 중복 방지를 위해 중간에 종료될 수 있음
 }

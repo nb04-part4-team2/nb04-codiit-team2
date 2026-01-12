@@ -4,6 +4,7 @@ import { env } from '@/config/constants.js';
 import { logger } from '@/config/logger.js';
 import prisma from '@/config/prisma.js';
 import { sseManager } from '@/common/utils/sse.manager.js';
+import { orderService } from '@/domains/order/order.container.js';
 
 // HTTP 서버 생성 (graceful shutdown을 위해 명시적 생성)
 const server = http.createServer(app);
@@ -12,6 +13,18 @@ server.listen(env.PORT, () => {
   logger.info(`🚀 Server is running on http://localhost:${env.PORT}`);
   logger.info(`📦 Environment: ${env.NODE_ENV}`);
 });
+
+// 주문 만료 처리 interval
+const EXPIRE_INTERVAL = 10 * 60 * 1000; // 10분
+
+const expireIntervalId = setInterval(async () => {
+  try {
+    logger.info('[OrderExpireJob] 만료 주문 처리 시작');
+    await orderService.expireWaitingOrder();
+  } catch (error) {
+    logger.error({ error }, '[OrderExpireJob] 만료 주문 처리 실패');
+  }
+}, EXPIRE_INTERVAL);
 
 // Graceful Shutdown 핸들러
 let isShuttingDown = false;
@@ -22,6 +35,9 @@ const gracefulShutdown = async (signal: string, timeout: number = 30000) => {
   isShuttingDown = true;
 
   logger.warn(`\n⚠️  ${signal} received. Starting graceful shutdown...`);
+
+  // 주문 만료처리 interval 정리
+  clearInterval(expireIntervalId);
 
   // SSE 연결 먼저 종료
   sseManager.closeAll();

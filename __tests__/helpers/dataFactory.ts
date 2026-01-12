@@ -10,6 +10,8 @@ import {
   Reply,
   Notification,
   OrderStatus,
+  PaymentProvider,
+  PaymentMethod,
 } from '@prisma/client';
 import { GetOrderRawData } from '@/domains/order/order.dto.js';
 import { createGetOrderMock } from '../mocks/order.mock.js';
@@ -315,9 +317,13 @@ export const createTestOrder = async (overrides: Partial<CreateOrderTestOptions>
       // [Payment 관계 처리]
       payments: payments
         ? {
-            create: {
-              price: payments.price,
-              status: payments.status,
+            createMany: {
+              data: payments.map((p) => ({
+                price: p.price,
+                status: p.status,
+                provider: PaymentProvider.kakaopay,
+                method: PaymentMethod.card,
+              })),
             },
           }
         : undefined,

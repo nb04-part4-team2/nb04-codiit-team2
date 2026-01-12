@@ -55,6 +55,8 @@ jobs:
       AWS_S3_BUCKET: dummy-bucket
       AWS_ACCESS_KEY_ID: dummy-access-key
       AWS_SECRET_ACCESS_KEY: dummy-secret-key
+      PORTONE_API_KEY: dummy-access-key
+      PORTONE_API_SECRET: dummy-secret-key
 
     steps:
       - name: Checkout code

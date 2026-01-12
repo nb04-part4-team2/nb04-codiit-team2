@@ -22,6 +22,7 @@ import {
   ReviewResponse,
 } from '@/domains/order/order.type.js';
 import { InternalServerError } from '@/common/utils/errors.js';
+import { buildPaymentStatus } from '@/domains/order/order.utils.js';
 
 // 주문 목록 조회 mapper input
 // type <-> dto 순환 참조 문제 때문에 type.ts에서 이동
@@ -97,16 +98,14 @@ const toOrderItemResponse = (orderItemRawData: GetOrderItemRawData): GetOrderIte
  */
 export const toOrderResponse = (rawOrder: GetOrderRawData): GetOrderResponseData => {
   if (!rawOrder.payments) {
-    // prisma에서 findUnique를 쓰니 타입상으로는 nullable 하지만
-    // payment가 status를 통해 결제 상태(결제 진행중인지 완료된건지 안된건지)를 파악하므로
-    // payment 객체 자체는 반드시 존재해야함
     console.error(`[Critical] Order ${rawOrder.id} has NO payment record!`);
     throw new InternalServerError('주문에 연결된 결제 정보가 없습니다.');
   }
   return {
     ...toOrderBaseResponse(rawOrder),
+    paymentStatus: buildPaymentStatus(rawOrder.payments),
     orderItems: rawOrder.orderItems.map(toOrderItemResponse),
-    payments: toPaymentResponse(rawOrder.payments),
+    payments: rawOrder.payments.map(toPaymentResponse),
   };
 };
 /**
