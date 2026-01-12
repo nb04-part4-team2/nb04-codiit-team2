@@ -16,7 +16,14 @@ CREATE TYPE "PaymentMethod" AS ENUM ('card', 'point', 'kakaopay', 'naverpay', 't
 -- AlterEnum
 BEGIN;
 CREATE TYPE "PaymentStatus_new" AS ENUM ('processing', 'pending', 'paid', 'failed', 'cancelled', 'completed');
-ALTER TABLE "payments" ALTER COLUMN "status" TYPE "PaymentStatus_new" USING ("status"::text::"PaymentStatus_new");
+
+ALTER TABLE "payments" ALTER COLUMN "status" TYPE "PaymentStatus_new" USING (
+  CASE 
+    WHEN "status"::text = 'CompletedPayment' THEN 'completed'::"PaymentStatus_new"
+    ELSE "status"::text::"PaymentStatus_new"
+  END
+);
+
 ALTER TYPE "PaymentStatus" RENAME TO "PaymentStatus_old";
 ALTER TYPE "PaymentStatus_new" RENAME TO "PaymentStatus";
 DROP TYPE "public"."PaymentStatus_old";
