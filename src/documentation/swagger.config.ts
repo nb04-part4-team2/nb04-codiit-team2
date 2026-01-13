@@ -33,6 +33,7 @@ const options: Options = {
       { name: 'Product', description: '상품 관리 (등록, 수정, 조회, 카테고리)' },
       { name: 'Cart', description: '장바구니 (추가, 수정, 삭제, 조회)' },
       { name: 'Order', description: '주문 (생성, 조회, 취소, 배송 상태)' },
+      { name: 'Payment', description: '결제 (생성, PG 연동, 웹훅)' },
       { name: 'Review', description: '리뷰 (작성, 수정, 삭제, 조회)' },
       { name: 'Inquiry', description: '문의 (질문, 답변, 비밀글)' },
       { name: 'Notification', description: '알림 (실시간 SSE, 읽음 처리)' },
