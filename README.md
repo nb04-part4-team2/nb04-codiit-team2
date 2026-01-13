@@ -1,6 +1,7 @@
 # Codiit E-Commerce Backend
 
 > 전자상거래 플랫폼 백엔드 - 실무 수준 아키텍처와 확장 가능한 설계
+> 실제 운영을 가정한 무중단 배포 · 실시간 알림 · 결제 트랜잭션을 포함한 백엔드
 
 [![Node.js](https://img.shields.io/badge/Node.js-22.x-green?logo=node.js)](https://nodejs.org/)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5.9-blue?logo=typescript)](https://www.typescriptlang.org/)
@@ -13,7 +14,7 @@
 
 ---
 
-## 🔗 링크
+## 링크
 
 - **Frontend**: https://www.stayme.kr
 - **Backend API**: https://api.stayme.kr
@@ -22,45 +23,60 @@
 
 ---
 
-## 📌 프로젝트 개요
+## ⭐ 한눈에 보는 프로젝트
 
-**12개 도메인**으로 구성된 전자상거래 백엔드 시스템.
+- 📦 **전자상거래 백엔드** - 13개 도메인, 51개 API
+- 🚀 **무중단 배포** - AWS Blue-Green 배포 + Graceful Shutdown
+- 🔐 **인증/인가** - JWT 이중 토큰 + 결제 트랜잭션 + SSE 실시간 알림
+- 🧪 **테스트 전략** - Unit/Integration 완전 분리, Docker 기반 테스트 DB
+- 🧱 **확장 가능한 구조** - Container Pattern (DI) 기반 도메인 독립 구성
+
+---
+
+## 프로젝트 개요
+
+13개 도메인으로 구성된 전자상거래 백엔드 시스템으로
+상품·주문·결제·알림·통계를 실제 서비스 수준으로 구현했습니다.
+
+**주요 기능**
 판매자 스토어 관리, 상품 등록/주문/결제, 실시간 알림(SSE), 대시보드 통계 제공.
 
 ### 핵심 특징
 
-- **도메인 주도 설계**: 12개 독립 모듈 + Container Pattern (DI)
-- **무중단 배포**: AWS 블루-그린 배포 + Graceful Shutdown
-- **타입 안전성**: TypeScript + Zod 검증 + tsconfig 3분할 구조
-- **테스트 격리**: Unit/Integration 분리, Docker 기반 테스트 DB
-- **환경별 로깅**: Development (morgan) / Production (pino-http) / Test (silent)
+- **무중단 배포**: AWS Blue-Green 배포 + Graceful Shutdown + ALB 타겟 그룹 전환
+- **도메인 주도 설계**: 12개 독립 모듈 + Container Pattern (DI) + 레이어드 아키텍처
+- **타입 안전성**: TypeScript + Zod 런타임 검증 + 3분할 tsconfig 구조
+- **테스트 격리**: Unit/Integration 완전 분리 + Docker 기반 테스트 DB 격리
+- **Rate Limiting**: Global 1000/15분, Auth 로그인 5회/15분, GitHub Secrets 관리
+- **환경별 로깅**: Development (morgan) / Production (pino-http + CloudWatch) / Test (silent)
 
 ---
 
-## 📑 목차
+## 목차
 
-- [⚡ 빠른 시작 (3분)](#빠른-시작-3분)
 - [✨ 주요 기능](#주요-기능)
 - [🛠️ 기술 스택](#기술-스택)
 - [🏗️ 아키텍처](#아키텍처)
 - [🗄️ 데이터베이스 ERD](#데이터베이스-erd)
 - [📋 API 문서](#api-문서)
+- [🧪 테스트 전략](#테스트-전략)
+- [🎯 기술적 도전 과제](#기술적-도전-과제)
+- [🚀 배포 & CI/CD](#배포)
+- [⚡ 빠른 시작 (3분)](#빠른-시작-3분)
 - [📁 프로젝트 구조](#프로젝트-구조)
 - [⚙️ 환경 변수](#환경-변수)
 - [📋 주요 명령어](#주요-명령어)
-- [🎯 기술적 도전 과제](#기술적-도전-과제)
-- [🚀 배포](#배포)
 - [🔄 개발 프로세스](#개발-프로세스)
 - [🔧 트러블슈팅](#트러블슈팅)
 - [📚 문서](#문서)
-- [🤝 기여 가이드](#기여-가이드)
 - [👥 팀원](#팀원)
+- [🤝 기여 가이드](#기여-가이드)
 - [📄 라이선스](#라이선스)
 - [📞 문의](#문의)
 
 ---
 
-## ⚡ 빠른 시작 (3분)
+## 빠른 시작 (3분)
 
 > 💡 **처음 실행하는 분들을 위한 최소 설정 가이드**
 
@@ -80,6 +96,11 @@ npm install
 
 # 3. 환경 변수 설정
 cp .env.example .env
+
+# JWT Secret 자동 생성 (필수)
+echo "ACCESS_TOKEN_SECRET=$(openssl rand -hex 32)" >> .env
+echo "REFRESH_TOKEN_SECRET=$(openssl rand -hex 32)" >> .env
+
 # .env 파일에서 DATABASE_URL 설정 (필수)
 
 # 4. Prisma 설정
@@ -99,13 +120,12 @@ curl http://localhost:3000/api/health
 ```
 
 **다음 단계:**
-- 📖 상세한 설정은 [시작하기](#시작하기) 섹션 참고
-- 🔧 환경 변수 전체 목록은 [환경 변수](#환경-변수) 참고
+- 🔧 환경 변수 상세 설명은 [환경 변수](#환경-변수) 참고
 - 📚 API 사용법은 [Swagger 문서](https://api.stayme.kr/api/swagger) 참고
 
 ---
 
-## ✨ 주요 기능
+## 주요 기능
 
 ### 핵심 비즈니스 로직
 
@@ -117,16 +137,17 @@ curl http://localhost:3000/api/health
 
 ### 기술 하이라이트
 
-- **Container Pattern (DI)**: 12개 도메인 독립 구성, 테스트 용이성 확보
+- **Container Pattern (DI)**: 13개 도메인 독립 구성, 테스트 용이성 확보
 - **실시간 알림**: SSE 기반 브라우저 푸시, Graceful Shutdown 지원
 - **무중단 배포**: AWS 블루-그린 배포, 타겟 그룹 전환
 - **타입 안전성**: TypeScript + Zod 런타임 검증, 3분할 tsconfig 구조
+- **Rate Limiting**: Global 1000/15분, Auth 로그인 5회/15분, GitHub Secrets 관리
 
-> 📋 전체 49개 API 명세는 [API 문서](#api-문서) 섹션 참고
+> 📋 전체 51개 API 명세는 [API 문서](#api-문서) 섹션 참고
 
 ---
 
-## 🛠️ 기술 스택
+## 기술 스택
 
 ### Core
 - **Node.js** 22.x
@@ -167,9 +188,9 @@ curl http://localhost:3000/api/health
 
 ---
 
-## 🏗️ 아키텍처
+## 아키텍처
 
-### 계층형 아키텍처 + Container Pattern
+### 아키텍처 설계 (Application Layer)
 
 본 프로젝트는 **계층형 아키텍처**와 **Container Pattern (DI)**을 결합합니다.
 
@@ -364,7 +385,7 @@ GitHub Actions → ECR (이미지 push) → SSH → EC2 (동적 IP 조회) → D
 
 ---
 
-## 📁 프로젝트 구조
+## 프로젝트 구조
 
 ```plaintext
 codiit/
@@ -372,7 +393,7 @@ codiit/
 │   ├── app.ts                    # Express 설정
 │   ├── server.ts                 # HTTP 서버 + Graceful Shutdown
 │   ├── config/                   # 환경 설정 (constants, logger, prisma)
-│   ├── domains/                  # 12개 도메인 모듈 (DDD)
+│   ├── domains/                  # 13개 도메인
 │   ├── documentation/            # Swagger API 문서
 │   └── common/                   # 공통 모듈 (middlewares, utils)
 ├── __tests__/                    # 테스트 (unit/integration)
@@ -395,51 +416,77 @@ codiit/
 
 ---
 
-## 🗄️ 데이터베이스 ERD
+## 데이터베이스 ERD
+
+> 실제 커머스 요구사항 기준으로 설계된 ERD (19개 테이블, 포트원 결제 연동)
 
 ### 핵심 엔티티 관계도
 
 ```mermaid
 erDiagram
-    Grade ||--o{ User : "1:N"
-    User ||--o| Store : "1:1"
-    User ||--o| Cart : "1:1"
-    User ||--o{ Order : "1:N"
-    User ||--o{ Review : "1:N"
-    User ||--o{ Inquiry : "1:N"
-    User ||--o{ Reply : "1:N"
-    User ||--o{ StoreLike : "1:N"
-    User ||--o{ Notification : "1:N"
-    User ||--o{ PointHistory : "1:N"
-    Store ||--o{ Product : "1:N"
-    Store ||--o{ StoreLike : "1:N"
-    Category ||--o{ Product : "1:N"
-    Product ||--o{ Stock : "1:N"
-    Product ||--o{ CartItem : "1:N"
-    Product ||--o{ OrderItem : "1:N"
-    Product ||--o{ Review : "1:N"
-    Product ||--o{ Inquiry : "1:N"
-    Size ||--o{ Stock : "1:N"
-    Size ||--o{ CartItem : "1:N"
-    Size ||--o{ OrderItem : "1:N"
-    Cart ||--o{ CartItem : "1:N"
-    Order ||--o{ OrderItem : "1:N"
-    Order ||--o| Payment : "1:1"
-    Order ||--o{ PointHistory : "1:N"
-    OrderItem ||--o| Review : "1:1"
-    Inquiry ||--o| Reply : "1:1"
+    %% User & Auth
+    User ||--o{ RefreshToken : has
+    User ||--|| Grade : "belongs to"
+    User ||--o| Store : owns
+    User ||--o| Cart : has
+    User ||--o{ Order : places
+    User ||--o{ Review : writes
+    User ||--o{ Inquiry : creates
+    User ||--o{ Reply : answers
+    User ||--o{ StoreLike : likes
+    User ||--o{ Notification : receives
+    User ||--o{ PointHistory : has
+
+    %% Store & Product
+    Store ||--o{ Product : sells
+    Store ||--o{ StoreLike : "liked by"
+
+    Product ||--|| Category : "belongs to"
+    Product ||--o{ Stock : has
+    Product ||--o{ CartItem : in
+    Product ||--o{ OrderItem : ordered
+    Product ||--o{ Review : reviewed
+    Product ||--o{ Inquiry : inquired
+
+    %% Size
+    Size ||--o{ Stock : "used in"
+    Size ||--o{ CartItem : "used in"
+    Size ||--o{ OrderItem : "used in"
+
+    %% Cart
+    Cart ||--o{ CartItem : contains
+
+    %% Order & Payment
+    Order ||--o{ OrderItem : contains
+    Order ||--o{ Payment : "paid by"
+    Order ||--o{ PointHistory : "related to"
+
+    %% Review
+    OrderItem ||--o| Review : "reviewed by"
+
+    %% Inquiry
+    Inquiry ||--o| Reply : "answered by"
 
     User {
         string id PK
         string email UK
         string password
         string name
-        enum type
+        UserType type
         string image
         int point
-        string gradeId FK
         datetime createdAt
         datetime updatedAt
+        string gradeId FK
+    }
+
+    RefreshToken {
+        string id PK
+        string token UK
+        string jti UK
+        string userId FK
+        datetime expiresAt
+        datetime createdAt
     }
 
     Grade {
@@ -459,9 +506,9 @@ erDiagram
         string detailAddress
         string phoneNumber
         string image
-        string userId FK
         datetime createdAt
         datetime updatedAt
+        string userId FK,UK
     }
 
     Product {
@@ -477,15 +524,23 @@ erDiagram
         int salesCount
         int reviewsCount
         float reviewsRating
-        string storeId FK
-        string categoryId FK
         datetime createdAt
         datetime updatedAt
+        string storeId FK
+        string categoryId FK
     }
 
     Category {
         string id PK
         string name UK
+    }
+
+    Stock {
+        string id PK
+        int quantity
+        int reservedQuantity
+        string productId FK
+        int sizeId FK
     }
 
     Size {
@@ -494,29 +549,22 @@ erDiagram
         string ko
     }
 
-    Stock {
-        string id PK
-        int quantity
-        string productId FK
-        int sizeId FK
-    }
-
     Cart {
         string id PK
         int quantity
-        string buyerId FK
         datetime createdAt
         datetime updatedAt
+        string buyerId FK,UK
     }
 
     CartItem {
         string id PK
         int quantity
+        datetime createdAt
+        datetime updatedAt
         string cartId FK
         string productId FK
         int sizeId FK
-        datetime createdAt
-        datetime updatedAt
     }
 
     Order {
@@ -524,12 +572,13 @@ erDiagram
         string name
         string phoneNumber
         string address
-        enum status
+        OrderStatus status
         int subtotal
         int totalQuantity
         int usePoint
-        string buyerId FK
         datetime createdAt
+        datetime expiresAt
+        string buyerId FK
     }
 
     OrderItem {
@@ -544,67 +593,75 @@ erDiagram
     Payment {
         string id PK
         int price
-        enum status
-        string orderId FK
+        PaymentStatus status
+        PaymentProvider provider
+        PaymentMethod method
+        string impUid UK
+        string pgTid
+        string errorCode
+        string errorMessage
+        datetime approvedAt
+        datetime failedAt
         datetime createdAt
         datetime updatedAt
+        string orderId FK
     }
 
     Review {
         string id PK
         int rating
         string content
-        string userId FK
-        string productId FK
-        string orderItemId FK
         datetime createdAt
         datetime updatedAt
+        string userId FK
+        string productId FK
+        string orderItemId FK,UK
     }
 
     Inquiry {
         string id PK
         string title
         string content
-        enum status
+        InquiryStatus status
         boolean isSecret
-        string userId FK
-        string productId FK
         datetime createdAt
         datetime updatedAt
+        string userId FK
+        string productId FK
     }
 
     Reply {
         string id PK
         string content
-        string userId FK
-        string inquiryId FK
         datetime createdAt
         datetime updatedAt
+        string userId FK
+        string inquiryId FK,UK
     }
 
     StoreLike {
         string id PK
+        datetime createdAt
         string userId FK
         string storeId FK
-        datetime createdAt
     }
 
     PointHistory {
         string id PK
-        enum type
+        PointHistoryType type
         int amount
+        datetime createdAt
         string userId FK
         string orderId FK
-        datetime createdAt
     }
 
     Notification {
         string id PK
         string content
         boolean isChecked
-        string userId FK
         datetime createdAt
         datetime updatedAt
+        string userId FK
     }
 ```
 
@@ -619,10 +676,24 @@ erDiagram
 - `CompletedAnswer`: 답변 완료
 
 **PaymentStatus (결제 상태)**
-- `Pending`: 결제 대기
-- `CompletedPayment`: 결제 완료
-- `Failed`: 결제 실패
-- `Cancelled`: 결제 취소
+- `processing`: 주문 트랜잭션 처리 중
+- `pending`: PG 결제 요청됨
+- `paid`: 결제 완료
+- `failed`: 결제 실패
+- `cancelled`: 결제 취소 / 환불
+- `completed`: 결제 완료 후 주문 트랜잭션 성공
+
+**PaymentProvider (결제 제공자)**
+- `kakaopay`: 카카오페이
+- `naverpay`: 네이버페이
+- `tosspay`: 토스페이
+
+**PaymentMethod (결제 수단)**
+- `card`: 카드
+- `point`: 포인트
+- `kakaopay`: 카카오페이
+- `naverpay`: 네이버페이
+- `tosspay`: 토스페이
 
 **OrderStatus (주문 상태)**
 - `WaitingPayment`: 결제 대기
@@ -638,7 +709,7 @@ erDiagram
 
 ---
 
-## 📋 API 문서
+## API 문서
 
 ### 📚 Swagger UI (권장)
 
@@ -647,14 +718,14 @@ erDiagram
 > ⭐ **모든 API를 Swagger에서 직접 테스트할 수 있습니다!**
 
 Swagger UI에서 다음 기능을 제공합니다:
-- 전체 49개 엔드포인트 명세
+- 전체 51개 엔드포인트 명세
 - 요청/응답 스키마 (Zod 검증)
 - Try it out 기능 (실제 API 호출)
 - 인증 토큰 자동 포함
 
 ---
 
-### 주요 도메인 (12개)
+### 주요 도메인 (13개)
 
 | 도메인 | 핵심 기능 | 엔드포인트 수 |
 |--------|----------|---------------|
@@ -664,6 +735,7 @@ Swagger UI에서 다음 기능을 제공합니다:
 | 🛍️ **Product** | 상품 CRUD, 검색, 필터링 | 5개 |
 | 🛒 **Cart** | 장바구니 추가/수정/삭제 | 5개 |
 | 📦 **Order** | 주문 생성, 조회, 취소 | 5개 |
+| 💳 **Payment** | 결제 생성, 웹훅 처리 | 2개 |
 | 💬 **Inquiry** | 문의 작성, 답변 | 8개 |
 | ⭐ **Review** | 리뷰 CRUD, 통계 | 5개 |
 | 🔔 **Notification** | SSE 실시간 알림 | 3개 |
@@ -671,7 +743,7 @@ Swagger UI에서 다음 기능을 제공합니다:
 | 🏷️ **Metadata** | 등급 정책 조회 | 1개 |
 | 📁 **S3** | 이미지 업로드 | 1개 |
 
-**총 49개 엔드포인트**
+**총 51개 엔드포인트**
 
 ---
 
@@ -707,7 +779,58 @@ curl https://api.stayme.kr/api/metadata/grade
 
 ---
 
-## ⚙️ 환경 변수
+## 테스트 전략
+
+### 테스트 구조
+
+**테스트 격리 전략**
+- **Unit Test**: Service/Repository 계층 단위 테스트 (의존성 Mock)
+- **Integration Test**: 실제 PostgreSQL + Docker 환경에서 E2E 테스트
+- **테스트 환경 완전 격리**: `.env.test` (Git 관리) + `.env.test.local` (로컬 전용)
+
+**테스트 실행**
+```bash
+# Unit 테스트 (빠름, Mock 사용)
+npm test
+
+# Integration 테스트 (Docker DB 필요)
+npm run test:db:up        # 테스트 DB 시작
+npm run test:integration  # 통합 테스트 실행
+npm run test:db:down      # 테스트 DB 정리
+
+# 전체 테스트
+npm run test:all
+
+# Watch 모드
+npm run test:watch
+
+# 커버리지 리포트
+npm run test:cov
+```
+
+**테스트 DB 관리**
+```bash
+npm run test:db:up       # PostgreSQL 테스트 DB 시작 (Docker)
+npm run test:db:down     # 테스트 DB 종료
+npm run test:db:reset    # DB 초기화 + 마이그레이션
+```
+
+### CI 환경 테스트
+
+**GitHub Actions CI Pipeline**
+1. **Lint & Type Check** - Prisma, ESLint, Prettier, TypeScript
+2. **Unit Tests** - Jest (mocked dependencies)
+3. **Integration Tests** - Docker PostgreSQL + 실제 DB 쿼리
+4. **Build** - TypeScript 컴파일 검증
+
+**환경 변수 처리**
+- CI 환경: `.env.test`의 더미 AWS 자격증명 사용
+- S3 Integration Test: Mock 처리로 실제 API 호출 없음
+- Rate Limit: 테스트 환경에서 자동으로 999999로 설정
+
+---
+
+## 환경 변수
 
 ### 필수 환경 변수
 
@@ -732,24 +855,13 @@ curl https://api.stayme.kr/api/metadata/grade
 | `ACCESS_TOKEN_EXPIRES_IN` | `15m` | Access Token 만료 시간 |
 | `REFRESH_TOKEN_EXPIRES_IN` | `7d` | Refresh Token 만료 시간 |
 
-### 빠른 설정
-
-```bash
-# .env 파일 생성
-cp .env.example .env
-
-# JWT Secret 자동 생성
-echo "ACCESS_TOKEN_SECRET=$(openssl rand -hex 32)" >> .env
-echo "REFRESH_TOKEN_SECRET=$(openssl rand -hex 32)" >> .env
-```
-
 ⚠️ **주의:** `.env` 파일은 절대 Git에 커밋하지 마세요!
 
 **중요**: 앱 시작 시 Zod가 모든 환경변수를 검증합니다. 누락 시 즉시 종료됩니다.
 
 ---
 
-## 📋 주요 명령어
+## 주요 명령어
 
 ### 개발
 
@@ -806,7 +918,7 @@ npx prisma studio        # Prisma Studio GUI
 
 ---
 
-## 🎯 기술적 도전 과제
+## 기술적 도전 과제
 
 ### 1. Graceful Shutdown
 
@@ -830,16 +942,17 @@ process.on('SIGTERM', async () => {
 
 ---
 
-### 2. 환경별 HTTP 로거 분기
+### 2. CI 안정화
 
-**배경**: 개발 환경에서 pino-http JSON 로그가 가독성이 떨어짐
+**배경**: PR #82에서 unit-test CI 실패. 로컬에서는 통과하나 CI에서 실패
 
-**구현**:
-- **Development**: `morgan('dev')` - 간결한 컬러 로그
-- **Production**: `pino-http` - 구조화된 JSON (CloudWatch 연동)
-- **Test**: 로거 없음 - 깔끔한 테스트 출력
+**원인**: `constants.ts`가 import 시점에 환경변수 검증 → CI unit-test job에 env 미설정
 
-**효과**: 개발자 경험(DX) 개선, 환경별 최적화
+**해결**:
+- `.github/workflows/ci.yml` unit-test job에 더미 환경변수 추가
+- Integration test와 환경변수 격리
+
+**효과**: 로컬/CI 환경 차이로 인한 테스트 실패 제거
 
 ---
 
@@ -861,27 +974,28 @@ process.on('SIGTERM', async () => {
 
 ---
 
-### 4. CI 안정화
+### 4. 환경별 HTTP 로거 분기
 
-**배경**: PR #82에서 unit-test CI 실패. 로컬에서는 통과하나 CI에서 실패
+**배경**: 개발 환경에서 pino-http JSON 로그가 가독성이 떨어짐
 
-**원인**: `constants.ts`가 import 시점에 환경변수 검증 → CI unit-test job에 env 미설정
+**구현**:
+- **Development**: `morgan('dev')` - 간결한 컬러 로그
+- **Production**: `pino-http` - 구조화된 JSON (CloudWatch 연동)
+- **Test**: 로거 없음 - 깔끔한 테스트 출력
 
-**해결**:
-- `.github/workflows/ci.yml` unit-test job에 더미 환경변수 추가
-- Integration test와 환경변수 격리
-
-**효과**: 로컬/CI 환경 차이로 인한 테스트 실패 제거
+**효과**: 개발자 경험(DX) 개선, 환경별 최적화
 
 ---
 
-## 🚀 배포
+## 배포 & CI/CD
 
 > 💡 블루-그린 배포 상세 흐름은 [인프라 아키텍처](#인프라-아키텍처-aws-blue-green-deployment) 섹션 참고
+>
+> **실제 운영 환경 경험**: 무중단 배포, 롤백 전략, Health Check, CloudWatch 모니터링 적용
 
 ### GitHub Actions 워크플로우
 
-배포는 GitHub Actions를 통해 자동화됩니다:
+배포는 GitHub Actions를 통해 완전 자동화됩니다:
 
 1. **이미지 빌드 & 푸시**: ECR에 Docker 이미지 푸시
 2. **동적 IP 조회**: AWS API로 Blue/Green EC2 인스턴스 IP 확인
@@ -891,7 +1005,7 @@ process.on('SIGTERM', async () => {
 
 ---
 
-## 🔄 개발 프로세스
+## 개발 프로세스
 
 ### CI/CD Pipeline
 
@@ -943,7 +1057,7 @@ git commit --no-verify -m "feat: 긴급 수정"
 
 ---
 
-## 🔧 트러블슈팅
+## 트러블슈팅
 
 ### 자주 발생하는 문제
 
@@ -1044,14 +1158,14 @@ npx prisma migrate reset
 
 ---
 
-## 📚 문서
+## 문서
 
 ### 프로젝트
 
 - **발표 자료**: <!-- TODO: 발표 자료 링크 -->
 - **팀 노션**: [CODI-IT 2팀](https://www.notion.so/CODI-IT-2-2b99ae0434fb803a8884e856fcef23cd)
 
-### 기술 가이드
+### 외부 기술 가이드
 
 - [TypeScript](https://www.typescriptlang.org/)
 - [Express.js](https://expressjs.com/)
@@ -1060,7 +1174,7 @@ npx prisma migrate reset
 
 ---
 
-## 🤝 기여 가이드
+## 기여 가이드
 
 1. **브랜치 생성** - `feat/feature-name`, `fix/bug-name`
 2. **코드 작성** - 코드 컨벤션 준수
@@ -1073,26 +1187,26 @@ npx prisma migrate reset
 
 ---
 
-## 👥 팀원
+## 팀원
 
 | Profile | Name | Role | GitHub | 담당 영역 |
 |---------|------|------|--------|-----------|
 | <img src="https://github.com/qhdltmwhs.png" width="80" height="80"/> | 최홍기 | 백엔드 | [@qhdltmwhs](https://github.com/qhdltmwhs) | Store |
-| <img src="https://github.com/aprkal12.png" width="80" height="80"/> | 김동현 | 백엔드 | [@aprkal12](https://github.com/aprkal12) | Cart, Order |
+| <img src="https://github.com/aprkal12.png" width="80" height="80"/> | 김동현 | 백엔드 | [@aprkal12](https://github.com/aprkal12) | Cart, Order, Payment |
 | <img src="https://github.com/Park-DaSeul.png" width="80" height="80"/> | 박다슬 | 백엔드 | [@Park-DaSeul](https://github.com/Park-DaSeul) | Notification, Inquiry |
-| <img src="https://github.com/stoneME2.png" width="80" height="80"/> | 김혜연 | 백엔드 | [@stoneME2](https://github.com/stoneME2) | Auth, User |
+| <img src="https://github.com/stoneME2.png" width="80" height="80"/> | 김혜연 | 백엔드 | [@stoneME2](https://github.com/stoneME2) | User, Auth |
 | <img src="https://github.com/InsipidPie1229.png" width="80" height="80"/> | 홍준기 | 백엔드 | [@InsipidPie1229](https://github.com/InsipidPie1229) | Product, Review |
 | <img src="https://github.com/winnie4869.png" width="80" height="80"/> | 이하영 | 백엔드 | [@winnie4869](https://github.com/winnie4869) | S3, Dashboard, Metadata |
 
 ---
 
-## 📄 라이선스
+## 라이선스
 
 MIT License
 
 ---
 
-## 📞 문의
+## 문의
 
 프로젝트 관련 문의사항은 [GitHub Issues](https://github.com/nb04-part4-team2/nb04-codiit-team2/issues)를 통해 남겨주세요.
 
