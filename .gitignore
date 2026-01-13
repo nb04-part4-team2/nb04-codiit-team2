@@ -12,7 +12,8 @@ build/
 .env
 .env.local
 .env.*.local
-.env.test
+!.env.example
+!.env.test
 
 # Logs
 logs/
@@ -59,3 +60,4 @@ docker-compose.override.yml
 
 # Documentation
 docs/
+/generated/prisma

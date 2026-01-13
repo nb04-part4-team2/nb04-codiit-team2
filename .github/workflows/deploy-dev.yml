@@ -1,0 +1,494 @@
+name: Deploy to AWS (Deploy Branch)
+
+on:
+  push:
+    branches:
+      - deploy
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        type: choice
+        options:
+          - development
+        default: development
+
+env:
+  AWS_REGION: ap-northeast-2
+  ECR_REGISTRY: ${{ secrets.ECR_REGISTRY }}
+  ECR_REPOSITORY: ${{ secrets.ECR_REPOSITORY }}
+  IMAGE_TAG: ${{ github.sha }}
+  AMI_ID: ${{ secrets.AMI_ID }}
+  SECURITY_GROUP_ID: ${{ secrets.SECURITY_GROUP_ID }}
+  SUBNET_ID: ${{ secrets.SUBNET_ID }}
+  IAM_INSTANCE_PROFILE: ${{ secrets.IAM_INSTANCE_PROFILE }}
+  KEY_NAME: ${{ secrets.KEY_NAME }}
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ env.AWS_REGION }}
+
+      # ============================================
+      # Step 1: 현재 활성 환경 감지 (Blue/Green)
+      # ============================================
+      - name: Detect current active environment
+        id: detect
+        run: |
+          echo "🔍 현재 운영 중인 환경 감지 중..."
+
+          CURRENT_TG_ARN=$(aws elbv2 describe-listeners \
+            --listener-arns ${{ secrets.ALB_LISTENER_ARN }} \
+            --query 'Listeners[0].DefaultActions[0].TargetGroupArn' \
+            --output text)
+
+          echo "Current Target Group: $CURRENT_TG_ARN"
+
+          if [[ "$CURRENT_TG_ARN" == "${{ secrets.BLUE_TARGET_GROUP_ARN }}" ]]; then
+            echo "current_env=blue" >> $GITHUB_OUTPUT
+            echo "target_env=green" >> $GITHUB_OUTPUT
+            echo "target_tag=codiit-green" >> $GITHUB_OUTPUT
+            echo "target_tg_arn=${{ secrets.GREEN_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+            echo "📘 현재: Blue 운영 중 → 📗 배포 타겟: Green"
+          elif [[ "$CURRENT_TG_ARN" == "${{ secrets.GREEN_TARGET_GROUP_ARN }}" ]]; then
+            echo "current_env=green" >> $GITHUB_OUTPUT
+            echo "target_env=blue" >> $GITHUB_OUTPUT
+            echo "target_tag=codiit-blue" >> $GITHUB_OUTPUT
+            echo "target_tg_arn=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+            echo "📗 현재: Green 운영 중 → 📘 배포 타겟: Blue"
+          else
+            echo "⚠️ No active target group detected. Starting initial deployment."
+            echo "current_env=none" >> $GITHUB_OUTPUT
+            echo "target_env=blue" >> $GITHUB_OUTPUT
+            echo "target_tag=codiit-blue" >> $GITHUB_OUTPUT
+            echo "target_tg_arn=${{ secrets.BLUE_TARGET_GROUP_ARN }}" >> $GITHUB_OUTPUT
+            echo "🚀 첫 배포: Blue 환경으로 시작"
+          fi
+
+      # ============================================
+      # Step 2: EC2 존재 확인 및 생성
+      # ============================================
+      - name: Check or create EC2 instance
+        id: ec2-setup
+        run: |
+          echo "🔍 Checking for existing ${{ steps.detect.outputs.target_tag }} EC2..."
+
+          INSTANCE_ID=$(aws ec2 describe-instances \
+            --filters "Name=tag:Name,Values=${{ steps.detect.outputs.target_tag }}" \
+                      "Name=instance-state-name,Values=running" \
+            --query 'Reservations[0].Instances[0].InstanceId' \
+            --output text)
+
+          if [[ "$INSTANCE_ID" == "None" || -z "$INSTANCE_ID" ]]; then
+            echo "🔨 Creating new EC2 from Golden AMI..."
+
+            INSTANCE_ID=$(aws ec2 run-instances \
+              --image-id ${{ secrets.AMI_ID }} \
+              --instance-type t3.micro \
+              --key-name ${{ env.KEY_NAME }} \
+              --security-group-ids ${{ env.SECURITY_GROUP_ID }} \
+              --subnet-id ${{ env.SUBNET_ID }} \
+              --iam-instance-profile Name=${{ env.IAM_INSTANCE_PROFILE }} \
+              --associate-public-ip-address \
+              --tag-specifications "ResourceType=instance,Tags=[{Key=Name,Value=${{ steps.detect.outputs.target_tag }}}]" \
+              --query 'Instances[0].InstanceId' \
+              --output text)
+
+            echo "✅ EC2 created: $INSTANCE_ID"
+            echo "⏳ Waiting for instance to be running..."
+            aws ec2 wait instance-running --instance-ids $INSTANCE_ID
+
+            # EC2 초기화 대기 (90초)
+            # 이유: 부팅 후 Docker, AWS CLI, systemd 서비스가 완전히 준비되기까지 60-90초 소요
+            # Golden AMI에 이미 설치되어 있지만, 서비스 시작 및 초기화 시간 고려
+            echo "⏳ Waiting for initialization (90s)..."
+            sleep 90
+          else
+            echo "✅ Using existing EC2: $INSTANCE_ID"
+          fi
+
+          echo "instance_id=$INSTANCE_ID" >> $GITHUB_OUTPUT
+
+      # ============================================
+      # Step 3: EC2 Public IP 동적 조회
+      # ============================================
+      - name: Get EC2 Public IP
+        id: get-ip
+        run: |
+          echo "🔍 Getting Public IP for ${{ steps.ec2-setup.outputs.instance_id }}..."
+
+          PUBLIC_IP=$(aws ec2 describe-instances \
+            --instance-ids ${{ steps.ec2-setup.outputs.instance_id }} \
+            --query 'Reservations[0].Instances[0].PublicIpAddress' \
+            --output text)
+
+          echo "✅ Public IP: $PUBLIC_IP"
+          echo "public_ip=$PUBLIC_IP" >> $GITHUB_OUTPUT
+
+      # ============================================
+      # Step 4: Docker 이미지 빌드 및 ECR 푸시
+      # ============================================
+      - name: Login to Amazon ECR
+        uses: aws-actions/amazon-ecr-login@v2
+
+      - name: Build and push Docker image
+        run: |
+          echo "🔨 Building Docker image..."
+          docker build -t $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG .
+          docker tag $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG \
+                     $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "📤 Pushing to ECR..."
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+          docker push $ECR_REGISTRY/$ECR_REPOSITORY:latest
+
+          echo "✅ Image pushed: $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG"
+
+      # ============================================
+      # Step 5: EC2에 배포 (SSH)
+      # ============================================
+      - name: Setup SSH key
+        run: |
+          mkdir -p ~/.ssh
+          echo "${{ secrets.EC2_SSH_KEY }}" > ~/.ssh/codiit-key.pem
+          chmod 400 ~/.ssh/codiit-key.pem
+          ssh-keyscan -H ${{ steps.get-ip.outputs.public_ip }} >> ~/.ssh/known_hosts 2>/dev/null
+
+      - name: Create .env file locally
+        run: |
+          echo "📝 Creating .env file locally..."
+          cat > .env.production << 'EOF'
+          NODE_ENV=production
+          PORT=3000
+          DATABASE_URL=${{ secrets.DATABASE_URL }}
+          ACCESS_TOKEN_SECRET=${{ secrets.ACCESS_TOKEN_SECRET }}
+          ACCESS_TOKEN_EXPIRES_IN=15m
+          REFRESH_TOKEN_SECRET=${{ secrets.REFRESH_TOKEN_SECRET }}
+          REFRESH_TOKEN_EXPIRES_IN=7d
+          CORS_ORIGIN=${{ secrets.CORS_ORIGIN }}
+          BCRYPT_ROUNDS=10
+          AWS_REGION=ap-northeast-2
+          AWS_ACCESS_KEY_ID=${{ secrets.AWS_ACCESS_KEY_ID }}
+          AWS_SECRET_ACCESS_KEY=${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          AWS_S3_BUCKET=${{ secrets.AWS_S3_BUCKET }}
+          SLOW_QUERY_THRESHOLD_MS=${{ secrets.SLOW_QUERY_THRESHOLD_MS }}
+          RATE_LIMIT_WINDOW=${{ secrets.RATE_LIMIT_WINDOW }}
+          RATE_LIMIT_MAX=${{ secrets.RATE_LIMIT_MAX }}
+          RATE_LIMIT_AUTH_LOGIN_WINDOW=${{ secrets.RATE_LIMIT_AUTH_LOGIN_WINDOW }}
+          RATE_LIMIT_AUTH_LOGIN_MAX=${{ secrets.RATE_LIMIT_AUTH_LOGIN_MAX }}
+          RATE_LIMIT_AUTH_REFRESH_WINDOW=${{ secrets.RATE_LIMIT_AUTH_REFRESH_WINDOW }}
+          RATE_LIMIT_AUTH_REFRESH_MAX=${{ secrets.RATE_LIMIT_AUTH_REFRESH_MAX }}
+          PORTONE_API_KEY=${{ secrets.PORTONE_API_KEY }}
+          PORTONE_API_SECRET=${{ secrets.PORTONE_API_SECRET }}
+          EOF
+          echo "✅ .env file created"
+
+      - name: Transfer .env to EC2
+        run: |
+          echo "📤 Transferring .env to ${{ steps.detect.outputs.target_env }} EC2..."
+          scp -i ~/.ssh/codiit-key.pem .env.production \
+            ec2-user@${{ steps.get-ip.outputs.public_ip }}:/home/ec2-user/.env
+
+          # 로컬 .env 삭제 (보안)
+          rm -f .env.production
+
+          echo "✅ .env file transferred securely"
+
+      - name: Deploy Docker container on ${{ steps.detect.outputs.target_env }} EC2
+        env:
+          AWS_REGION: ${{ env.AWS_REGION }}
+          ECR_REGISTRY: ${{ env.ECR_REGISTRY }}
+          ECR_REPOSITORY: ${{ env.ECR_REPOSITORY }}
+          IMAGE_TAG: ${{ env.IMAGE_TAG }}
+        run: |
+          echo "🚀 Deploying to ${{ steps.detect.outputs.target_env }} EC2..."
+
+          ssh -i ~/.ssh/codiit-key.pem ec2-user@${{ steps.get-ip.outputs.public_ip }} \
+            "AWS_REGION=${AWS_REGION} \
+             ECR_REGISTRY=${ECR_REGISTRY} \
+             ECR_REPOSITORY=${ECR_REPOSITORY} \
+             IMAGE_TAG=${IMAGE_TAG} \
+             bash -s" << 'DEPLOYSSH'
+          # ECR 로그인
+          aws ecr get-login-password --region $AWS_REGION | \
+            docker login --username AWS --password-stdin $ECR_REGISTRY
+
+          # 이미지 Pull
+          echo "📥 Pulling new image..."
+          docker pull $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+          # 기존 컨테이너 Graceful Shutdown
+          # 타임아웃: 30초 (Node.js Graceful Shutdown 시간)
+          # src/server.ts의 gracefulShutdown 타임아웃과 동일하게 설정
+          # SSE 연결 종료 + HTTP 서버 종료 + DB 연결 종료 시간 고려
+          echo "🛑 Stopping old container (30s graceful)..."
+          docker stop --time 30 app || true
+          docker rm app || true
+
+          # 새 컨테이너 실행
+          echo "▶️  Starting new container..."
+          docker run -d \
+            --name app \
+            -p 3000:3000 \
+            --restart=always \
+            --env-file /home/ec2-user/.env \
+            $ECR_REGISTRY/$ECR_REPOSITORY:$IMAGE_TAG
+
+          # Prisma 마이그레이션 실행
+          echo "🔄 Running Prisma migrations..."
+          docker exec app npx prisma migrate deploy
+
+          if [ $? -ne 0 ]; then
+            echo "❌ Migration failed!"
+            echo ""
+            echo "🔍 Debugging information:"
+            echo "  Container status:"
+            docker ps -a | grep app || true
+            echo ""
+            echo "  Container logs (last 50 lines):"
+            docker logs app --tail 50 || true
+            docker stop app
+            docker rm app
+            exit 1
+          fi
+          echo "✅ Migrations completed"
+
+          # ============================================
+          # 헬스체크 1: EC2 내부 컨테이너 상태 확인
+          # 타임아웃: 60초 (12회 * 5초)
+          # 목적: 앱이 정상적으로 시작되었는지 확인
+          # ============================================
+          echo "🏥 Health checking (local)..."
+          for i in {1..12}; do
+            if curl -f http://localhost:3000/api/health > /dev/null 2>&1; then
+              echo "✅ Local health check passed! ($i/12 = $((i*5))s elapsed)"
+
+              # ECR 로그아웃 (보안)
+              echo "🔓 Logging out from ECR..."
+              docker logout $ECR_REGISTRY || true
+
+              exit 0
+            fi
+
+            if [ $i -eq 12 ]; then
+              echo "❌ Local health check failed after 60s"
+              echo ""
+              echo "🔍 Debugging information:"
+              echo "  Container status:"
+              docker ps -a | grep app || true
+              echo ""
+              echo "  Container logs (last 50 lines):"
+              docker logs app --tail 50 || true
+              echo ""
+              echo "  Health endpoint test:"
+              curl -v http://localhost:3000/api/health || true
+              exit 1
+            fi
+
+            echo "   ⏳ Retrying... ($i/12 = $((i*5))s elapsed)"
+            sleep 5
+          done
+          DEPLOYSSH
+
+          echo "✅ Deployment on ${{ steps.detect.outputs.target_env }} EC2 successful!"
+
+      # ============================================
+      # Step 6: Target Group에 EC2 등록
+      # ============================================
+      - name: Register to Target Group
+        run: |
+          echo "📋 Registering to Target Group..."
+
+          EXISTING=$(aws elbv2 describe-target-health \
+            --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+            --query "TargetHealthDescriptions[?Target.Id=='${{ steps.ec2-setup.outputs.instance_id }}'].Target.Id" \
+            --output text)
+
+          if [[ -z "$EXISTING" ]]; then
+            aws elbv2 register-targets \
+              --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+              --targets Id=${{ steps.ec2-setup.outputs.instance_id }}
+            echo "✅ Target registered"
+          else
+            echo "ℹ️  Target already registered"
+          fi
+
+      # ============================================
+      # 헬스체크 2: ALB Target Group 헬스체크
+      # 타임아웃: 120초 (12회 * 10초)
+      # 목적: ALB가 타겟을 healthy/unused로 인식하는지 확인
+      # unused = Blue-Green에서 대기 중 (정상 상태)
+      # ============================================
+      - name: Wait for target to be healthy
+        run: |
+          echo "⏳ Waiting for target to be healthy (ALB level)..."
+
+          for i in {1..12}; do
+            HEALTH=$(aws elbv2 describe-target-health \
+              --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+              --targets Id=${{ steps.ec2-setup.outputs.instance_id }} \
+              --query 'TargetHealthDescriptions[0].TargetHealth.State' \
+              --output text)
+
+            echo "Target health: $HEALTH ($i/12 = $((i*10))s elapsed)"
+
+            # Blue-Green 배포에서 비활성 Target Group은 'unused' 상태가 정상
+            # ALB가 해당 TG를 사용하지 않으므로 Health Check가 실행되지 않음
+            # 'unused'는 배포 실패가 아니라 "대기 중" 상태를 의미
+            if [[ "$HEALTH" == "healthy" ]] || [[ "$HEALTH" == "unused" ]]; then
+              echo "✅ Target is ready! (Status: $HEALTH)"
+              exit 0
+            fi
+
+            sleep 10
+          done
+
+          echo "❌ Target did not become healthy"
+          echo ""
+          echo "🔍 Target Group 상태:"
+          aws elbv2 describe-target-health \
+            --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+            --targets Id=${{ steps.ec2-setup.outputs.instance_id }} \
+            --output table || true
+          exit 1
+
+      # ============================================
+      # Step 7: ALB 트래픽 전환
+      # ============================================
+      - name: Switch ALB to ${{ steps.detect.outputs.target_env }}
+        if: success()
+        run: |
+          echo "🔀 ALB 트래픽 전환 중..."
+          echo "   ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}"
+
+          # HTTP Listener (80) 전환
+          echo "🌐 HTTP Listener (80) 전환 중..."
+          aws elbv2 modify-listener \
+            --listener-arn ${{ secrets.ALB_LISTENER_ARN }} \
+            --default-actions Type=forward,TargetGroupArn=${{ steps.detect.outputs.target_tg_arn }}
+          echo "✅ HTTP Listener 전환 완료"
+
+          # HTTPS Listener (443) 전환
+          echo "🔒 HTTPS Listener (443) 전환 중..."
+          aws elbv2 modify-listener \
+            --listener-arn ${{ secrets.ALB_LISTENER_HTTPS_ARN }} \
+            --default-actions Type=forward,TargetGroupArn=${{ steps.detect.outputs.target_tg_arn }}
+          echo "✅ HTTPS Listener 전환 완료"
+
+          echo ""
+          echo "✅ 모든 트래픽 전환 완료! (HTTP + HTTPS)"
+          echo ""
+          echo "📊 배포 결과:"
+          echo "   • 이전: ${{ steps.detect.outputs.current_env }} (롤백 대기)"
+          echo "   • 현재: ${{ steps.detect.outputs.target_env }} (운영 중)"
+          echo "   • Instance: ${{ steps.ec2-setup.outputs.instance_id }}"
+          echo "   • IP: ${{ steps.get-ip.outputs.public_ip }}"
+          echo "   • Image: ${{ env.ECR_REGISTRY }}/${{ env.ECR_REPOSITORY }}:${{ env.IMAGE_TAG }}"
+          echo ""
+          echo "🎉 블루-그린 배포 완료!"
+
+      # ============================================
+      # Step 8: 이전 타겟 Deregister (비활성화)
+      # ============================================
+      # 주석 처리 이유: 즉시 롤백을 위해 Standby 환경을 Target Group에 유지
+      # Blue-Green 배포에서 비활성 환경도 등록 상태 유지 → 1초 롤백 가능
+      #
+      # - name: Deregister old targets (optional)
+      #   if: success()
+      #   continue-on-error: true
+      #   run: |
+      #     echo "🔄 Deregistering old targets..."
+      #
+      #     OLD_TG_ARN=$([[ "${{ steps.detect.outputs.target_env }}" == "blue" ]] && \
+      #       echo "${{ secrets.GREEN_TARGET_GROUP_ARN }}" || \
+      #       echo "${{ secrets.BLUE_TARGET_GROUP_ARN }}")
+      #
+      #     OLD_TARGETS=$(aws elbv2 describe-target-health \
+      #       --target-group-arn $OLD_TG_ARN \
+      #       --query 'TargetHealthDescriptions[].Target.Id' \
+      #       --output text)
+      #
+      #     if [[ -n "$OLD_TARGETS" ]]; then
+      #       for TARGET in $OLD_TARGETS; do
+      #         aws elbv2 deregister-targets \
+      #           --target-group-arn $OLD_TG_ARN \
+      #           --targets Id=$TARGET || true
+      #         echo "✅ Deregistered $TARGET"
+      #       done
+      #     fi
+
+      # ============================================
+      # 정리: 사용하지 않는 Docker 이미지 삭제
+      # ============================================
+      - name: Cleanup old Docker images
+        if: success()
+        run: |
+          echo "🧹 Cleaning up unused Docker images..."
+
+          # 24시간 이상 사용하지 않은 이미지만 삭제
+          # 이유: Blue-Green 배포 시 이전 버전 이미지 보존 (빠른 롤백)
+          # 24시간 기준으로 안전성과 디스크 공간 관리 균형 유지
+          ssh -i ~/.ssh/codiit-key.pem ec2-user@${{ steps.get-ip.outputs.public_ip }} \
+            "docker image prune -af --filter 'until=24h'"
+
+          echo "✅ Cleanup completed"
+
+      # ============================================
+      # 롤백: 배포 실패 시 타겟 Deregister
+      # ============================================
+      - name: Rollback on failure
+        if: failure()
+        run: |
+          echo "❌ 배포 실패!"
+
+          # 실패한 타겟 Deregister
+          aws elbv2 deregister-targets \
+            --target-group-arn ${{ steps.detect.outputs.target_tg_arn }} \
+            --targets Id=${{ steps.ec2-setup.outputs.instance_id }} || true
+
+          echo "💡 ${{ steps.detect.outputs.current_env }} 환경이 계속 운영 중입니다."
+          echo "🔄 롤백 불필요 (ALB 전환 전 실패)"
+          echo ""
+          echo "디버깅 정보:"
+          echo "  Instance ID: ${{ steps.ec2-setup.outputs.instance_id }}"
+          echo "  Public IP: ${{ steps.get-ip.outputs.public_ip }}"
+
+      # ============================================
+      # Discord 알림
+      # ============================================
+      - name: Send Discord notification on success
+        if: success()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: "✅ 배포 성공!"
+          description: |
+            - 🌿 **브랜치**: ${{ github.ref_name }}
+            - 🔄 **배포 전환**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
+            - 🌐 **운영 환경**: ${{ steps.detect.outputs.target_env }} (Active)
+            - 🖥️ **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id }}
+          color: 0x00FF00
+
+      - name: Send Discord notification on failure
+        if: failure()
+        uses: sarisia/actions-status-discord@v1
+        with:
+          webhook: ${{ secrets.DISCORD_WEBHOOK_URL }}
+          title: "❌ 배포 실패!"
+          description: |
+            - 🌿 **브랜치**: ${{ github.ref_name }}
+            - 🔄 **배포 시도**: ${{ steps.detect.outputs.current_env }} → ${{ steps.detect.outputs.target_env }}
+            - 🌐 **실패 환경**: ${{ steps.detect.outputs.target_env || 'unknown' }}
+            - 🖥️ **인스턴스**: ${{ steps.ec2-setup.outputs.instance_id || 'N/A' }}
+          color: 0xFF0000

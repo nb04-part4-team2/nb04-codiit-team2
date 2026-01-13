@@ -1,0 +1,67 @@
+import { Router } from 'express';
+import { asyncHandler } from '@/common/middlewares/asyncHandler.js';
+import { validate } from '@/common/middlewares/validate.middleware.js';
+import { authenticate, onlySeller } from '@/common/middlewares/auth.middleware.js'; // onlySeller 추가
+import { productController } from './product.container.js';
+import { nestedReviewRouter } from '../review/review.router.js';
+import {
+  createProductSchema,
+  productListSchema,
+  productDetailSchema,
+  updateProductSchema,
+  deleteProductSchema,
+} from './product.schema.js';
+import { nestedInquiryRouter } from '../inquiry/inquiry.router.js';
+
+const productRouter = Router();
+
+// 상품 등록 API
+productRouter.post(
+  '/',
+  authenticate,
+  onlySeller, // 판매자 권한 확인 미들웨어 추가
+  validate(createProductSchema, 'body'),
+  asyncHandler(productController.create),
+);
+
+// 상품 목록 조회 API
+// 누구나 접근 가능하도록 authenticate를 뺐습니다.
+productRouter.get(
+  '/',
+  validate(productListSchema, 'query'),
+  asyncHandler(productController.getProducts),
+);
+
+// 문의 중첩 라우터
+productRouter.use('/:productId/inquiries', nestedInquiryRouter);
+
+// 리뷰 중첩 라우터
+productRouter.use('/:productId/reviews', nestedReviewRouter);
+
+// 상품 상세 조회 API
+productRouter.get(
+  '/:productId',
+  validate(productDetailSchema, 'params'),
+  asyncHandler(productController.getOne),
+);
+
+// 상품 수정 API
+productRouter.patch(
+  '/:productId',
+  authenticate,
+  onlySeller,
+  validate(productDetailSchema, 'params'),
+  validate(updateProductSchema, 'body'),
+  asyncHandler(productController.update),
+);
+
+// 상품 삭제 API
+productRouter.delete(
+  '/:productId',
+  authenticate,
+  onlySeller,
+  validate(deleteProductSchema, 'params'),
+  asyncHandler(productController.delete),
+);
+
+export default productRouter;

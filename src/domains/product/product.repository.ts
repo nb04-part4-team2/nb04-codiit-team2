@@ -1,0 +1,302 @@
+import { PrismaClient, Prisma } from '@prisma/client';
+
+// 목록 조회용 가벼운 타입 추가
+export type ProductListWithRelations = Prisma.ProductGetPayload<{
+  include: {
+    store: { select: { id: true; name: true } };
+  };
+}>;
+
+// Prisma 유틸리티를 사용해 DB에서 반환될 데이터의 타입을 정확히 정의
+export type ProductWithRelations = Prisma.ProductGetPayload<{
+  include: {
+    stocks: { include: { size: true } };
+    store: { select: { id: true; name: true } };
+    category: true;
+  };
+}>;
+
+// 상세 조회 시 사용되는 확장된 관계형 타입 (문의, 리뷰 포함)
+export type ProductDetailWithRelations = Prisma.ProductGetPayload<{
+  include: {
+    stocks: { include: { size: true } };
+    store: { select: { id: true; name: true } };
+    category: true;
+    inquiries: {
+      include: {
+        reply: {
+          include: {
+            user: { select: { id: true; name: true } };
+          };
+        };
+      };
+    };
+    reviews: true;
+  };
+}>;
+
+// DB 저장용 데이터 타입
+export interface CreateProductData {
+  name: string;
+  price: number;
+  content: string;
+  image: string;
+  discountRate: number;
+  discountStartTime: Date | null;
+  discountEndTime: Date | null;
+  categoryName: string;
+  stocks: {
+    sizeId: number;
+    quantity: number;
+  }[];
+}
+
+// DB 업데이트용 데이터 타입
+export interface UpdateProductData {
+  name?: string;
+  price?: number;
+  content?: string;
+  image?: string;
+  discountRate?: number;
+  discountStartTime?: Date | null;
+  discountEndTime?: Date | null;
+  categoryName?: string;
+  isSoldOut?: boolean;
+  stocks: {
+    sizeId: number;
+    quantity: number;
+  }[];
+}
+
+// 레포지토리 조회용 파라미터 인터페이스
+export interface FindProductsParams {
+  page: number;
+  pageSize: number;
+  search?: string;
+  sort?: 'mostReviewed' | 'recent' | 'lowPrice' | 'highPrice' | 'highRating' | 'salesRanking';
+  priceMin?: number;
+  priceMax?: number;
+  categoryName?: string;
+  size?: string;
+  favoriteStore?: string;
+}
+
+export class ProductRepository {
+  constructor(private prisma: PrismaClient) {}
+
+  // 유저 ID로 스토어 조회
+  async findStoreByUserId(userId: string) {
+    return this.prisma.store.findUnique({
+      where: { userId },
+      select: { id: true },
+    });
+  }
+
+  // 카테고리 이름으로 조회
+  async findCategoryByName(name: string) {
+    return this.prisma.category.findFirst({
+      where: { name },
+      select: { id: true },
+    });
+  }
+  // 권한 검증을 위해 상품과 스토어 주인 ID만 조회하는 최적화된 메서드
+  async findProductOwnership(productId: string) {
+    return this.prisma.product.findUnique({
+      where: { id: productId },
+      select: {
+        id: true,
+        storeId: true,
+        store: {
+          select: {
+            id: true,
+            userId: true, // 판매자 ID 확인용
+          },
+        },
+      },
+    });
+  }
+
+  // 상품 생성
+  async create(storeId: string, data: CreateProductData): Promise<ProductWithRelations> {
+    const { stocks, categoryName, ...productData } = data;
+
+    return this.prisma.product.create({
+      data: {
+        ...productData,
+        store: { connect: { id: storeId } },
+        category: { connect: { name: categoryName } },
+        stocks: {
+          create: stocks.map((stock) => ({
+            size: { connect: { id: stock.sizeId } },
+            quantity: stock.quantity,
+          })),
+        },
+      },
+      include: {
+        stocks: { include: { size: true } },
+        store: { select: { id: true, name: true } },
+        category: true,
+      },
+    });
+  }
+
+  // 상품 목록 조회
+  async findAll(params: FindProductsParams) {
+    const { page, pageSize, search, sort, priceMin, priceMax, categoryName, size, favoriteStore } =
+      params;
+
+    // Where 조건 구성
+    const where: Prisma.ProductWhereInput = {
+      ...(search && {
+        OR: [
+          { name: { contains: search, mode: 'insensitive' } },
+          { store: { name: { contains: search, mode: 'insensitive' } } },
+        ],
+      }),
+      price: {
+        ...(priceMin !== undefined && { gte: priceMin }),
+        ...(priceMax !== undefined && { lte: priceMax }),
+      },
+      ...(categoryName && {
+        category: { name: categoryName },
+      }),
+      ...(size && {
+        stocks: {
+          some: {
+            size: {
+              OR: [{ en: size }, { ko: size }], // 영문/한글 사이즈 모두 검색
+            },
+          },
+        },
+      }),
+      ...(favoriteStore && {
+        storeId: favoriteStore,
+      }),
+    };
+
+    // OrderBy 정렬 구성
+    let orderBy: Prisma.ProductOrderByWithRelationInput = { createdAt: 'desc' };
+
+    switch (sort) {
+      case 'lowPrice':
+        orderBy = { price: 'asc' };
+        break;
+      case 'highPrice':
+        orderBy = { price: 'desc' };
+        break;
+      case 'mostReviewed':
+        orderBy = { reviewsCount: 'desc' };
+        break;
+      case 'highRating':
+        orderBy = { reviewsRating: 'desc' };
+        break;
+      case 'salesRanking':
+        orderBy = { salesCount: 'desc' };
+        break;
+      case 'recent':
+      default:
+        orderBy = { createdAt: 'desc' };
+        break;
+    }
+
+    const skip = (page - 1) * pageSize;
+
+    // 트랜잭션으로 데이터 + 카운트 조회
+    const [products, totalCount] = await this.prisma.$transaction([
+      this.prisma.product.findMany({
+        where,
+        orderBy,
+        skip,
+        take: pageSize,
+        include: {
+          store: {
+            select: { id: true, name: true },
+          },
+          // 리스트에서는 stocks, category 전체 정보가 필요 없으므로 include 최소화
+        },
+      }),
+      this.prisma.product.count({ where }),
+    ]);
+
+    return { products, totalCount };
+  }
+
+  async findById(id: string): Promise<ProductDetailWithRelations | null> {
+    return this.prisma.product.findUnique({
+      where: { id },
+      include: {
+        // 재고 및 사이즈 정보
+        stocks: {
+          include: { size: true },
+        },
+        // 스토어 기본 정보
+        store: {
+          select: { id: true, name: true },
+        },
+        // 카테고리 정보
+        category: true,
+        // 상품 문의 및 답변 (답변자 정보 포함)
+        inquiries: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            reply: {
+              include: {
+                user: {
+                  select: { id: true, name: true },
+                },
+              },
+            },
+          },
+        },
+        // 리뷰
+        reviews: {
+          orderBy: { createdAt: 'desc' },
+        },
+      },
+    });
+  }
+
+  async update(id: string, data: UpdateProductData): Promise<ProductDetailWithRelations> {
+    const { stocks, categoryName, ...productData } = data;
+
+    return this.prisma.product.update({
+      where: { id },
+      data: {
+        ...productData,
+        ...(categoryName && { category: { connect: { name: categoryName } } }),
+
+        stocks: {
+          deleteMany: {},
+          create: stocks.map((stock) => ({
+            size: { connect: { id: stock.sizeId } },
+            quantity: stock.quantity,
+          })),
+        },
+      },
+      include: {
+        stocks: { include: { size: true } },
+        store: { select: { id: true, name: true } },
+        category: true,
+        inquiries: {
+          orderBy: { createdAt: 'desc' },
+          include: {
+            reply: {
+              include: {
+                user: { select: { id: true, name: true } },
+              },
+            },
+          },
+        },
+        reviews: { orderBy: { createdAt: 'desc' } },
+      },
+    });
+  }
+
+  async delete(id: string): Promise<void> {
+    await this.prisma.product.delete({
+      where: {
+        id,
+      },
+    });
+  }
+}

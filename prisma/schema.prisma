@@ -1,0 +1,424 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// --------------------------------------
+// enums
+// --------------------------------------
+
+enum UserType {
+  BUYER
+  SELLER
+}
+
+enum InquiryStatus {
+  WaitingAnswer
+  CompletedAnswer
+}
+
+enum PaymentStatus {
+  processing // 주문 트랜잭션 처리중
+  pending // pg 결제 요청됨
+  paid // 결제 완료
+  failed // 결제 실패
+  cancelled // 결제 취소 / 환불
+  completed // 결제 완료 후 주문 트랜잭션 성공
+}
+
+enum PaymentProvider {
+  kakaopay
+  naverpay
+  tosspay
+}
+
+enum PaymentMethod {
+  card
+  point
+  kakaopay
+  naverpay
+  tosspay
+}
+
+enum OrderStatus {
+  WaitingPayment
+  CompletedPayment
+  Cancelled
+  Delivered
+}
+
+enum PointHistoryType {
+  USE // 사용
+  EARN // 적립
+  EARN_CANCEL // 적립 취소
+  REFUND // 환불
+}
+
+// --------------------------------------
+// Lookup table (시딩용 객체)
+// --------------------------------------
+
+model Size {
+  //  xs: 1, s: 2, m: 3, l: 4, xl: 5, free: 6,
+  // project-codiit-fe-main/src/utils/formData/toProductFormData.ts 참고
+  id Int    @id
+  en String // Small, Medium
+  ko String // 소, 중
+
+  stocks     Stock[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+
+  @@map("size")
+}
+
+// --------------------------------------
+// 1. 유저 및 인증 관련 (User & Auth)
+// --------------------------------------
+
+model User {
+  id        String   @id @default(cuid())
+  email     String   @unique
+  password  String
+  name      String
+  type      UserType
+  image     String?
+  point     Int      @default(0)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FK
+  gradeId String
+  grade   Grade  @relation(fields: [gradeId], references: [id])
+
+  // Relations
+  store         Store? // 판매자일 경우 1:1 (혹은 1:N 확장 가능)
+  cart          Cart? // 구매자일 경우 1:1
+  orders        Order[]
+  reviews       Review[]
+  inquiries     Inquiry[]
+  replies       Reply[]
+  storeLikes    StoreLike[]
+  notifications Notification[]
+  pointHistory  PointHistory[]
+  refreshTokens RefreshToken[]
+
+  @@map("users")
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  jti       String   @unique
+  userId    String
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  expiresAt DateTime
+  createdAt DateTime @default(now())
+
+  @@index([userId])
+  @@index([jti])
+  @@map("refresh_tokens")
+}
+
+model Grade {
+  id        String   @id @default(cuid())
+  name      String // green, orange, red, black, vip
+  minAmount Int // 등급 달성 최소 금액
+  rate      Float // 적립률 (예: 0.05)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  users User[]
+
+  @@map("grade")
+}
+
+// --------------------------------------
+// 2. 상품 및 스토어 (Product & Store)
+// --------------------------------------
+
+model Store {
+  id            String   @id @default(cuid())
+  name          String
+  content       String // 가게 소개
+  address       String
+  detailAddress String?
+  phoneNumber   String
+  image         String?
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  // FK
+  userId String @unique // 유저 한 명당 가게 하나라고 가정
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  // Relations
+  products Product[]
+  likes    StoreLike[]
+
+  @@map("stores")
+}
+
+model Product {
+  id                String    @id @default(cuid())
+  name              String
+  price             Int
+  content           String?
+  image             String
+  discountRate      Int       @default(0)
+  discountStartTime DateTime?
+  discountEndTime   DateTime?
+  isSoldOut         Boolean   @default(false)
+  salesCount        Int       @default(0)
+  reviewsCount      Int       @default(0)
+  reviewsRating     Float     @default(0.0)
+  createdAt         DateTime  @default(now())
+  updatedAt         DateTime  @updatedAt
+
+  // FK
+  storeId    String
+  store      Store    @relation(fields: [storeId], references: [id], onDelete: Cascade) // 스토어 삭제 시 상품 삭제
+  categoryId String
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  // Relations
+  stocks     Stock[]
+  cartItems  CartItem[]
+  orderItems OrderItem[]
+  reviews    Review[]
+  inquiries  Inquiry[]
+
+  @@map("products")
+}
+
+model Category {
+  id   String @id @default(cuid()) // SQL의 'Key'를 id로 변경
+  name String @unique
+
+  products Product[]
+
+  @@map("categories")
+}
+
+model Stock {
+  id               String @id @default(cuid())
+  quantity         Int // 재고 수량
+  reservedQuantity Int    @default(0) @map("reserved_quantity") // 주문된 재고 수량 (결제 전 주문만 처리됨)
+
+  // FK
+  productId String  @map("product_id")
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품 삭제 시 재고 삭제
+  sizeId    Int     @map("size_id")
+  size      Size    @relation(fields: [sizeId], references: [id])
+
+  @@unique([productId, sizeId])
+  @@map("stocks")
+}
+
+// --------------------------------------
+// 4. 장바구니 (Cart)
+// --------------------------------------
+
+model Cart {
+  id        String   @id @default(cuid()) // SQL의 string 타입 반영
+  quantity  Int      @default(0) // 장바구니에 담긴 총 아이템 개수? (필요 없으면 삭제 가능, Computed field로 대체 권장)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FK
+  buyerId String @unique
+  buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 장바구니 삭제
+
+  items CartItem[]
+
+  @@map("carts")
+}
+
+model CartItem {
+  id        String   @id @default(cuid())
+  quantity  Int
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FK
+  cartId    String
+  cart      Cart    @relation(fields: [cartId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품이 삭제되면 장바구니 내역에서도 삭제
+  sizeId    Int
+  size      Size    @relation(fields: [sizeId], references: [id])
+
+  @@unique([cartId, productId, sizeId])
+  @@map("cart_items")
+}
+
+// --------------------------------------
+// 5. 주문 및 결제 (Order & Payment)
+// --------------------------------------
+
+model Order {
+  id            String      @id @default(cuid())
+  name          String // 주문자 이름
+  phoneNumber   String
+  address       String
+  status        OrderStatus @default(WaitingPayment)
+  subtotal      Int // 상품 총액
+  totalQuantity Int // 총 주문수량
+  usePoint      Int         @default(0)
+  createdAt     DateTime    @default(now())
+  expiresAt     DateTime?
+
+  // 비회원 주문에 대한 내용은 추후 확장
+  buyerId String
+  buyer   User   @relation(fields: [buyerId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 주문 내역 삭제
+
+  orderItems   OrderItem[]
+  payments     Payment[]
+  pointHistory PointHistory[]
+
+  @@map("orders")
+}
+
+model OrderItem {
+  id       String @id @default(cuid())
+  price    Int // 구매 당시 가격 (Snapshot)
+  quantity Int
+
+  // FK
+  orderId   String
+  order     Order   @relation(fields: [orderId], references: [id], onDelete: Cascade)
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품 삭제 시 주문 상세 내역 삭제
+  sizeId    Int
+  size      Size    @relation(fields: [sizeId], references: [id])
+
+  review Review?
+
+  @@map("order_items")
+}
+
+model Payment {
+  id           String          @id @default(cuid())
+  price        Int
+  status       PaymentStatus
+  provider     PaymentProvider @default(kakaopay)
+  method       PaymentMethod   @default(card)
+  impUid       String?         @unique // 고유 결제번호
+  pgTid        String? // pg사 거래번호
+  errorCode    String?
+  errorMessage String?
+  approvedAt   DateTime?
+  failedAt     DateTime?
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
+
+  // FK
+  orderId String
+  order   Order  @relation(fields: [orderId], references: [id])
+
+  @@map("payments")
+}
+
+// --------------------------------------
+// 6. 리뷰, 문의, 포인트 등 (Community & Etc)
+// --------------------------------------
+
+model Review {
+  id        String   @id @default(cuid())
+  rating    Int
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FK
+  userId      String
+  user        User      @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 달린 리뷰 삭제
+  productId   String
+  product     Product   @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품 삭제 시 달린 리뷰 삭제
+  orderItemId String    @unique // 리뷰는 특정 구매 건에 종속
+  orderItem   OrderItem @relation(fields: [orderItemId], references: [id])
+
+  @@map("reviews")
+}
+
+model Inquiry {
+  id        String        @id @default(cuid())
+  title     String
+  content   String
+  status    InquiryStatus @default(WaitingAnswer)
+  isSecret  Boolean       @default(false)
+  createdAt DateTime      @default(now())
+  updatedAt DateTime      @updatedAt
+
+  // FK
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 작성한 문의 삭제
+  productId String
+  product   Product @relation(fields: [productId], references: [id], onDelete: Cascade) // 상품 삭제 시 달린 문의 삭제
+
+  reply Reply?
+
+  @@map("inquiries")
+}
+
+model Reply {
+  id        String   @id @default(cuid())
+  content   String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FK
+  userId    String
+  user      User    @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 작성한 답변 삭제
+  inquiryId String  @unique
+  inquiry   Inquiry @relation(fields: [inquiryId], references: [id], onDelete: Cascade)
+
+  @@map("replies")
+}
+
+model StoreLike {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  // FK
+  userId  String
+  user    User   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  storeId String
+  store   Store  @relation(fields: [storeId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, storeId]) // 중복 좋아요 방지
+  @@map("store_likes")
+}
+
+model PointHistory {
+  id        String           @id @default(cuid())
+  type      PointHistoryType
+  amount    Int
+  createdAt DateTime         @default(now())
+
+  // FK
+  userId  String
+  user    User    @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 포인트 내역 삭제
+  orderId String? // 주문과 관련된 포인트일 경우
+  order   Order?  @relation(fields: [orderId], references: [id])
+
+  @@map("point_history")
+}
+
+model Notification {
+  id        String   @id @default(cuid())
+  content   String
+  isChecked Boolean  @default(false)
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // FK
+  userId String
+  user   User   @relation(fields: [userId], references: [id], onDelete: Cascade) // 유저 탈퇴 시 알림 삭제
+
+  @@map("notifications")
+}

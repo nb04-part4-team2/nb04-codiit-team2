@@ -1,0 +1,382 @@
+# ========================================
+# Dashboard API Swagger Documentation
+# ========================================
+# 작성일: 2025-01-05
+# 도메인: 대시보드(Dashboard) - 판매 통계
+# 총 1개 엔드포인트
+#
+# 엔드포인트:
+# - GET /api/dashboard - 판매자 대시보드 데이터 조회
+#
+# 특징:
+# - SELLER 전용 (onlySeller 미들웨어)
+# - 기간별 판매 통계 (오늘, 주간, 월간, 연간)
+# - 전기 대비 변화율 계산 (오늘 vs 어제, 이번주 vs 지난주 등)
+# - 상위 5개 판매 상품
+# - 가격대별 판매 분포
+# ========================================
+
+paths:
+  /api/dashboard:
+    get:
+      tags:
+        - Dashboard
+      summary: 판매자 대시보드 데이터 조회
+      description: |
+        판매자의 스토어에 대한 종합적인 판매 통계 데이터를 조회합니다.
+
+        인증 필요:
+        `Bearer 토큰 필수`
+
+        권한:
+        `SELLER` 타입 사용자만 접근 가능
+        `BUYER` 접근 시 403 Forbidden
+
+        집계 기준:
+        주문 상태: `CompletedPayment`(결제 완료), `Delivered`(배송 완료)만 집계
+        총 주문 수: 고유한 주문 건수 (중복 제거)
+        총 판매액: 상품 가격 × 수량의 합계
+
+        응답 데이터:
+
+        기간별 판매 통계 (`today`, `week`, `month`, `year`)
+        `current`: 현재 기간 통계 (오늘, 이번 주, 이번 달, 올해)
+        `previous`: 이전 기간 통계 (어제, 지난주, 지난달, 작년)
+        `changeRate`: 전기 대비 변화율 (퍼센트, 정수)
+        계산식: ((current - previous) / previous) * 100
+        이전 값이 0이고 현재 값이 있으면 `null` (무한대 성장)
+        둘 다 0이면 0% 반환
+
+        상위 판매 상품 (`topSales`)
+        판매 수량 기준 상위 5개 상품
+        `totalOrders`: 해당 상품의 총 판매 수량
+        `product`: 상품 정보 (id, name, price)
+
+        가격대별 판매 분포 (`priceRange`)
+        5개 가격대로 구분하여 판매액 집계
+        `percentage`: 전체 판매액 대비 비율 (소수점 첫째 자리)
+
+        가격대 구분:
+        1만원 이하: 0 ~ 10,000원
+        1만원 ~ 3만원: 10,001 ~ 30,000원
+        3만원 ~ 5만원: 30,001 ~ 50,000원
+        5만원 ~ 10만원: 50,001 ~ 100,000원
+        10만원 이상: 100,001원 ~
+      security:
+        - bearerAuth: []
+      responses:
+        '200':
+          description: 대시보드 데이터 조회 성공
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  today:
+                    type: object
+                    description: 오늘 vs 어제 판매 통계
+                    properties:
+                      current:
+                        type: object
+                        description: 오늘 통계
+                        properties:
+                          totalOrders:
+                            type: integer
+                            description: 오늘 총 주문 건수
+                            example: 15
+                          totalSales:
+                            type: integer
+                            description: 오늘 총 판매액 (원)
+                            example: 1250000
+                      previous:
+                        type: object
+                        description: 어제 통계
+                        properties:
+                          totalOrders:
+                            type: integer
+                            description: 어제 총 주문 건수
+                            example: 12
+                          totalSales:
+                            type: integer
+                            description: 어제 총 판매액 (원)
+                            example: 980000
+                      changeRate:
+                        type: object
+                        description: 전일 대비 변화율 (퍼센트)
+                        properties:
+                          totalOrders:
+                            type: integer
+                            nullable: true
+                            description: |
+                              주문 건수 변화율 (정수, %)
+
+                              `null`: 이전 값 0, 현재 값 > 0 (무한대 성장)
+                              `0`: 변화 없음
+                              양수: 증가율
+                              음수: 감소율
+                            example: 25
+                          totalSales:
+                            type: integer
+                            nullable: true
+                            description: |
+                              판매액 변화율 (정수, %)
+
+                              `null`: 이전 값 0, 현재 값 > 0 (무한대 성장)
+                              `0`: 변화 없음
+                              양수: 증가율
+                              음수: 감소율
+                            example: 28
+
+                  week:
+                    type: object
+                    description: 이번 주 vs 지난주 판매 통계
+                    properties:
+                      current:
+                        type: object
+                        description: 이번 주 통계
+                        properties:
+                          totalOrders:
+                            type: integer
+                            description: 이번 주 총 주문 건수
+                            example: 85
+                          totalSales:
+                            type: integer
+                            description: 이번 주 총 판매액 (원)
+                            example: 7200000
+                      previous:
+                        type: object
+                        description: 지난주 통계
+                        properties:
+                          totalOrders:
+                            type: integer
+                            description: 지난주 총 주문 건수
+                            example: 78
+                          totalSales:
+                            type: integer
+                            description: 지난주 총 판매액 (원)
+                            example: 6500000
+                      changeRate:
+                        type: object
+                        description: 전주 대비 변화율 (퍼센트)
+                        properties:
+                          totalOrders:
+                            type: integer
+                            nullable: true
+                            description: 주문 건수 변화율 (정수, %)
+                            example: 9
+                          totalSales:
+                            type: integer
+                            nullable: true
+                            description: 판매액 변화율 (정수, %)
+                            example: 11
+
+                  month:
+                    type: object
+                    description: 이번 달 vs 지난달 판매 통계
+                    properties:
+                      current:
+                        type: object
+                        description: 이번 달 통계
+                        properties:
+                          totalOrders:
+                            type: integer
+                            description: 이번 달 총 주문 건수
+                            example: 320
+                          totalSales:
+                            type: integer
+                            description: 이번 달 총 판매액 (원)
+                            example: 28500000
+                      previous:
+                        type: object
+                        description: 지난달 통계
+                        properties:
+                          totalOrders:
+                            type: integer
+                            description: 지난달 총 주문 건수
+                            example: 285
+                          totalSales:
+                            type: integer
+                            description: 지난달 총 판매액 (원)
+                            example: 25000000
+                      changeRate:
+                        type: object
+                        description: 전월 대비 변화율 (퍼센트)
+                        properties:
+                          totalOrders:
+                            type: integer
+                            nullable: true
+                            description: 주문 건수 변화율 (정수, %)
+                            example: 12
+                          totalSales:
+                            type: integer
+                            nullable: true
+                            description: 판매액 변화율 (정수, %)
+                            example: 14
+
+                  year:
+                    type: object
+                    description: 올해 vs 작년 판매 통계
+                    properties:
+                      current:
+                        type: object
+                        description: 올해 통계
+                        properties:
+                          totalOrders:
+                            type: integer
+                            description: 올해 총 주문 건수
+                            example: 3500
+                          totalSales:
+                            type: integer
+                            description: 올해 총 판매액 (원)
+                            example: 320000000
+                      previous:
+                        type: object
+                        description: 작년 통계
+                        properties:
+                          totalOrders:
+                            type: integer
+                            description: 작년 총 주문 건수
+                            example: 2800
+                          totalSales:
+                            type: integer
+                            description: 작년 총 판매액 (원)
+                            example: 250000000
+                      changeRate:
+                        type: object
+                        description: 전년 대비 변화율 (퍼센트)
+                        properties:
+                          totalOrders:
+                            type: integer
+                            nullable: true
+                            description: 주문 건수 변화율 (정수, %)
+                            example: 25
+                          totalSales:
+                            type: integer
+                            nullable: true
+                            description: 판매액 변화율 (정수, %)
+                            example: 28
+
+                  topSales:
+                    type: array
+                    description: 판매 수량 기준 상위 5개 상품
+                    items:
+                      type: object
+                      properties:
+                        totalOrders:
+                          type: integer
+                          description: 해당 상품의 총 판매 수량 (주문 건수가 아닌 판매된 개수)
+                          example: 120
+                        product:
+                          type: object
+                          description: 상품 정보
+                          properties:
+                            id:
+                              type: string
+                              description: 상품 ID
+                              example: "cmjtknx7h001dp701iu8z3mno"
+                            name:
+                              type: string
+                              description: 상품명
+                              example: "코디잇 오버핏 후드티"
+                            price:
+                              type: integer
+                              description: 상품 가격 (원)
+                              example: 89000
+                    example:
+                      - totalOrders: 120
+                        product:
+                          id: "cmjtknx7h001dp701iu8z3mno"
+                          name: "코디잇 오버핏 후드티"
+                          price: 89000
+                      - totalOrders: 95
+                        product:
+                          id: "cmjtknxy2001fp701m5r8q3wx"
+                          name: "베이직 면 티셔츠"
+                          price: 29000
+                      - totalOrders: 78
+                        product:
+                          id: "cmjtko0z5001hp701n7x2w4yz"
+                          name: "슬림핏 청바지"
+                          price: 79000
+                      - totalOrders: 65
+                        product:
+                          id: "cmjtko3r8001jp701k9m5x8pq"
+                          name: "크롭 니트 가디건"
+                          price: 59000
+                      - totalOrders: 52
+                        product:
+                          id: "cmjtko6w1001lp701p3n9y2tz"
+                          name: "와이드 슬랙스"
+                          price: 69000
+
+                  priceRange:
+                    type: array
+                    description: 가격대별 판매 분포 (5개 구간)
+                    items:
+                      type: object
+                      properties:
+                        priceRange:
+                          type: string
+                          description: 가격대 구간명
+                          enum:
+                            - "1만원 이하"
+                            - "1만원 ~ 3만원"
+                            - "3만원 ~ 5만원"
+                            - "5만원 ~ 10만원"
+                            - "10만원 이상"
+                          example: "1만원 ~ 3만원"
+                        totalSales:
+                          type: integer
+                          description: 해당 가격대 총 판매액 (원)
+                          example: 5800000
+                        percentage:
+                          type: number
+                          format: float
+                          description: 전체 판매액 대비 비율 (소수점 첫째 자리, %)
+                          example: 18.5
+                    example:
+                      - priceRange: "1만원 이하"
+                        totalSales: 1200000
+                        percentage: 3.8
+                      - priceRange: "1만원 ~ 3만원"
+                        totalSales: 5800000
+                        percentage: 18.5
+                      - priceRange: "3만원 ~ 5만원"
+                        totalSales: 8900000
+                        percentage: 28.4
+                      - priceRange: "5만원 ~ 10만원"
+                        totalSales: 12500000
+                        percentage: 39.9
+                      - priceRange: "10만원 이상"
+                        totalSales: 2900000
+                        percentage: 9.4
+
+        '401':
+          description: 인증 실패
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "인증이 필요합니다."
+
+        '403':
+          description: 권한 없음 (BUYER 사용자 접근 시도)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message:
+                    type: string
+                    example: "판매자만 접근할 수 있습니다."
+
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT 액세스 토큰 (로그인 후 발급, SELLER 타입만 접근 가능)
